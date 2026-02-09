@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   LayoutDashboard,
   FileText,
@@ -13,6 +13,7 @@ import {
   LogOut,
 } from 'lucide-react';
 import { useCreditStore } from '@/stores/creditStore';
+import { createClient } from '@/lib/supabase/client';
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -25,7 +26,15 @@ const navItems = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const balance = useCreditStore((s) => s.balance);
+
+  const handleSignOut = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push('/login');
+    router.refresh();
+  };
 
   return (
     <aside className="w-60 h-screen bg-[#F5F5F7]/50 border-r border-[#E5E5EA] flex flex-col fixed left-0 top-0">
@@ -73,7 +82,10 @@ export function Sidebar() {
       </nav>
 
       <div className="p-3 border-t border-[#E5E5EA]/60">
-        <button className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-[#86868B] hover:bg-white/60 hover:text-[#1D1D1F] transition-all duration-150 w-full cursor-pointer">
+        <button
+          onClick={handleSignOut}
+          className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-[#86868B] hover:bg-white/60 hover:text-[#1D1D1F] transition-all duration-150 w-full cursor-pointer"
+        >
           <LogOut size={18} strokeWidth={1.5} />
           Sign Out
         </button>

@@ -1,11 +1,91 @@
 'use client';
 
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Card } from '@/components/ui/Card';
+import { createClient } from '@/lib/supabase/client';
 
 export default function SignupPage() {
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
+
+  const handleSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+
+    if (password.length < 6) {
+      setError('Password must be at least 6 characters.');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const supabase = createClient();
+      const { error: authError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: fullName,
+          },
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+
+      if (authError) {
+        setError(authError.message);
+        return;
+      }
+
+      setSuccess(true);
+    } catch {
+      setError('Something went wrong. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleSignup = async () => {
+    const supabase = createClient();
+    await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
+  };
+
+  if (success) {
+    return (
+      <Card className="w-full max-w-sm" padding="lg">
+        <div className="text-center">
+          <div className="w-14 h-14 rounded-2xl bg-[#34C759]/10 flex items-center justify-center mx-auto">
+            <svg className="w-7 h-7 text-[#34C759]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <h1 className="text-xl font-bold text-[#1D1D1F] mt-5">Check your email</h1>
+          <p className="text-sm text-[#86868B] mt-2 leading-relaxed">
+            We&apos;ve sent a confirmation link to <strong className="text-[#1D1D1F]">{email}</strong>.
+            Click it to activate your account.
+          </p>
+          <Link href="/login" className="inline-block mt-6">
+            <Button variant="secondary" size="sm">Back to Login</Button>
+          </Link>
+        </div>
+      </Card>
+    );
+  }
+
   return (
     <Card className="w-full max-w-sm" padding="lg">
       <div className="text-center mb-6">
@@ -13,26 +93,42 @@ export default function SignupPage() {
         <p className="text-sm text-[#86868B] mt-1">Start with 5 free form fills</p>
       </div>
 
-      <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
+      <form className="space-y-4" onSubmit={handleSignup}>
         <Input
           label="Full Name"
           type="text"
           placeholder="Jane Doe"
           autoComplete="name"
+          value={fullName}
+          onChange={(e) => setFullName(e.target.value)}
+          required
         />
         <Input
           label="Email"
           type="email"
           placeholder="you@company.com"
           autoComplete="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
         />
         <Input
           label="Password"
           type="password"
-          placeholder="Create a password"
+          placeholder="Create a password (6+ characters)"
           autoComplete="new-password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
         />
-        <Button type="submit" className="w-full">
+
+        {error && (
+          <p className="text-sm text-[#FF3B30] bg-[#FF3B30]/5 px-3 py-2 rounded-xl">
+            {error}
+          </p>
+        )}
+
+        <Button type="submit" className="w-full" loading={loading}>
           Create Account
         </Button>
       </form>
@@ -47,7 +143,7 @@ export default function SignupPage() {
           </div>
         </div>
 
-        <Button variant="secondary" className="w-full mt-4">
+        <Button variant="secondary" className="w-full mt-4" onClick={handleGoogleSignup}>
           <svg className="w-4 h-4" viewBox="0 0 24 24">
             <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
             <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
