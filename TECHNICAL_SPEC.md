@@ -708,38 +708,58 @@ async function fillForm(formId: string, fieldValues: Record<string, string>) {
 ### Phase 1: MVP (Weeks 1-8)
 **Goal:** Upload PDF → manually map fields → fill → download
 
-- [ ] Project scaffolding (Next.js, Supabase, Tailwind)
-- [ ] Authentication (signup, login, OAuth)
-- [ ] PDF upload and storage
-- [ ] PDF viewer with PDF.js
-- [ ] Manual field placement (click to place)
-- [ ] Manual data entry per field
-- [ ] PDF filling with pdf-lib
-- [ ] Filled PDF download
-- [ ] Credit system (5 free credits)
-- [ ] Landing page
-- [ ] Basic dashboard
+- [x] Project scaffolding (Next.js 15, Supabase, Tailwind v4)
+- [x] Authentication (signup, login, OAuth) — Supabase Auth wired up
+- [x] Auth middleware — route protection, redirect logic
+- [x] Auth callback route — OAuth code exchange
+- [x] Sign out functionality
+- [x] Landing page — hero, features, pricing, CTA sections
+- [x] Basic dashboard — quick actions, credit balance, empty states
+- [x] Design system — Button, Input, Card, Badge, Modal components
+- [x] Layout system — Navbar, Sidebar, Footer
+- [x] Credit system UI — balance display, purchase page, credit packs
+- [x] Templates page — UI with search, empty state
+- [x] Data profiles page — UI with create modal, field list
+- [x] Settings page — profile, data retention, danger zone
+- [x] PDF uploader component — drag-and-drop with validation
+- [x] API route stubs — forms/upload, forms/detect, forms/fill, credits
+- [x] Stripe webhook route (stub)
+- [x] Database schema — 8 tables with RLS, auto user profile trigger
+- [x] Supabase client setup (browser + server SSR)
+- [x] AI pipeline code — field detection + auto-fill via Claude API
+- [x] PDF filler service — pdf-lib with AcroForm + coordinate-based
+- [x] Zustand stores — form state, credit state, UI state
+- [x] TypeScript types — form, template, profile, credit, API
+- [ ] **>>> RESUME HERE: Supabase setup** — run SQL migration, test signup/login
+- [ ] PDF upload to Supabase Storage (connect upload API to real storage)
+- [ ] PDF viewer with PDF.js (render uploaded PDFs in browser)
+- [ ] Manual field placement (click on PDF to place field markers)
+- [ ] Manual data entry per field (type values into placed fields)
+- [ ] PDF filling end-to-end (fill + download working pipeline)
+- [ ] Connect credit deduction to real database on form fill
 
 ### Phase 2: AI + Templates (Weeks 9-14)
 **Goal:** AI detects fields, drag-and-drop mapping, save templates
 
-- [ ] AI field detection via Claude API
-- [ ] Drag-and-drop field mapping (Fabric.js)
-- [ ] Data profiles (CRUD)
-- [ ] Template creation and reuse
-- [ ] AI auto-fill (smart mapping)
-- [ ] Credit purchase (Stripe integration)
-- [ ] Credit pack store
+- [x] AI field detection code written (Claude API vision + prompts)
+- [x] AI auto-fill code written (semantic field-to-profile mapping)
+- [ ] Connect AI detection to real upload flow (render pages → send to Claude)
+- [ ] Drag-and-drop field mapping on PDF canvas (Fabric.js)
+- [ ] Data profiles CRUD (connect UI to Supabase)
+- [ ] Template creation (save form + field mapping)
+- [ ] Template reuse (one-click fill from saved template)
+- [ ] Credit purchase with Stripe (real checkout sessions)
+- [ ] Stripe webhook handler (credit fulfillment on payment)
 
 ### Phase 3: Power Features (Weeks 15-20)
 **Goal:** Recurring fills, batch processing, team features
 
-- [ ] Recurring fill scheduling
-- [ ] Batch fill (CSV upload)
+- [ ] Recurring fill scheduling (cron-based auto-fills)
+- [ ] Batch fill (CSV upload → fill many forms at once)
 - [ ] Team invitations and shared templates
 - [ ] Template marketplace (public templates)
 - [ ] Usage analytics dashboard
-- [ ] Referral system
+- [ ] Referral system (give 5, get 5 credits)
 
 ### Phase 4: Scale & Polish (Weeks 21-26)
 **Goal:** Performance, API, mobile responsiveness
@@ -748,9 +768,10 @@ async function fillForm(formId: string, fieldValues: Record<string, string>) {
 - [ ] API documentation
 - [ ] Mobile-responsive workspace
 - [ ] Performance optimization (lazy loading, caching)
-- [ ] E2E test suite
+- [ ] E2E test suite (Playwright)
 - [ ] SOC 2 preparation
 - [ ] Production monitoring (Sentry, PostHog)
+- [ ] Deploy to Vercel
 
 ---
 
