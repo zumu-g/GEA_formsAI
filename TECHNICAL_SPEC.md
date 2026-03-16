@@ -38,6 +38,16 @@
 │  │PostgreSQL│  │  Redis   │  │  S3 /    │  │  Claude API   │  │
 │  │(Supabase)│  │  Cache   │  │  Storage │  │  (Anthropic)  │  │
 │  └──────────┘  └──────────┘  └──────────┘  └───────────────┘  │
+└────────────────────────┬────────────────────────────────────────┘
+                         │
+┌────────────────────────┴────────────────────────────────────────┐
+│                   EXTERNAL AI SERVICES                          │
+│  ┌──────────────────────┐  ┌──────────────────────────────┐    │
+│  │  form_filling_app    │  │  Skyvern                      │    │
+│  │  FastAPI :8000       │  │  Browser Automation :8080     │    │
+│  │  PyMuPDF + Claude    │  │  AI Web Form Filling          │    │
+│  │  Agent SDK + MCP     │  │  (20.8k GitHub stars)         │    │
+│  └──────────────────────┘  └──────────────────────────────┘    │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -48,7 +58,7 @@
 ### Frontend
 | Technology | Purpose | Why |
 |-----------|---------|-----|
-| **Next.js 15** (App Router) | Framework | SSR, API routes, file-based routing, React Server Components |
+| **Next.js 16** (App Router) | Framework | SSR, API routes, file-based routing, React Server Components |
 | **TypeScript** | Language | Type safety, better DX, catch errors at compile time |
 | **Tailwind CSS v4** | Styling | Rapid UI development, design system consistency |
 | **Framer Motion** | Animations | Apple-style fluid transitions and micro-interactions |
@@ -65,6 +75,8 @@
 | **Supabase** | Database + Auth | PostgreSQL, auth, realtime, storage — all-in-one |
 | **pdf-lib** | PDF manipulation | Fill form fields, flatten PDFs, server-side |
 | **Anthropic Claude API** | AI field detection | Best-in-class document understanding |
+| **form_filling_app** | AI PDF form filling | FastAPI + PyMuPDF + Claude Agent SDK — natural language PDF filling |
+| **Skyvern** | AI web form filling | Browser automation agent — fills web forms via AI navigation |
 | **Stripe** | Payments | Credit pack purchases, usage tracking |
 | **Redis (Upstash)** | Caching & rate limiting | Session cache, rate limiting, job queues |
 | **Vercel** | Hosting | Edge deployment, serverless functions, CDN |
@@ -377,9 +389,12 @@ Authorization: Bearer <supabase_access_token>
 #### Forms
 
 ```
-POST   /api/forms/upload          Upload a PDF
-POST   /api/forms/detect          Run AI field detection on uploaded PDF
-POST   /api/forms/fill            Fill a form and generate output PDF
+POST   /api/forms/upload          Upload a PDF (stored in memory, later Supabase Storage)
+POST   /api/forms/detect          Detect fields — dual path: PyMuPDF backend or Claude vision
+POST   /api/forms/fill            Fill form — AI agent (natural language) or manual field values
+POST   /api/forms/fill-stream     SSE streaming fill via Claude Agent SDK (real-time events)
+POST   /api/forms/web-fill        Create Skyvern task to fill a web form via browser automation
+GET    /api/forms/web-fill/:taskId  Poll Skyvern task status
 GET    /api/forms/:id             Get form details and detected fields
 DELETE /api/forms/:id             Delete an uploaded form
 ```
@@ -730,20 +745,30 @@ async function fillForm(formId: string, fieldValues: Record<string, string>) {
 - [x] PDF filler service — pdf-lib with AcroForm + coordinate-based
 - [x] Zustand stores — form state, credit state, UI state
 - [x] TypeScript types — form, template, profile, credit, API
-- [ ] **>>> RESUME HERE: Supabase setup** — run SQL migration, test signup/login
-- [ ] PDF upload to Supabase Storage (connect upload API to real storage)
-- [ ] PDF viewer with PDF.js (render uploaded PDFs in browser)
+- [x] AI form filling backend integration (form_filling_app — PyMuPDF + Claude Agent SDK)
+- [x] Web form automation integration (Skyvern — AI browser automation)
+- [x] Service client layer (formFillingBackend.ts, skyvernClient.ts, pdfStore.ts)
+- [x] Streaming fill API route (SSE proxy from FastAPI to browser)
+- [x] Interactive fill workspace page (PDF viewer + chat + field list)
+- [x] Dual-path field detection (AcroForm native + vision fallback)
+- [x] Fill page updated with PDF/Web form tab switcher
+- [x] useStreamingFill hook (SSE event parsing, error handling)
+- [ ] **>>> RESUME HERE: Start backends + test end-to-end**
+- [ ] Supabase setup — run SQL migration, test signup/login
+- [ ] PDF upload to Supabase Storage (replace in-memory pdfStore)
+- [ ] Serve original PDF to fill workspace viewer
 - [ ] Manual field placement (click on PDF to place field markers)
 - [ ] Manual data entry per field (type values into placed fields)
-- [ ] PDF filling end-to-end (fill + download working pipeline)
 - [ ] Connect credit deduction to real database on form fill
+- [ ] Skyvern web fill status page UI
 
 ### Phase 2: AI + Templates (Weeks 9-14)
 **Goal:** AI detects fields, drag-and-drop mapping, save templates
 
 - [x] AI field detection code written (Claude API vision + prompts)
 - [x] AI auto-fill code written (semantic field-to-profile mapping)
-- [ ] Connect AI detection to real upload flow (render pages → send to Claude)
+- [x] AI detection connected via form_filling_app backend (PyMuPDF AcroForm detection)
+- [x] AI fill connected via Claude Agent SDK streaming (natural language → filled PDF)
 - [ ] Drag-and-drop field mapping on PDF canvas (Fabric.js)
 - [ ] Data profiles CRUD (connect UI to Supabase)
 - [ ] Template creation (save form + field mapping)
@@ -820,6 +845,10 @@ AWS_REGION=
 UPSTASH_REDIS_URL=
 UPSTASH_REDIS_TOKEN=
 
+FORM_FILLING_BACKEND_URL=http://localhost:8000
+SKYVERN_API_URL=http://localhost:8080/api/v1
+SKYVERN_API_KEY=
+
 NEXT_PUBLIC_APP_URL=https://useslate.com
 ```
 
@@ -841,4 +870,4 @@ NEXT_PUBLIC_APP_URL=https://useslate.com
 ---
 
 *Confidential — GEA Technologies / Slate*
-*Version 1.0 — February 2026*
+*Version 1.1 — March 2026 (AI integration update)*

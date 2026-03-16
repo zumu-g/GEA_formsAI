@@ -1,0 +1,6 @@
+# Cloned external repos (managed separately)
+form_filling_app/
+skyvern/
+
+# Claude Code config
+.claude/skills/

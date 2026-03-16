@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getPDFPageCount } from '@/lib/pdf/filler';
+import { storePdf } from '@/lib/services/pdfStore';
 
 export async function POST(request: NextRequest) {
   try {
@@ -38,11 +39,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // TODO: Upload to S3 / Supabase Storage
-    // TODO: Create form record in database
-    // TODO: Return form ID
-
     const formId = crypto.randomUUID();
+
+    // Store PDF in memory (swap to Supabase Storage later)
+    storePdf(formId, pdfBytes, file.name);
 
     return NextResponse.json({
       success: true,
