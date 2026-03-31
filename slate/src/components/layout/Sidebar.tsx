@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import {
   LayoutDashboard,
   FileText,
+  Wand2,
   BookTemplate,
   User,
   Coins,
@@ -18,6 +19,7 @@ import { createClient } from '@/lib/supabase/client';
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/fill', label: 'Fill a Form', icon: FileText },
+  { href: '/skills', label: 'Skills', icon: Wand2 },
   { href: '/templates', label: 'Templates', icon: BookTemplate },
   { href: '/profiles', label: 'Data Profiles', icon: User },
   { href: '/credits', label: 'Credits', icon: Coins },

@@ -25,12 +25,25 @@ export async function fillPDF(
     );
 
     if (acroField) {
+      const fieldName = acroField.getName();
+      // Try checkbox first
       try {
-        const textField = form.getTextField(acroField.getName());
+        const checkBox = form.getCheckBox(fieldName);
+        if (value === 'true' || value === 'Yes' || value === '1') {
+          checkBox.check();
+        } else {
+          checkBox.uncheck();
+        }
+        continue;
+      } catch {
+        // Not a checkbox — try text field
+      }
+      try {
+        const textField = form.getTextField(fieldName);
         textField.setText(value);
         continue;
       } catch {
-        // Not a text field or other error — fall through to coordinate-based
+        // Not a text field either — fall through to coordinate-based
       }
     }
 

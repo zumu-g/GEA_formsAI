@@ -34,7 +34,7 @@ export interface FillSession {
   filledData: Record<string, string>;
   outputPath?: string;
   creditsUsed: number;
-  fillMethod: 'manual' | 'template' | 'ai_auto' | 'batch' | 'recurring' | 'api';
+  fillMethod: 'manual' | 'template' | 'ai_auto' | 'batch' | 'recurring' | 'api' | 'skill';
   createdAt: string;
 }
 

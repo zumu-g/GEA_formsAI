@@ -69,4 +69,5 @@ export const CREDIT_COSTS = {
   batch_fill: 1,
   recurring_fill: 1,
   api_fill: 1,
+  skill_fill: 1,
 } as const;

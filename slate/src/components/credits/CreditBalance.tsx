@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { Coins, Plus } from 'lucide-react';
 import { useCreditStore } from '@/stores/creditStore';
 import Link from 'next/link';
@@ -10,6 +11,15 @@ interface CreditBalanceProps {
 
 export function CreditBalance({ compact = false }: CreditBalanceProps) {
   const balance = useCreditStore((s) => s.balance);
+  const isLoading = useCreditStore((s) => s.isLoading);
+  const hasFetched = useCreditStore((s) => s.hasFetched);
+  const fetchBalance = useCreditStore((s) => s.fetchBalance);
+
+  useEffect(() => {
+    if (!hasFetched) {
+      fetchBalance();
+    }
+  }, [hasFetched, fetchBalance]);
 
   if (compact) {
     return (
@@ -18,7 +28,9 @@ export function CreditBalance({ compact = false }: CreditBalanceProps) {
         className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#5856D6]/10 hover:bg-[#5856D6]/15 transition-colors"
       >
         <Coins size={14} className="text-[#5856D6]" />
-        <span className="text-sm font-semibold text-[#5856D6]">{balance}</span>
+        <span className="text-sm font-semibold text-[#5856D6]">
+          {isLoading && !hasFetched ? '...' : balance}
+        </span>
       </Link>
     );
   }
@@ -27,7 +39,9 @@ export function CreditBalance({ compact = false }: CreditBalanceProps) {
     <div className="flex items-center justify-between p-5 rounded-2xl bg-gradient-to-br from-[#5856D6] to-[#4A48C4]">
       <div>
         <p className="text-sm text-white/70 font-medium">Credit Balance</p>
-        <p className="text-3xl font-bold text-white mt-1">{balance}</p>
+        <p className="text-3xl font-bold text-white mt-1">
+          {isLoading && !hasFetched ? '...' : balance}
+        </p>
         <p className="text-xs text-white/50 mt-1">credits remaining</p>
       </div>
       <Link

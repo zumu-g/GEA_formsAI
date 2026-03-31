@@ -110,6 +110,18 @@ export default function LoginPage() {
         </Button>
       </div>
 
+      {process.env.NODE_ENV === 'development' && (
+        <div className="mt-4">
+          <Button
+            variant="secondary"
+            className="w-full border-dashed border-2 border-amber-400 text-amber-700 bg-amber-50 hover:bg-amber-100"
+            onClick={() => { router.push('/dashboard'); }}
+          >
+            Skip to Dashboard (Dev)
+          </Button>
+        </div>
+      )}
+
       <p className="text-center text-sm text-[#86868B] mt-6">
         Don&apos;t have an account?{' '}
         <Link href="/signup" className="text-[#5856D6] font-medium hover:underline">
