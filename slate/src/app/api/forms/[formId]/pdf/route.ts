@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getPdfUrl, getPdf } from '@/lib/services/pdfStore';
+import { getPdf } from '@/lib/services/pdfStore';
 
 export async function GET(
   _request: NextRequest,
@@ -15,15 +15,7 @@ export async function GET(
       );
     }
 
-    // Try to get a signed URL (works when Supabase Storage is available)
-    const signedUrl = await getPdfUrl(formId);
-
-    if (signedUrl) {
-      return NextResponse.redirect(signedUrl);
-    }
-
-    // Fallback: serve PDF bytes directly from getPdf (covers in-memory store)
-    const pdf = await getPdf(formId);
+    const pdf = getPdf(formId);
 
     if (!pdf) {
       return NextResponse.json(

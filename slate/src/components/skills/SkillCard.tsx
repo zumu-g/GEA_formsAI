@@ -1,13 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import { FileSignature, Scale, FileText } from 'lucide-react';
+import { FileSignature, Scale, FileText, Calculator } from 'lucide-react';
 import type { SkillDefinition } from '@/types/skill';
 
 const ICON_MAP: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
   FileSignature,
   Scale,
   FileText,
+  Calculator,
 };
 
 interface SkillCardProps {
