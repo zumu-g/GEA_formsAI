@@ -22,7 +22,7 @@ export async function autoFillFields(
   }));
 
   const response = await client.messages.create({
-    model: 'claude-sonnet-4-5-20250929',
+    model: 'claude-sonnet-4-6',
     max_tokens: 2048,
     system: AUTO_FILL_SYSTEM_PROMPT,
     messages: [

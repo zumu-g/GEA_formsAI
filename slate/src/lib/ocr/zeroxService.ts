@@ -43,7 +43,7 @@ export async function ocrWithZerox(
           : 'Convert this PDF page to well-structured markdown. Preserve all text, labels, field names, checkboxes, tables, and layout structure. For form fields, note the field label and any current values or empty fields.';
 
         const response = await client.messages.create({
-          model: 'claude-sonnet-4-5-20250929',
+          model: 'claude-sonnet-4-6',
           max_tokens: 4096,
           messages: [
             {

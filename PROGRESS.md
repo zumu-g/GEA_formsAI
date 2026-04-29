@@ -1,8 +1,8 @@
 # Slate — Development Progress
 
-**Last updated:** 4 April 2026
+**Last updated:** 29 April 2026
 **Current phase:** Phase 2 (Skills + OCR Integration)
-**Status:** Skills wizard working with 3 skills, pdfme + Zerox integrated, needs coordinate calibration and end-to-end testing.
+**Status:** Skills wizard working with 4 skills, pdfme + Zerox integrated, 6 open-source tools integrated, needs coordinate calibration and end-to-end testing.
 
 ---
 
@@ -20,10 +20,11 @@
 
 ### COMPLETED — Skills Feature (26 Mar - 4 Apr 2026)
 
-**3 Form Filling Skills:**
+**4 Form Filling Skills:**
 1. **Contract of Sale Offer (VIC)** — 5 sections, 25+ fields (purchaser, solicitor, payment, conditions, signing)
-2. **Section 32 Statement (VIC)** — Draft skeleton, 2 sections
+2. **Section 32 Statement (VIC)** — 7 sections (complete)
 3. **Trust Reconciliation Report** — 5 sections (header, bank account, cash book, ledger balances, sign-off)
+4. **Transfer of Land** — VIC transfer of land skill
 
 **Features:**
 - Step-by-step wizard UI with section sidebar, progress bar, validation, review
@@ -51,28 +52,36 @@
 - OCR via Claude vision using `customModelFunction` (no new API keys)
 - Field discovery: PDF → images → markdown → AI field extraction
 - `POST /api/forms/detect-fields` endpoint
-- Needs GraphicsMagick system dependency
+- GraphicsMagick installed (brew install graphicsmagick ✓)
+
+### COMPLETED — Tool Integrations (29 Apr 2026)
+
+**6 Open-Source Form Filling Tools Integrated:**
+1. **Stagehand** (22k★, MIT) — TypeScript SDK for AI-driven web form automation. Native Next.js integration. Replaces/complements Skyvern. `src/lib/services/stagehandClient.ts`
+2. **Playwright MCP** — MCP server enabling Claude to drive a browser directly. `@playwright/mcp` installed.
+3. **browser-use** (91k★, MIT) — Python + Playwright AI web form agent. `POST /web-fill` on Python backend.
+4. **Docling** (58.7k★, MIT, IBM Research) — Structured PDF extraction with bounding box coordinates. `POST /docling/extract` on Python backend. Directly enables pdfme coordinate calibration.
+5. **MarkItDown** (118k★, MIT, Microsoft) — DOCX/XLSX/PPTX/HTML → Markdown for LLM context. `POST /convert` on Python backend.
+6. **Unstructured** (14.6k★, Apache 2.0) — Semantic document partitioning. `src/lib/services/unstructuredClient.ts`.
 
 ---
 
 ## RESUME HERE — Next Steps
 
 ### Immediate (Calibration & Testing)
-1. **Calibrate pdfme coordinates** — Upload Reconciliation Report PDF, generate, check text placement. Adjust mm values in `pdfmeTemplates.ts`. Repeat for Contract of Sale.
-2. **Install GraphicsMagick** — `arch -arm64 brew install graphicsmagick` (for Zerox)
-3. **End-to-end test** — /skills → upload PDF → fill wizard → generate → verify output
-4. **Test Zerox OCR** — Call `/api/forms/detect-fields` with a PDF
+1. **Calibrate pdfme coordinates** — Use `POST /docling/extract` (Python backend) with real PDFs to get actual mm positions, then update `pdfmeTemplates.ts`
+2. **End-to-end test** — /skills → upload PDF → fill wizard → generate → verify output
+3. **Test Zerox OCR** — Call `/api/forms/detect-fields` with a PDF (GraphicsMagick now installed)
 
 ### Short Term
-5. **Complete Section 32 skill** — Add remaining sections
-6. **Wire Supabase Storage** — Replace in-memory pdfStore with real storage
-7. **Run Supabase migration** — Execute SQL schema
-8. **Connect Stripe** — Credit purchases
+4. **Wire Supabase Storage** — Replace in-memory pdfStore with real storage
+5. **Run Supabase migration** — Execute SQL schema
+6. **Connect Stripe** — Credit purchases
 
 ### Medium Term
-9. **pdfme Designer UI** — `@pdfme/ui` for visual template creation
-10. **Deploy** — Vercel for app (note: Zerox needs self-hosted for GraphicsMagick)
-11. **More skills** — Transfer of Land, Power of Attorney, Lease Agreement
+7. **pdfme Designer UI** — `@pdfme/ui` for visual template creation
+8. **Deploy** — Vercel for app (note: Zerox needs self-hosted for GraphicsMagick)
+9. **More skills** — Power of Attorney, Lease Agreement
 
 ---
 
@@ -81,12 +90,17 @@
 | Service | Status | Notes |
 |---------|--------|-------|
 | **Supabase** | Created | URL + anon key in .env.local. SQL migration needs to be run. |
-| **Anthropic (Claude)** | Configured | Used by skills wizard, Zerox OCR, and form_filling_app |
+| **Anthropic (Claude)** | Configured | Used by skills wizard, Zerox OCR, and form_filling_app. All models updated to claude-sonnet-4-6. |
 | **pdfme** | Installed | @pdfme/generator + common + schemas. Coordinates need calibration. |
-| **Zerox** | Installed | Needs `brew install graphicsmagick`. Uses Anthropic via customModelFunction. |
+| **Zerox** | Installed | GraphicsMagick installed (1.3.46_1). Uses Anthropic via customModelFunction. |
 | **form_filling_app** | Installed | FastAPI backend. Needs `ANTHROPIC_API_KEY` to run. |
 | **Skyvern** | Installed | Needs Docker Desktop + API key. |
 | **Stripe** | Not configured | Need account + keys |
+| **Stagehand** | Installed | `@browserbasehq/stagehand` npm. Runs locally via Playwright, no extra keys needed. |
+| **browser-use** | Installed | Python venv. `POST /web-fill` endpoint. |
+| **Docling** | Installed | Python venv. `POST /docling/extract` endpoint. |
+| **MarkItDown** | Installed | Python venv. `POST /convert` endpoint. |
+| **GraphicsMagick** | Installed | brew install graphicsmagick (1.3.46_1). Required for Zerox PDF-to-image conversion. |
 
 ---
 
@@ -104,7 +118,8 @@ slate/src/
 │   ├── ocr/                         # zeroxService.ts, fieldDiscovery.ts
 │   ├── pdf/                         # pdfmeGenerator.ts, pdfmeTemplates.ts, filler.ts
 │   └── skills/                      # index.ts, utils.ts, vic-contract-of-sale-offer.ts,
-│                                    # section-32-offer.ts, reconciliation-report.ts
+│                                    # section-32-offer.ts, reconciliation-report.ts,
+│                                    # transfer-of-land.ts
 ├── stores/skillStore.ts             # Zustand wizard session
 └── types/skill.ts                   # SkillDefinition, PdfmeFieldMapping
 ```

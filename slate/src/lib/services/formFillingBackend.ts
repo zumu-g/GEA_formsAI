@@ -1,5 +1,20 @@
 import type { BackendAnalyzeResponse } from '@/types/formFillingBackend';
 
+export interface DoclingTextBlock {
+  text: string;
+  page: number;
+  bbox: { x0: number; y0: number; x1: number; y1: number };
+  type: string;
+}
+
+export interface DoclingExtractResult {
+  text_blocks: DoclingTextBlock[];
+  tables: DoclingTextBlock[];
+  markdown: string;
+  pages: unknown[];
+  error?: string;
+}
+
 const BACKEND_URL = process.env.FORM_FILLING_BACKEND_URL || 'http://localhost:8000';
 
 export async function analyzeForm(pdfBytes: Uint8Array, filename: string = 'form.pdf'): Promise<BackendAnalyzeResponse> {
@@ -96,5 +111,37 @@ export async function getSessionInfo(sessionId: string): Promise<Record<string, 
   if (!res.ok) {
     throw new Error(`Failed to get session info: ${res.status}`);
   }
+  return res.json();
+}
+
+export async function doclingExtract(pdfBytes: Uint8Array, filename: string = 'document.pdf'): Promise<DoclingExtractResult> {
+  const formData = new FormData();
+  formData.append('file', new Blob([Buffer.from(pdfBytes)], { type: 'application/pdf' }), filename);
+
+  const res = await fetch(`${BACKEND_URL}/docling/extract`, {
+    method: 'POST',
+    body: formData,
+  });
+
+  if (!res.ok) {
+    throw new Error(`Docling extract failed: ${res.status} ${res.statusText}`);
+  }
+
+  return res.json();
+}
+
+export async function convertDocument(fileBytes: Uint8Array, filename: string): Promise<{ markdown: string; title: string }> {
+  const formData = new FormData();
+  formData.append('file', new Blob([Buffer.from(fileBytes)]), filename);
+
+  const res = await fetch(`${BACKEND_URL}/convert`, {
+    method: 'POST',
+    body: formData,
+  });
+
+  if (!res.ok) {
+    throw new Error(`Document convert failed: ${res.status} ${res.statusText}`);
+  }
+
   return res.json();
 }

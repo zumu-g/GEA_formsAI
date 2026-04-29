@@ -28,7 +28,7 @@ export async function discoverFields(
     : '';
 
   const response = await client.messages.create({
-    model: 'claude-sonnet-4-5-20250929',
+    model: 'claude-sonnet-4-6',
     max_tokens: 8192,
     system: `You are a form field discovery AI. Given markdown extracted from a PDF form via OCR, identify every FILLABLE field (empty or partially filled). Return a JSON array of objects.
 

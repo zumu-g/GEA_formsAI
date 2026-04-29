@@ -19,7 +19,7 @@ export async function detectFormFields(
 
   for (const pageImage of pageImages) {
     const response = await client.messages.create({
-      model: 'claude-sonnet-4-5-20250929',
+      model: 'claude-sonnet-4-6',
       max_tokens: 4096,
       system: FIELD_DETECTION_SYSTEM_PROMPT,
       messages: [
