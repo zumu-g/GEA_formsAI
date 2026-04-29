@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { Upload, FileText, Loader2 } from 'lucide-react';
 
 interface SkillPdfUploadProps {
@@ -13,6 +13,7 @@ export function SkillPdfUpload({ skillName, onUploaded }: SkillPdfUploadProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const handleFile = useCallback(
     async (file: File) => {
@@ -87,6 +88,15 @@ export function SkillPdfUpload({ skillName, onUploaded }: SkillPdfUploadProps) {
         </p>
       </div>
 
+      <input
+        ref={inputRef}
+        type="file"
+        accept=".pdf"
+        onChange={handleInputChange}
+        className="hidden"
+        disabled={isUploading}
+      />
+
       <div
         onDragOver={(e) => {
           e.preventDefault();
@@ -94,19 +104,13 @@ export function SkillPdfUpload({ skillName, onUploaded }: SkillPdfUploadProps) {
         }}
         onDragLeave={() => setIsDragging(false)}
         onDrop={handleDrop}
+        onClick={() => !isUploading && inputRef.current?.click()}
         className={`
-          relative border-2 border-dashed rounded-2xl p-10 text-center
+          border-2 border-dashed rounded-2xl p-10 text-center
           transition-all duration-200 cursor-pointer
           ${isDragging ? 'border-[#5856D6] bg-[#5856D6]/5' : 'border-[#E5E5EA] hover:border-[#C7C7CC] bg-[#FAFAFA]'}
         `}
       >
-        <input
-          type="file"
-          accept=".pdf"
-          onChange={handleInputChange}
-          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-          disabled={isUploading}
-        />
 
         {isUploading ? (
           <div className="flex flex-col items-center gap-3">

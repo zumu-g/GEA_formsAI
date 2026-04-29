@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { FileSignature, Scale, FileText, Calculator } from 'lucide-react';
+import { FileSignature, Scale, FileText, Calculator, ArrowRightLeft, BookOpen } from 'lucide-react';
 import type { SkillDefinition } from '@/types/skill';
 
 const ICON_MAP: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
@@ -9,6 +9,8 @@ const ICON_MAP: Record<string, React.ComponentType<{ size?: number; className?: 
   Scale,
   FileText,
   Calculator,
+  ArrowRightLeft,
+  BookOpen,
 };
 
 interface SkillCardProps {

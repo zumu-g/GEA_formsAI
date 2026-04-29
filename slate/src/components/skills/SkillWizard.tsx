@@ -37,12 +37,11 @@ export function SkillWizard({ skill }: SkillWizardProps) {
   }, [pdfUrl]);
 
   const computedFieldIds = useMemo(() => {
-    const ids = new Set<string>();
-    for (const c of skill.computedFields ?? []) {
-      ids.add(c.skillFieldId);
-    }
-    return ids;
-  }, [skill.computedFields]);
+    return new Set<string>([
+      ...(skill.computedFields?.map((cf) => cf.skillFieldId) ?? []),
+      ...skill.sections.flatMap((s) => s.fields.filter((f) => f.computed).map((f) => f.id)),
+    ]);
+  }, [skill.computedFields, skill.sections]);
 
   // Auto-compute derived fields whenever values change
   const valuesWithComputed = useMemo(() => {

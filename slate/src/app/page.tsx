@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import {
@@ -28,6 +29,8 @@ const fadeUp = {
 };
 
 export default function LandingPage() {
+  useEffect(() => { document.title = 'Slate — AI Form Filling for Real Estate'; }, []);
+
   return (
     <div className="min-h-screen bg-white">
       <Navbar />
@@ -55,7 +58,7 @@ export default function LandingPage() {
             className="mt-6 text-lg md:text-xl text-[#86868B] max-w-2xl mx-auto leading-relaxed"
           >
             Upload a PDF. AI detects the fields. Drag and drop your data.
-            Download the filled form. Pay only when you fill — starting at $0.25.
+            Download the filled form. Pay only when you fill — starting at $0.20 per fill.
           </motion.p>
 
           <motion.div
@@ -81,7 +84,7 @@ export default function LandingPage() {
             transition={{ ...fadeUp.transition, delay: 0.4 }}
             className="mt-4 text-sm text-[#AEAEB2]"
           >
-            5 free fills. No credit card required.
+            5 free credits. No credit card required.
           </motion.p>
         </div>
 
@@ -211,7 +214,7 @@ export default function LandingPage() {
               {
                 icon: CreditCard,
                 title: 'Pay Per Use',
-                description: 'No subscriptions. No monthly bills. Buy credits when you need them, starting at $0.10 each.',
+                description: 'No subscriptions. No monthly bills. Buy credits when you need them, from $0.10 per fill on volume packs.',
               },
               {
                 icon: Repeat,
@@ -313,7 +316,7 @@ export default function LandingPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
             {[
               { stat: '60s', label: 'Average time to fill a form' },
-              { stat: '$0.25', label: 'Starting cost per form fill' },
+              { stat: '$0.20', label: 'Starting cost per form fill' },
               { stat: '99.2%', label: 'AI field detection accuracy' },
             ].map((item) => (
               <div key={item.label}>
@@ -343,7 +346,7 @@ export default function LandingPage() {
             </Link>
           </div>
           <p className="mt-3 text-sm text-[#AEAEB2]">
-            5 free fills. No credit card. No subscription.
+            5 free credits. No credit card. No subscription.
           </p>
         </div>
       </section>

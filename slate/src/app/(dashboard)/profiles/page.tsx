@@ -27,6 +27,8 @@ function filledFieldCount(data: Record<string, string>): number {
 }
 
 export default function ProfilesPage() {
+  useEffect(() => { document.title = 'Data Profiles — Slate'; }, []);
+
   const [profiles, setProfiles] = useState<DataProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -222,11 +224,10 @@ export default function ProfilesPage() {
             </div>
             <h3 className="text-base font-semibold text-[#1D1D1F] mt-5">No profiles yet</h3>
             <p className="text-sm text-[#86868B] mt-2 max-w-sm mx-auto">
-              Create a data profile with your name, address, and other details to auto-fill form
-              fields.
+              Create a data profile to auto-fill your details into any form.
             </p>
             <Button variant="secondary" size="sm" className="mt-5" onClick={openCreateModal}>
-              Create Your First Profile
+              Create Profile
             </Button>
           </Card>
         </motion.div>

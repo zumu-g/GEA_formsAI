@@ -54,6 +54,8 @@ function SuccessBanner({ credits, isMock, onDismiss }: SuccessBannerProps) {
 }
 
 export default function CreditsPage() {
+  useEffect(() => { document.title = 'Credits — Slate'; }, []);
+
   const [loading, setLoading] = useState<string | null>(null);
   const [successInfo, setSuccessInfo] = useState<{
     credits: number;
@@ -116,9 +118,9 @@ export default function CreditsPage() {
         </p>
       </div>
 
-      <CreditBalance />
+      <CreditBalance buyHref="#pricing" />
 
-      <div className="mt-10">
+      <div id="pricing" className="mt-10">
         <h2 className="text-lg font-semibold text-[#1D1D1F] mb-4">Buy Credits</h2>
         <CreditPurchase onPurchase={handlePurchase} loading={loading} />
       </div>

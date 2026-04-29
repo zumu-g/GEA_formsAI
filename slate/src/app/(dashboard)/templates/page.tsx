@@ -43,6 +43,8 @@ function SkeletonCard() {
 }
 
 export default function TemplatesPage() {
+  useEffect(() => { document.title = 'Templates — Slate'; }, []);
+
   const [templates, setTemplates] = useState<Template[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchValue, setSearchValue] = useState('');
@@ -169,12 +171,12 @@ export default function TemplatesPage() {
             <p className="text-sm text-[#86868B] mt-2 max-w-sm mx-auto">
               {debouncedQuery
                 ? 'Try a different search term or create a new template.'
-                : 'Fill a form and save it as a template to reuse it with one click next time.'}
+                : 'Fill a form and save it as a template to reuse it with one click.'}
             </p>
             {!debouncedQuery && (
-              <Link href="/fill" className="inline-block mt-5">
+              <Link href="/skills" className="inline-block mt-5">
                 <Button variant="secondary" size="sm">
-                  Fill Your First Form
+                  Browse Skills
                 </Button>
               </Link>
             )}

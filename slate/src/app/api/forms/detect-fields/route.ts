@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getPdf } from '@/lib/services/pdfStore';
 import { ocrWithZerox } from '@/lib/ocr/zeroxService';
 import { discoverFields } from '@/lib/ocr/fieldDiscovery';
-import { DEV_MODE, MOCK_USER } from '@/lib/dev';
+import { DEV_MODE } from '@/lib/dev';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 export async function POST(request: NextRequest) {
@@ -31,7 +31,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const stored = await getPdf(formId);
+    const stored = getPdf(formId);
     if (!stored) {
       return NextResponse.json(
         { success: false, error: { code: 'FORM_NOT_FOUND', message: 'PDF not found.' } },

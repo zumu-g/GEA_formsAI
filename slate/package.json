@@ -11,6 +11,9 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.74.0",
     "@browserbasehq/stagehand": "^3.3.0",
+    "@pdfme/common": "^6.0.6",
+    "@pdfme/generator": "^6.0.6",
+    "@pdfme/schemas": "^6.0.6",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.95.3",
     "framer-motion": "^12.33.0",
@@ -24,6 +27,7 @@
     "react-dropzone": "^14.4.0",
     "stripe": "^20.3.1",
     "unstructured-client": "^0.31.0",
+    "zerox": "^1.1.20",
     "zod": "^4.3.6",
     "zustand": "^5.0.11"
   },

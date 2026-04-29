@@ -7,9 +7,11 @@ import Link from 'next/link';
 
 interface CreditBalanceProps {
   compact?: boolean;
+  /** Override the href for the "Buy Credits" button. Defaults to "/credits". */
+  buyHref?: string;
 }
 
-export function CreditBalance({ compact = false }: CreditBalanceProps) {
+export function CreditBalance({ compact = false, buyHref = '/credits' }: CreditBalanceProps) {
   const balance = useCreditStore((s) => s.balance);
   const isLoading = useCreditStore((s) => s.isLoading);
   const hasFetched = useCreditStore((s) => s.hasFetched);
@@ -45,7 +47,7 @@ export function CreditBalance({ compact = false }: CreditBalanceProps) {
         <p className="text-xs text-white/50 mt-1">credits remaining</p>
       </div>
       <Link
-        href="/credits"
+        href={buyHref}
         className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white/20 hover:bg-white/30 transition-colors text-white text-sm font-medium"
       >
         <Plus size={14} />

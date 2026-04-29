@@ -1,10 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getPDFPageCount } from '@/lib/pdf/filler';
-import { storePdf } from '@/lib/services/pdfStore';
+import { storePdf, cleanupOldPdfs } from '@/lib/services/pdfStore';
 
 export async function POST(request: NextRequest) {
+  cleanupOldPdfs();
+
   try {
-    const formData = await request.formData();
+    let formData: FormData;
+    try {
+      formData = await request.formData();
+    } catch {
+      return NextResponse.json(
+        { success: false, error: { code: 'INVALID_REQUEST', message: 'Expected multipart/form-data.' } },
+        { status: 400 }
+      );
+    }
     const file = formData.get('file') as File | null;
 
     if (!file) {

@@ -29,11 +29,10 @@ export function SkillReview({
 
       <div className="space-y-4">
         {skill.sections.map((section, sectionIndex) => {
-          const filledFields = section.fields.filter(
-            (f) =>
-              (values[f.id] && values[f.id].trim() !== '') ||
-              (f.type === 'checkbox' && values[f.id] === 'false')
-          );
+          const filledFields = section.fields.filter((f) => {
+            if (f.type === 'checkbox') return values[f.id] === 'true';
+            return values[f.id] && values[f.id].trim() !== '';
+          });
 
           return (
             <div

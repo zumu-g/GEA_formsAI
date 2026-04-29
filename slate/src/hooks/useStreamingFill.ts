@@ -9,7 +9,7 @@ interface UseStreamingFillReturn {
   filledPdfUrl: string | null;
   sessionId: string | null;
   error: string | null;
-  startFill: (formId: string, instructions: string, resumeSessionId?: string) => void;
+  startFill: (formId: string, instructions: string, resumeSessionId?: string) => Promise<void>;
   reset: () => void;
 }
 

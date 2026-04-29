@@ -1,10 +1,13 @@
 'use client';
 
+import { useEffect } from 'react';
 import { SKILLS } from '@/lib/skills';
 import { SkillCard } from '@/components/skills/SkillCard';
 import { Wand2 } from 'lucide-react';
 
 export default function SkillsPage() {
+  useEffect(() => { document.title = 'Skills — Slate'; }, []);
+
   return (
     <div className="max-w-4xl mx-auto">
       <div className="flex items-center gap-3 mb-8">

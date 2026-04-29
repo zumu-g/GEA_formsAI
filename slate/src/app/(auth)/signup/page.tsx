@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
@@ -9,6 +9,8 @@ import { Card } from '@/components/ui/Card';
 import { createClient } from '@/lib/supabase/client';
 
 export default function SignupPage() {
+  useEffect(() => { document.title = 'Get Started — Slate'; }, []);
+
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -90,7 +92,7 @@ export default function SignupPage() {
     <Card className="w-full max-w-sm" padding="lg">
       <div className="text-center mb-6">
         <h1 className="text-xl font-bold text-[#1D1D1F]">Create your account</h1>
-        <p className="text-sm text-[#86868B] mt-1">Start with 5 free form fills</p>
+        <p className="text-sm text-[#86868B] mt-1">Start with 5 free credits</p>
       </div>
 
       <form className="space-y-4" onSubmit={handleSignup}>
@@ -156,9 +158,9 @@ export default function SignupPage() {
 
       <p className="text-center text-xs text-[#AEAEB2] mt-6">
         By signing up, you agree to our{' '}
-        <Link href="#" className="text-[#5856D6] hover:underline">Terms</Link>
+        <Link href="/terms" className="text-[#5856D6] hover:underline">Terms</Link>
         {' '}and{' '}
-        <Link href="#" className="text-[#5856D6] hover:underline">Privacy Policy</Link>.
+        <Link href="/privacy" className="text-[#5856D6] hover:underline">Privacy Policy</Link>.
       </p>
 
       {process.env.NODE_ENV === 'development' && (

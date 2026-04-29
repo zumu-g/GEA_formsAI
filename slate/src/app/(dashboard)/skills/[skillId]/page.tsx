@@ -82,6 +82,7 @@ export default function SkillExecutionPage() {
         {session && session.status !== 'upload' && (
           <button
             onClick={() => {
+              hasAutoFilled.current = false;
               reset();
               startSession(skillId);
             }}
@@ -93,7 +94,7 @@ export default function SkillExecutionPage() {
       </div>
 
       {/* Wizard */}
-      <SkillWizard skill={skill} />
+      <SkillWizard key={session?.formId ?? 'no-session'} skill={skill} />
     </div>
   );
 }
