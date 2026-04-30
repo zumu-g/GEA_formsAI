@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useCallback, useRef } from 'react';
-import { Upload, FileText, Loader2 } from 'lucide-react';
+import { flushSync } from 'react-dom';
+import { Upload, FileText, Loader2, CheckCircle2 } from 'lucide-react';
 
 interface SkillPdfUploadProps {
   skillName: string;
@@ -11,13 +12,20 @@ interface SkillPdfUploadProps {
 export function SkillPdfUpload({ skillName, onUploaded }: SkillPdfUploadProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const pendingFormId = useRef<string | null>(null);
 
   const handleFile = useCallback(
     async (file: File) => {
-      if (file.type !== 'application/pdf') {
+      const isPdf =
+        file.type === 'application/pdf' ||
+        ((!file.type || file.type === 'application/octet-stream') &&
+          file.name.toLowerCase().endsWith('.pdf'));
+
+      if (!isPdf) {
         setError('Please upload a PDF file.');
         return;
       }
@@ -27,9 +35,14 @@ export function SkillPdfUpload({ skillName, onUploaded }: SkillPdfUploadProps) {
         return;
       }
 
-      setError(null);
-      setFileName(file.name);
-      setIsUploading(true);
+      // flushSync forces the loading state to paint before the async fetch starts,
+      // preventing React 18 batching from skipping the intermediate loading render.
+      flushSync(() => {
+        setError(null);
+        setFileName(file.name);
+        setIsUploading(true);
+        setIsSuccess(false);
+      });
 
       try {
         const formData = new FormData();
@@ -46,12 +59,21 @@ export function SkillPdfUpload({ skillName, onUploaded }: SkillPdfUploadProps) {
           throw new Error(data.error?.message ?? 'Upload failed.');
         }
 
+        // Show success state briefly so the user knows the upload worked
+        pendingFormId.current = data.data.id;
+        flushSync(() => {
+          setIsUploading(false);
+          setIsSuccess(true);
+        });
+
+        // Short pause so the success state is visible, then transition
+        await new Promise((r) => setTimeout(r, 600));
         onUploaded(data.data.id);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Upload failed.');
         setFileName(null);
-      } finally {
         setIsUploading(false);
+        setIsSuccess(false);
       }
     },
     [onUploaded]
@@ -104,7 +126,7 @@ export function SkillPdfUpload({ skillName, onUploaded }: SkillPdfUploadProps) {
         }}
         onDragLeave={() => setIsDragging(false)}
         onDrop={handleDrop}
-        onClick={() => !isUploading && inputRef.current?.click()}
+        onClick={() => !isUploading && !isSuccess && inputRef.current?.click()}
         className={`
           border-2 border-dashed rounded-2xl p-10 text-center
           transition-all duration-200 cursor-pointer
@@ -116,7 +138,14 @@ export function SkillPdfUpload({ skillName, onUploaded }: SkillPdfUploadProps) {
           <div className="flex flex-col items-center gap-3">
             <Loader2 size={32} className="text-[#5856D6] animate-spin" />
             <p className="text-sm text-[#86868B]">
-              Uploading <span className="font-medium text-[#1D1D1F]">{fileName}</span>...
+              Uploading <span className="font-medium text-[#1D1D1F]">{fileName}</span>…
+            </p>
+          </div>
+        ) : isSuccess ? (
+          <div className="flex flex-col items-center gap-3">
+            <CheckCircle2 size={32} className="text-green-500" />
+            <p className="text-sm text-[#86868B]">
+              <span className="font-medium text-[#1D1D1F]">{fileName}</span> ready
             </p>
           </div>
         ) : (
