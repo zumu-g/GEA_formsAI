@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { FileSignature, Scale, FileText, Calculator, ArrowRightLeft, BookOpen } from 'lucide-react';
+import { FileSignature, Scale, FileText, Calculator, ArrowRightLeft, BookOpen, FileDown } from 'lucide-react';
 import type { SkillDefinition } from '@/types/skill';
 
 const ICON_MAP: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
@@ -43,6 +43,19 @@ export function SkillCard({ skill }: SkillCardProps) {
             )}
           </div>
           <p className="text-sm text-[#86868B] mt-1 line-clamp-2">{skill.description}</p>
+
+          {skill.formTemplateUrl && (
+            <a
+              href={skill.formTemplateUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="inline-flex items-center gap-1 text-xs text-[#5856D6] hover:underline mt-1"
+            >
+              <FileDown size={11} />
+              Get blank form
+            </a>
+          )}
 
           <div className="flex items-center gap-3 mt-3">
             {skill.jurisdiction && (

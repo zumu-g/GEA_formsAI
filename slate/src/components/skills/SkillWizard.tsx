@@ -234,6 +234,7 @@ export function SkillWizard({ skill }: SkillWizardProps) {
               <button
                 key={section.id}
                 disabled={!canNavigate}
+                title={!canNavigate ? 'Complete previous sections first' : section.title}
                 onClick={() => {
                   if (!canNavigate) return;
                   if (isReview) {
@@ -273,6 +274,7 @@ export function SkillWizard({ skill }: SkillWizardProps) {
             return (
               <button
                 disabled={!allComplete && !isReview}
+                title={!allComplete && !isReview ? 'Complete previous sections first' : 'Review & Generate'}
                 onClick={() => {
                   if (allComplete) {
                     setStatus('review');
@@ -316,10 +318,10 @@ export function SkillWizard({ skill }: SkillWizardProps) {
             {/* Progress */}
             <div className="flex items-center justify-between mb-6">
               <span className="text-xs text-[#86868B] font-medium">
-                Step {session.currentSectionIndex + 1} of {skill.sections.length}
+                Step {session.currentSectionIndex + 1} of {skill.sections.length + 1}
               </span>
               <div className="flex gap-1">
-                {skill.sections.map((_, idx) => (
+                {[...skill.sections, null].map((_, idx) => (
                   <div
                     key={idx}
                     className={`h-1 w-6 rounded-full transition-colors ${
@@ -343,6 +345,7 @@ export function SkillWizard({ skill }: SkillWizardProps) {
               <button
                 onClick={handleBack}
                 disabled={isFirstSection}
+                aria-label={isFirstSection ? 'Already on first section' : 'Go to previous section'}
                 className={`
                   flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium
                   transition-all duration-150 cursor-pointer
@@ -359,6 +362,7 @@ export function SkillWizard({ skill }: SkillWizardProps) {
 
               <button
                 onClick={handleNext}
+                aria-label={session.currentSectionIndex === skill.sections.length - 1 ? 'Proceed to review' : 'Go to next section'}
                 className="flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold text-white bg-[#5856D6] hover:bg-[#4240B0] active:scale-[0.98] transition-all duration-200 cursor-pointer"
               >
                 {session.currentSectionIndex === skill.sections.length - 1
@@ -371,7 +375,15 @@ export function SkillWizard({ skill }: SkillWizardProps) {
         )}
 
         {genError && (
-          <p className="mt-4 text-sm text-red-600 text-center">{genError}</p>
+          <div className="mt-4 px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-center">
+            <p className="text-sm text-red-700 mb-2">{genError}</p>
+            <button
+              onClick={handleGenerate}
+              className="text-sm font-medium text-[#5856D6] hover:text-[#4240B0] transition-colors cursor-pointer"
+            >
+              Try again →
+            </button>
+          </div>
         )}
       </div>
     </div>

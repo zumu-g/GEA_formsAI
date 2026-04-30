@@ -5,7 +5,7 @@ export const reconciliationReport: SkillDefinition = {
   id: 'trust_reconciliation_report',
   name: 'Trust Reconciliation Report',
   description:
-    'Fill out a trust account reconciliation report. Bank account, cash book, ledger balances, and sign-off.',
+    'Trust account reconciliation report for real estate agencies. For property managers and agency principals. Covers trust receipts, disbursements, and balance reconciliation.',
   icon: 'Calculator',
   version: '1.0',
   jurisdiction: 'VIC, Australia',

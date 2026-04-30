@@ -5,7 +5,7 @@ export const vicContractOfSaleOffer: SkillDefinition = {
   id: 'vic_contract_of_sale_offer',
   name: 'Contract of Sale Offer',
   description:
-    'Fill out the purchaser side of a Victorian Contract of Sale of Land. Covers purchaser details, solicitor, payment, conditions, and signing.',
+    "Purchaser's offer on a Victorian Contract of Sale. For purchasers and their conveyancers. Covers purchase price, deposit, conditions, and settlement terms.",
   icon: 'FileSignature',
   version: '1.0',
   jurisdiction: 'VIC, Australia',
@@ -169,16 +169,14 @@ export const vicContractOfSaleOffer: SkillDefinition = {
         {
           id: 'gst_farming_business',
           label: 'Farming Business / Going Concern',
-          type: 'text',
-          placeholder: 'e.g. farming business',
-          helpText: "Enter 'farming business' or 'going concern' if applicable.",
+          type: 'checkbox',
+          helpText: 'Tick if this sale includes a farming business or qualifies as a going concern for GST purposes.',
         },
         {
           id: 'gst_margin_scheme',
-          label: 'Margin Scheme',
-          type: 'text',
-          placeholder: 'e.g. margin scheme',
-          helpText: "Enter 'margin scheme' if the margin scheme applies.",
+          label: 'GST Margin Scheme Applies',
+          type: 'checkbox',
+          helpText: 'Tick if the vendor and purchaser have agreed to apply the GST margin scheme to this sale.',
         },
         {
           id: 'loan_lender',
@@ -215,9 +213,8 @@ export const vicContractOfSaleOffer: SkillDefinition = {
         {
           id: 'terms_contract',
           label: 'Terms Contract',
-          type: 'text',
-          placeholder: "Enter 'terms contract' if applicable",
-          helpText: 'Only if this is a terms contract under the Sale of Land Act 1962.',
+          type: 'checkbox',
+          helpText: 'Tick if this is a terms contract under the Sale of Land Act 1962 (i.e. a deferred settlement arrangement where possession is given before full payment).',
         },
         {
           id: 'special_conditions',

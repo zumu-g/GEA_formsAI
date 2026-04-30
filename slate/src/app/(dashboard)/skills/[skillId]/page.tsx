@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
@@ -20,6 +20,9 @@ export default function SkillExecutionPage() {
   const setValues = useSkillStore((s) => s.setValues);
   const reset = useSkillStore((s) => s.reset);
   const hasAutoFilled = useRef(false);
+  const [showStartOverConfirm, setShowStartOverConfirm] = useState(false);
+  const [autoFillCount, setAutoFillCount] = useState(0);
+  const [showAutoFillToast, setShowAutoFillToast] = useState(false);
 
   useEffect(() => {
     if (!skill) {
@@ -48,6 +51,9 @@ export default function SkillExecutionPage() {
         const autoValues = autoFillFromProfile(skill, profile);
         if (Object.keys(autoValues).length > 0) {
           setValues(autoValues);
+          setAutoFillCount(Object.keys(autoValues).length);
+          setShowAutoFillToast(true);
+          setTimeout(() => setShowAutoFillToast(false), 4000);
         }
       } catch {
         // Silently ignore — auto-fill is best-effort
@@ -65,6 +71,7 @@ export default function SkillExecutionPage() {
           <Link
             href="/skills"
             onClick={() => reset()}
+            aria-label="Back to Skills"
             className="flex items-center justify-center w-9 h-9 rounded-xl border border-[#E5E5EA] text-[#86868B] hover:text-[#1D1D1F] hover:border-[#C7C7CC] transition-all duration-150"
           >
             <ArrowLeft size={16} />
@@ -80,18 +87,45 @@ export default function SkillExecutionPage() {
         </div>
 
         {session && session.status !== 'upload' && (
-          <button
-            onClick={() => {
-              hasAutoFilled.current = false;
-              reset();
-              startSession(skillId);
-            }}
-            className="text-xs text-[#86868B] hover:text-[#1D1D1F] transition-colors cursor-pointer"
-          >
-            Start over
-          </button>
+          showStartOverConfirm ? (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-[#86868B]">Discard all progress?</span>
+              <button
+                onClick={() => {
+                  setShowStartOverConfirm(false);
+                  hasAutoFilled.current = false;
+                  reset();
+                  startSession(skillId);
+                }}
+                className="text-xs font-medium text-red-600 hover:text-red-700 cursor-pointer"
+              >
+                Yes, start over
+              </button>
+              <button
+                onClick={() => setShowStartOverConfirm(false)}
+                className="text-xs text-[#86868B] hover:text-[#1D1D1F] cursor-pointer"
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowStartOverConfirm(true)}
+              className="text-xs text-[#86868B] hover:text-[#1D1D1F] transition-colors cursor-pointer"
+            >
+              Start over
+            </button>
+          )
         )}
       </div>
+
+      {/* Auto-fill toast */}
+      {showAutoFillToast && autoFillCount > 0 && (
+        <div className="mb-4 px-4 py-2.5 rounded-xl bg-[#5856D6]/10 border border-[#5856D6]/20 text-sm text-[#5856D6] flex items-center justify-between">
+          <span>Pre-filled {autoFillCount} field{autoFillCount !== 1 ? 's' : ''} from your profile</span>
+          <button onClick={() => setShowAutoFillToast(false)} className="text-[#5856D6]/60 hover:text-[#5856D6] text-xs cursor-pointer">Dismiss</button>
+        </div>
+      )}
 
       {/* Wizard */}
       <SkillWizard key={session?.formId ?? 'no-session'} skill={skill} />

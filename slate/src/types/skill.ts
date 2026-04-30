@@ -57,6 +57,7 @@ export interface SkillDefinition {
   version: string;
   jurisdiction?: string;
   documentType: string;
+  formTemplateUrl?: string; // URL to download a blank version of this form
   sections: SkillSection[];
   fieldMappings: SkillFieldMapping[];
   computedFields?: SkillComputedField[];

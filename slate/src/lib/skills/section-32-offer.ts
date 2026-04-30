@@ -5,17 +5,18 @@ export const section32Offer: SkillDefinition = {
   id: 'vic_section_32',
   name: 'Section 32 Statement',
   description:
-    "Vendor's statement under Section 32 of the Sale of Land Act 1962 (VIC). Covers title details, planning, rates, and statutory disclosures.",
+    "Vendor's statement under Section 32 of the Sale of Land Act 1962 (Vic). For vendors and their conveyancers. Covers title, planning, rates, and statutory disclosures.",
   icon: 'Scale',
   version: '1.0',
   jurisdiction: 'VIC, Australia',
   documentType: "Vendor's Statement (Section 32)",
+  formTemplateUrl: 'https://www.consumer.vic.gov.au/housing/buying-and-selling-property/sale-of-land',
 
   sections: [
     {
       id: 'vendor_details',
       title: 'Vendor Details',
-      description: 'Details of the vendor (seller) of the property.',
+      description: 'Details of the vendor (seller). Enter the full legal name(s) as they appear on the Certificate of Title.',
       fields: [
         {
           id: 'vendor_name',
@@ -54,7 +55,7 @@ export const section32Offer: SkillDefinition = {
     {
       id: 'vendor_solicitor',
       title: "Vendor's Legal Practitioner",
-      description: 'Details of the vendor\'s solicitor or conveyancer.',
+      description: 'The conveyancer or solicitor preparing this statement. This is the vendor\'s legal representative, not the real estate agent.',
       fields: [
         {
           id: 'vendor_solicitor_name',
@@ -91,7 +92,7 @@ export const section32Offer: SkillDefinition = {
     {
       id: 'property_details',
       title: 'Property & Title',
-      description: 'Property address and Certificate of Title reference information.',
+      description: 'Property identification details from the Certificate of Title and council records.',
       fields: [
         {
           id: 'property_address',
@@ -123,10 +124,28 @@ export const section32Offer: SkillDefinition = {
           type: 'text',
         },
         {
+          id: 'registered_proprietors',
+          label: 'All Registered Proprietors',
+          type: 'textarea',
+          required: false,
+          placeholder: 'e.g. John Smith & Jane Smith',
+          helpText: 'List all proprietors exactly as shown on the Certificate of Title, even if not all are signing this statement. Leave blank if same as Vendor Name above.',
+        },
+        {
           id: 'title_type',
-          label: 'Instrument of Ownership',
+          label: 'Type of Title',
           type: 'text',
-          placeholder: 'e.g. Freehold, Leasehold, Strata Title',
+          required: false,
+          placeholder: 'e.g. Torrens Title, Strata Title, Company Title',
+          helpText: 'The type of title as shown on the Certificate of Title.',
+        },
+        {
+          id: 'restrictions_caveats',
+          label: 'Restrictive Covenants or Caveats',
+          type: 'textarea',
+          required: false,
+          placeholder: 'e.g. Building line restriction, caveat lodged by mortgagee — or enter "None"',
+          helpText: 'List any restrictions, covenants, or caveats noted on the Certificate of Title. Enter "None" if there are none.',
         },
         {
           id: 'council_name',
@@ -139,13 +158,14 @@ export const section32Offer: SkillDefinition = {
     {
       id: 'outgoings_encumbrances',
       title: 'Outgoings & Encumbrances',
-      description: 'Annual outgoings and any mortgages or encumbrances on the property.',
+      description: 'Annual costs and financial obligations that run with the property. Use figures from the most recent notices.',
       fields: [
         {
           id: 'council_rates',
-          label: 'Council Rates (per year)',
+          label: 'Council Rates (annual, current year)',
           type: 'currency',
           placeholder: 'e.g. 1850',
+          helpText: 'Enter the current annual council rates from the most recent rate notice. Check with the relevant council or your property file.',
         },
         {
           id: 'water_authority',
@@ -161,10 +181,10 @@ export const section32Offer: SkillDefinition = {
         },
         {
           id: 'land_tax',
-          label: 'Land Tax (if applicable)',
+          label: 'Land Tax (annual, if applicable)',
           type: 'currency',
           placeholder: '0.00',
-          helpText: 'Leave blank if primary residence.',
+          helpText: 'Only applicable to investment properties. Enter the current annual land tax liability from the most recent land tax notice. Leave blank for owner-occupied or primary residences.',
         },
         {
           id: 'owners_corp_fees',
@@ -202,14 +222,15 @@ export const section32Offer: SkillDefinition = {
     {
       id: 'planning_permits',
       title: 'Planning & Permits',
-      description: 'Zoning, planning overlays, and building permits issued in the last 7 years.',
+      description: 'Current planning controls and any permit history affecting this property.',
       fields: [
         {
           id: 'zoning_code',
           label: 'Zoning Code',
           type: 'text',
+          required: true,
           placeholder: 'e.g. GRZ1 (General Residential Zone)',
-          helpText: 'Find on VicPlan or council website.',
+          helpText: 'Required disclosure. Find on VicPlan (vicplan.vic.gov.au) or the local council planning portal. Enter the zone code and name (e.g., GRZ1 — General Residential Zone).',
         },
         {
           id: 'planning_overlay',
@@ -220,9 +241,9 @@ export const section32Offer: SkillDefinition = {
         },
         {
           id: 'building_permits_7yrs',
-          label: 'Building Permits Issued (last 7 years)',
+          label: 'Building Permits Issued in Last 7 Years',
           type: 'checkbox',
-          helpText: 'Check if any building permits were issued in the last 7 years.',
+          helpText: 'Tick YES if any building permits were issued for this property in the last 7 years. Leave unticked if none were issued.',
         },
         {
           id: 'permit_details',
@@ -242,51 +263,65 @@ export const section32Offer: SkillDefinition = {
     {
       id: 'services',
       title: 'Services',
-      description: 'Services connected to the property.',
+      description: 'Indicate which utilities and services are connected to the property. Check each service that is available and connected.',
       fields: [
         {
           id: 'service_water',
           label: 'Water connected',
           type: 'checkbox',
+          helpText: 'Tick if connected to mains water supply. Do not tick if water is from a bore, tank, or rainwater only.',
         },
         {
           id: 'service_drainage',
           label: 'Drainage connected',
           type: 'checkbox',
+          helpText: 'Tick if stormwater drainage is connected to the council system.',
         },
         {
           id: 'service_sewerage',
           label: 'Sewerage connected',
           type: 'checkbox',
+          helpText: 'Tick if connected to mains sewerage. Do not tick if using a septic tank or waste system.',
         },
         {
           id: 'service_electricity',
           label: 'Electricity connected',
           type: 'checkbox',
+          helpText: 'Tick if connected to the electricity grid.',
         },
         {
           id: 'service_gas',
           label: 'Gas connected',
           type: 'checkbox',
+          helpText: 'Tick if natural gas or reticulated LPG is connected.',
         },
         {
           id: 'service_telephone',
           label: 'Telephone/NBN connected',
           type: 'checkbox',
+          helpText: 'Tick if connected to the telephone network or NBN infrastructure.',
         },
       ],
     },
     {
       id: 'special_conditions',
       title: 'Special Conditions & Notices',
-      description: 'Chattels included in the sale and any special conditions or statutory notices.',
+      description: 'Any additional disclosures, special conditions, or items required under the Sale of Land Act 1962.',
       fields: [
         {
           id: 'chattels_included',
-          label: 'Chattels / Inclusions',
+          label: 'Items Included in Sale (optional)',
           type: 'textarea',
           placeholder: 'e.g. Dishwasher, blinds, air conditioner (model XYZ)...',
-          helpText: 'List all fixtures and chattels included in the sale.',
+          helpText: 'List any fixtures or fittings to be included. Note: chattels and inclusions are typically documented in the Contract of Sale, not the Section 32 — include here only if your conveyancer advises.',
+        },
+        {
+          id: 'sunset_clause',
+          label: 'Sunset Clause / Off-plan Expiry',
+          type: 'text',
+          required: false,
+          placeholder: 'e.g. 12 months from date of this statement, or "Not applicable"',
+          helpText: 'If the property is off-plan or subject to sunset provisions under s9AA of the Sale of Land Act 1962, enter the expiry date or period. Enter "Not applicable" if this is an existing property.',
         },
         {
           id: 'special_conditions',

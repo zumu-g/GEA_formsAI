@@ -1,6 +1,8 @@
 'use client';
 
+import { useMemo } from 'react';
 import type { SkillDefinition } from '@/types/skill';
+import { validateSection } from '@/lib/skills/utils';
 import { Check, Pencil } from 'lucide-react';
 
 interface SkillReviewProps {
@@ -18,6 +20,14 @@ export function SkillReview({
   onGenerate,
   isGenerating,
 }: SkillReviewProps) {
+  const allErrors = useMemo(() => {
+    return skill.sections.reduce<Record<string, string>>((acc, section) => ({
+      ...acc,
+      ...validateSection(section, values),
+    }), {});
+  }, [skill, values]);
+  const hasErrors = Object.keys(allErrors).length > 0;
+
   return (
     <div className="space-y-6">
       <div>
@@ -80,6 +90,31 @@ export function SkillReview({
           );
         })}
       </div>
+
+      {hasErrors && (
+        <div className="mb-6 px-4 py-3 rounded-xl bg-amber-50 border border-amber-200">
+          <p className="text-sm font-medium text-amber-800 mb-2">
+            {Object.keys(allErrors).length} required field{Object.keys(allErrors).length !== 1 ? 's' : ''} incomplete
+          </p>
+          <ul className="space-y-1">
+            {skill.sections.map((section, idx) => {
+              const sectionErrors = validateSection(section, values);
+              if (Object.keys(sectionErrors).length === 0) return null;
+              return (
+                <li key={section.id} className="text-xs text-amber-700 flex items-center justify-between">
+                  <span>{section.title}: {Object.keys(sectionErrors).length} field(s)</span>
+                  <button
+                    onClick={() => onEditSection(idx)}
+                    className="text-[#5856D6] text-xs font-medium hover:underline"
+                  >
+                    Fill now →
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
 
       <button
         onClick={onGenerate}

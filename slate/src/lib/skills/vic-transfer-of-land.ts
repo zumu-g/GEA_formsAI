@@ -5,7 +5,7 @@ export const vicTransferOfLand: SkillDefinition = {
   id: 'vic_transfer_of_land',
   name: 'Transfer of Land (VIC)',
   description:
-    'Prepare the transfer of land document for Victorian property settlements. Records title details, transferor (vendor), transferee (purchaser), consideration, and encumbrances.',
+    'Transfer document for Victorian property settlement. Used by both vendor and purchaser conveyancers to record the title transfer, parties, and consideration.',
   icon: 'ArrowRightLeft',
   version: '1.0',
   jurisdiction: 'VIC, Australia',
@@ -51,8 +51,8 @@ export const vicTransferOfLand: SkillDefinition = {
     },
     {
       id: 'transferor',
-      title: 'Transferor (Vendor)',
-      description: 'Details of the transferor — the party transferring the title.',
+      title: 'Vendor (Transferor)',
+      description: 'The current owner(s) transferring the property. If you are acting for the vendor, enter their details here.',
       fields: [
         {
           id: 'transferor_name',
@@ -70,8 +70,8 @@ export const vicTransferOfLand: SkillDefinition = {
     },
     {
       id: 'transferee',
-      title: 'Transferee (Purchaser)',
-      description: 'Details of the transferee — the party receiving the title.',
+      title: 'Purchaser (Transferee)',
+      description: 'The new owner(s) acquiring the property. If you are acting for the purchaser, enter their details here.',
       fields: [
         {
           id: 'transferee_name',
@@ -91,8 +91,9 @@ export const vicTransferOfLand: SkillDefinition = {
           id: 'consideration',
           label: 'Consideration (Purchase Price)',
           type: 'currency',
-          placeholder: 'e.g. 750000',
+          placeholder: 'e.g. 750000 (enter 0 for gift or family transfer)',
           required: true,
+          helpText: 'The amount paid or consideration given. For a gift or family transfer with no monetary consideration, enter 0.',
         },
       ],
     },
