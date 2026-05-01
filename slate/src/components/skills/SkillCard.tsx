@@ -45,16 +45,18 @@ export function SkillCard({ skill }: SkillCardProps) {
           <p className="text-sm text-[#86868B] mt-1 line-clamp-2">{skill.description}</p>
 
           {skill.formTemplateUrl && (
-            <a
-              href={skill.formTemplateUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => e.stopPropagation()}
-              className="inline-flex items-center gap-1 text-xs text-[#5856D6] hover:underline mt-1"
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                window.open(skill.formTemplateUrl, '_blank', 'noopener,noreferrer');
+              }}
+              className="inline-flex items-center gap-1 text-xs text-[#5856D6] hover:underline mt-1 cursor-pointer"
             >
               <FileDown size={11} />
               Get blank form
-            </a>
+            </button>
           )}
 
           <div className="flex items-center gap-3 mt-3">
