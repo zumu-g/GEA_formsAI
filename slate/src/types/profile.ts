@@ -28,3 +28,27 @@ export const DEFAULT_PROFILE_FIELDS = [
 ] as const;
 
 export type ProfileFieldKey = typeof DEFAULT_PROFILE_FIELDS[number];
+
+// Extended resume / professional profile keys
+export const PROFILE_RESUME_KEYS = {
+  linkedin_url: 'LinkedIn URL',
+  website_url: 'Website / Portfolio',
+  skills: 'Skills (comma-separated)',
+  years_experience: 'Years of Experience',
+  current_employer: 'Current Employer',
+  current_role: 'Current Role',
+  education_level: 'Highest Education',
+  cover_letter_blurb: 'Cover Letter / Bio',
+  abn: 'ABN',
+  acn: 'ACN',
+  licence_number: 'Licence Number',
+  licence_type: 'Licence Type',
+} as const;
+
+export type ProfileResumeKey = keyof typeof PROFILE_RESUME_KEYS;
+
+// All known profile keys (legacy + resume extensions)
+export const ALL_PROFILE_KEYS = [
+  ...DEFAULT_PROFILE_FIELDS,
+  ...Object.keys(PROFILE_RESUME_KEYS) as ProfileResumeKey[],
+] as const;
