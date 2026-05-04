@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useCallback, useRef } from 'react';
-import { flushSync } from 'react-dom';
 import { Upload, FileText, Loader2, CheckCircle2 } from 'lucide-react';
 
 interface SkillPdfUploadProps {
@@ -16,7 +15,6 @@ export function SkillPdfUpload({ skillName, onUploaded }: SkillPdfUploadProps) {
   const [error, setError] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const pendingFormId = useRef<string | null>(null);
 
   const handleFile = useCallback(
     async (file: File) => {
@@ -35,14 +33,16 @@ export function SkillPdfUpload({ skillName, onUploaded }: SkillPdfUploadProps) {
         return;
       }
 
-      // flushSync forces the loading state to paint before the async fetch starts,
-      // preventing React 18 batching from skipping the intermediate loading render.
-      flushSync(() => {
-        setError(null);
-        setFileName(file.name);
-        setIsUploading(true);
-        setIsSuccess(false);
-      });
+      setError(null);
+      setFileName(file.name);
+      setIsUploading(true);
+      setIsSuccess(false);
+
+      // Yield to the macrotask queue so React can flush these state updates
+      // and the browser can paint the loading state before the fetch starts.
+      // On localhost the fetch completes in <1ms — without this yield the
+      // loading frame is never painted (both state changes land in the same frame).
+      await new Promise<void>(resolve => setTimeout(resolve, 0));
 
       try {
         const formData = new FormData();
@@ -59,15 +59,11 @@ export function SkillPdfUpload({ skillName, onUploaded }: SkillPdfUploadProps) {
           throw new Error(data.error?.message ?? 'Upload failed.');
         }
 
-        // Show success state briefly so the user knows the upload worked
-        pendingFormId.current = data.data.id;
-        flushSync(() => {
-          setIsUploading(false);
-          setIsSuccess(true);
-        });
+        setIsUploading(false);
+        setIsSuccess(true);
 
-        // Short pause so the success state is visible, then transition
-        await new Promise((r) => setTimeout(r, 600));
+        // Brief pause so the success state is visible before transitioning
+        await new Promise<void>(resolve => setTimeout(resolve, 600));
         onUploaded(data.data.id);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Upload failed.');
@@ -133,7 +129,6 @@ export function SkillPdfUpload({ skillName, onUploaded }: SkillPdfUploadProps) {
           ${isDragging ? 'border-[#5856D6] bg-[#5856D6]/5' : 'border-[#E5E5EA] hover:border-[#C7C7CC] bg-[#FAFAFA]'}
         `}
       >
-
         {isUploading ? (
           <div className="flex flex-col items-center gap-3">
             <Loader2 size={32} className="text-[#5856D6] animate-spin" />
