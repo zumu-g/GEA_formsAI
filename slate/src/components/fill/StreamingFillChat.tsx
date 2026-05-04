@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Send, Bot, Wrench, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { Send, Bot, Wrench, CheckCircle, AlertCircle, Loader2, Paperclip, X } from 'lucide-react';
 import type { StreamEvent } from '@/types/formFillingBackend';
 
 interface StreamingFillChatProps {
@@ -9,12 +9,15 @@ interface StreamingFillChatProps {
   status: 'idle' | 'streaming' | 'complete' | 'error';
   error: string | null;
   onSend: (message: string) => void;
+  onContextFilesChange?: (files: File[]) => void;
   disabled?: boolean;
 }
 
-export function StreamingFillChat({ events, status, error, onSend, disabled }: StreamingFillChatProps) {
+export function StreamingFillChat({ events, status, error, onSend, onContextFilesChange, disabled }: StreamingFillChatProps) {
   const [input, setInput] = useState('');
+  const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -29,6 +32,27 @@ export function StreamingFillChat({ events, status, error, onSend, disabled }: S
     onSend(trimmed);
     setInput('');
   };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selected = e.target.files;
+    if (!selected) return;
+    const newFiles = Array.from(selected);
+    const merged = [...attachedFiles, ...newFiles].filter(
+      (file, idx, arr) => arr.findIndex((f) => f.name === file.name && f.size === file.size) === idx
+    );
+    setAttachedFiles(merged);
+    onContextFilesChange?.(merged);
+    // Reset input so the same file can be re-selected after removal
+    e.target.value = '';
+  };
+
+  const removeFile = (index: number) => {
+    const updated = attachedFiles.filter((_, i) => i !== index);
+    setAttachedFiles(updated);
+    onContextFilesChange?.(updated);
+  };
+
+  const hasFiles = attachedFiles.length > 0;
 
   return (
     <div className="flex flex-col h-full rounded-xl border border-[#E5E5EA] overflow-hidden">
@@ -78,7 +102,61 @@ export function StreamingFillChat({ events, status, error, onSend, disabled }: S
 
       {/* Input */}
       <form onSubmit={handleSubmit} className="p-3 border-t border-[#E5E5EA] bg-white">
+        {/* Attached file chips */}
+        {hasFiles && (
+          <div className="flex flex-wrap gap-1.5 mb-2">
+            {attachedFiles.map((file, i) => (
+              <span
+                key={i}
+                className="bg-[#F5F5F7] border border-[#E5E5EA] text-xs px-2 py-0.5 rounded-full flex items-center gap-1"
+              >
+                <span className="text-[#1D1D1F] max-w-[140px] truncate">{file.name}</span>
+                <button
+                  type="button"
+                  onClick={() => removeFile(i)}
+                  className="text-[#AEAEB2] hover:text-[#FF3B30] transition-colors"
+                  aria-label={`Remove ${file.name}`}
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
+
         <div className="flex gap-2">
+          {/* Hidden file input */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".pdf,.doc,.docx,.txt"
+            multiple
+            onChange={handleFileChange}
+            className="hidden"
+            aria-label="Attach context files"
+          />
+
+          {/* Paperclip button */}
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={disabled || status === 'streaming'}
+            title="Attach context files (CV, resume, etc.)"
+            className={
+              `relative px-3 py-2 rounded-lg border transition-colors disabled:opacity-50 disabled:cursor-not-allowed ` +
+              (hasFiles
+                ? 'bg-[#5856D6]/10 border-[#5856D6]/30 text-[#5856D6]'
+                : 'bg-[#F5F5F7] border-[#E5E5EA] text-[#86868B] hover:bg-[#E5E5EA]')
+            }
+          >
+            <Paperclip className="w-4 h-4" />
+            {hasFiles && (
+              <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-[#5856D6] text-white text-[10px] font-semibold rounded-full flex items-center justify-center leading-none">
+                {attachedFiles.length}
+              </span>
+            )}
+          </button>
+
           <input
             type="text"
             value={input}

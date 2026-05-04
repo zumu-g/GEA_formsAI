@@ -15,6 +15,7 @@ export default function FillWorkspacePage() {
   const [originalPdfUrl, setOriginalPdfUrl] = useState<string | null>(null);
   const [fields, setFields] = useState<{ id: string; fieldName: string; fieldType: string }[]>([]);
   const [isDetecting, setIsDetecting] = useState(true);
+  const [contextFiles, setContextFiles] = useState<File[]>([]);
 
   const { events, status, filledPdfUrl, sessionId, error, startFill, reset } = useStreamingFill();
 
@@ -48,9 +49,9 @@ export default function FillWorkspacePage() {
 
   const handleSend = useCallback(
     (message: string) => {
-      startFill(formId, message, sessionId ?? undefined);
+      startFill(formId, message, sessionId ?? undefined, contextFiles.length > 0 ? contextFiles : undefined);
     },
-    [formId, sessionId, startFill]
+    [formId, sessionId, startFill, contextFiles]
   );
 
   const handleDownload = useCallback(() => {
@@ -113,6 +114,7 @@ export default function FillWorkspacePage() {
             status={status}
             error={error}
             onSend={handleSend}
+            onContextFilesChange={setContextFiles}
           />
 
           {/* Field summary */}

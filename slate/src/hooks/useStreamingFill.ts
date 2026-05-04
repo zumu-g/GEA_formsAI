@@ -9,7 +9,7 @@ interface UseStreamingFillReturn {
   filledPdfUrl: string | null;
   sessionId: string | null;
   error: string | null;
-  startFill: (formId: string, instructions: string, resumeSessionId?: string) => Promise<void>;
+  startFill: (formId: string, instructions: string, resumeSessionId?: string, contextFiles?: File[]) => Promise<void>;
   reset: () => void;
 }
 
@@ -21,7 +21,7 @@ export function useStreamingFill(): UseStreamingFillReturn {
   const [error, setError] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
-  const startFill = useCallback(async (formId: string, instructions: string, resumeSessionId?: string) => {
+  const startFill = useCallback(async (formId: string, instructions: string, resumeSessionId?: string, contextFiles?: File[]) => {
     // Cleanup previous
     abortRef.current?.abort();
     if (filledPdfUrl) URL.revokeObjectURL(filledPdfUrl);
@@ -39,6 +39,11 @@ export function useStreamingFill(): UseStreamingFillReturn {
       formData.append('formId', formId);
       formData.append('instructions', instructions);
       if (resumeSessionId) formData.append('resumeSessionId', resumeSessionId);
+      if (contextFiles) {
+        for (const file of contextFiles) {
+          formData.append('contextFile', file, file.name);
+        }
+      }
 
       const res = await fetch('/api/forms/fill-stream', {
         method: 'POST',
