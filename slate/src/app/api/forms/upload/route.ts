@@ -24,7 +24,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (file.type !== 'application/pdf') {
+    const isPdf =
+      file.type === 'application/pdf' ||
+      ((file.type === '' || file.type === 'application/octet-stream') &&
+        file.name.toLowerCase().endsWith('.pdf'));
+
+    if (!isPdf) {
       return NextResponse.json(
         { success: false, error: { code: 'INVALID_TYPE', message: 'Only PDF files are accepted.' } },
         { status: 400 }
