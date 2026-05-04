@@ -1,5 +1,16 @@
 import type { SkillDefinition, SkillSection, PdfmeFieldMapping } from '@/types/skill';
 import type { DataProfile } from '@/types/profile';
+import { PROFILE_RESUME_KEYS } from '@/types/profile';
+
+// All profile keys that autoFillFromProfile will resolve (legacy + extended resume keys)
+const ALL_KNOWN_PROFILE_KEYS = new Set<string>([
+  // Legacy flat keys
+  'full_name', 'first_name', 'last_name', 'email', 'phone',
+  'address_line_1', 'address_line_2', 'city', 'state', 'zip_code', 'country',
+  'company_name', 'job_title', 'tax_id', 'date_of_birth', 'ssn_last_4',
+  // Resume / extended keys
+  ...Object.keys(PROFILE_RESUME_KEYS),
+]);
 
 export function applyComputedFields(
   skill: SkillDefinition,
@@ -141,8 +152,11 @@ export function autoFillFromProfile(
 
   for (const section of skill.sections) {
     for (const field of section.fields) {
-      if (field.profileKey && profile.data[field.profileKey]) {
-        values[field.id] = profile.data[field.profileKey];
+      if (!field.profileKey) continue;
+      const profileValue = profile.data[field.profileKey];
+      // Accept any well-known profile key (legacy or extended resume keys)
+      if (profileValue && ALL_KNOWN_PROFILE_KEYS.has(field.profileKey)) {
+        values[field.id] = profileValue;
       }
     }
   }
