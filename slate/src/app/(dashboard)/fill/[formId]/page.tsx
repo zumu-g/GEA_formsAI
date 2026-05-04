@@ -1,11 +1,13 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams } from 'next/navigation';
-import { Download, RotateCcw, Globe } from 'lucide-react';
+import Link from 'next/link';
+import { Download, RotateCcw, Clock } from 'lucide-react';
 import { PDFViewer } from '@/components/fill/PDFViewer';
 import { StreamingFillChat } from '@/components/fill/StreamingFillChat';
 import { useStreamingFill } from '@/hooks/useStreamingFill';
+import { addFillEntry } from '@/lib/fillHistory';
 
 export default function FillWorkspacePage() {
   const params = useParams();
@@ -15,6 +17,10 @@ export default function FillWorkspacePage() {
   const [originalPdfUrl, setOriginalPdfUrl] = useState<string | null>(null);
   const [fields, setFields] = useState<{ id: string; fieldName: string; fieldType: string }[]>([]);
   const [isDetecting, setIsDetecting] = useState(true);
+
+  // Track last instructions sent and whether this fill has been logged
+  const lastInstructionsRef = useRef<string>('');
+  const historyRecordedRef = useRef<boolean>(false);
 
   const { events, status, filledPdfUrl, sessionId, error, startFill, reset } = useStreamingFill();
 
@@ -46,8 +52,37 @@ export default function FillWorkspacePage() {
     init();
   }, [formId]);
 
+  // Record fill history when streaming completes or errors
+  useEffect(() => {
+    if (status !== 'complete' && status !== 'error') return;
+    if (historyRecordedRef.current) return;
+    if (!lastInstructionsRef.current) return;
+
+    historyRecordedRef.current = true;
+
+    let fieldsFilled: number | undefined;
+    if (status === 'complete') {
+      const completeEvent = [...events].reverse().find((e) => e.type === 'complete');
+      if (completeEvent) {
+        const val = completeEvent.data.fields_filled;
+        if (typeof val === 'number') fieldsFilled = val;
+      }
+    }
+
+    addFillEntry({
+      formName: formName || 'Unnamed Form',
+      instructions: lastInstructionsRef.current.slice(0, 120),
+      timestamp: Date.now(),
+      status: status === 'complete' ? 'complete' : 'error',
+      fieldsFilled,
+      formId,
+    });
+  }, [status, events, formName, formId]);
+
   const handleSend = useCallback(
     (message: string) => {
+      historyRecordedRef.current = false;
+      lastInstructionsRef.current = message;
       startFill(formId, message, sessionId ?? undefined);
     },
     [formId, sessionId, startFill]
@@ -60,6 +95,12 @@ export default function FillWorkspacePage() {
     a.download = `filled_${formName || 'form'}.pdf`;
     a.click();
   }, [filledPdfUrl, formName]);
+
+  const handleReset = useCallback(() => {
+    historyRecordedRef.current = false;
+    lastInstructionsRef.current = '';
+    reset();
+  }, [reset]);
 
   const displayPdfUrl = filledPdfUrl || originalPdfUrl;
 
@@ -87,12 +128,20 @@ export default function FillWorkspacePage() {
             </button>
           )}
           <button
-            onClick={reset}
+            onClick={handleReset}
             className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-[#86868B] bg-[#F5F5F7] rounded-lg hover:bg-[#E5E5EA] transition-colors"
           >
             <RotateCcw className="w-4 h-4" />
             Reset
           </button>
+          <Link
+            href="/fill/history"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-[#86868B] bg-[#F5F5F7] rounded-lg hover:bg-[#E5E5EA] transition-colors"
+            title="Fill history"
+          >
+            <Clock className="w-4 h-4" />
+            History
+          </Link>
         </div>
       </div>
 
