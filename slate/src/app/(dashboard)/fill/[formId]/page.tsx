@@ -41,12 +41,13 @@ export default function FillWorkspacePage() {
         if (detectData.success && detectData.data.fields.length > 0) {
           setFields(
             detectData.data.fields.map(
-              (f: { id: string; fieldName: string; fieldType: string }) => ({
+              (f: { id: string; fieldName: string; fieldType: string; pageNumber?: number }) => ({
                 id: f.id,
                 fieldName: f.fieldName,
                 fieldType: (f.fieldType as FieldEntry['fieldType']) || 'text',
                 value: '',
                 manual: false,
+                pageNumber: f.pageNumber,
               })
             )
           );

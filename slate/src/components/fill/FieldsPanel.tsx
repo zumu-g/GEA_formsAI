@@ -9,6 +9,7 @@ export interface FieldEntry {
   fieldType: 'text' | 'checkbox' | 'date' | 'radio' | 'signature' | 'dropdown';
   value: string;
   manual: boolean;
+  pageNumber?: number;
 }
 
 interface FieldsPanelProps {
@@ -45,6 +46,9 @@ function FieldRow({
           <span className={`shrink-0 text-[10px] font-medium px-1.5 py-0.5 rounded-full ${TYPE_COLOURS[field.fieldType]}`}>
             {field.fieldType}
           </span>
+          {field.pageNumber != null && (
+            <span className="shrink-0 text-[10px] text-[#AEAEB2]">p{field.pageNumber}</span>
+          )}
         </div>
         {field.fieldType === 'checkbox' ? (
           <label className="flex items-center gap-1.5 cursor-pointer">

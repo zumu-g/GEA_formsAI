@@ -6,16 +6,17 @@ import type { FormField } from '@/types/form';
 import type { BackendFieldInfo } from '@/types/formFillingBackend';
 
 function backendFieldToFormField(field: BackendFieldInfo, formId: string): FormField {
+  const [x0, y0, x1, y1] = field.bbox ?? [0, 0, 0, 0];
   return {
     id: field.field_id,
     formId,
     fieldName: field.friendly_label || field.native_field_name,
     fieldType: field.field_type === 'dropdown' ? 'dropdown' : field.field_type,
     pageNumber: field.page + 1, // backend is 0-indexed
-    x: 0,
-    y: 0,
-    width: 0,
-    height: 0,
+    x: x0,
+    y: y0,
+    width: x1 - x0,
+    height: y1 - y0,
     isRequired: false,
     aiDetected: true,
     value: field.current_value ?? undefined,

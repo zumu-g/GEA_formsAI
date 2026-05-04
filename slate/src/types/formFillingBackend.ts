@@ -9,6 +9,7 @@ export interface BackendFieldInfo {
   current_value: string | null;
   options: string[] | null;
   native_field_name: string;
+  bbox: [number, number, number, number] | null; // [x0, y0, x1, y1] in PDF points
 }
 
 export interface BackendAnalyzeResponse {
