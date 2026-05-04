@@ -12,6 +12,7 @@ import {
   Settings,
   Zap,
   LogOut,
+  Clock,
 } from 'lucide-react';
 import { useCreditStore } from '@/stores/creditStore';
 import { createClient } from '@/lib/supabase/client';
@@ -19,6 +20,7 @@ import { createClient } from '@/lib/supabase/client';
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/fill', label: 'Fill a Form', icon: FileText },
+  { href: '/fill/history', label: 'Fill History', icon: Clock },
   { href: '/skills', label: 'Skills', icon: Wand2 },
   { href: '/templates', label: 'Templates', icon: BookTemplate },
   { href: '/profiles', label: 'Data Profiles', icon: User },
@@ -54,7 +56,16 @@ export function Sidebar() {
       <nav className="flex-1 py-4 px-3">
         <ul className="space-y-0.5">
           {navItems.map((item) => {
-            const isActive = pathname === item.href || pathname?.startsWith(item.href + '/');
+            // Exact match, or starts with item.href + '/' but is NOT a more-specific nav item
+            const isActive =
+              pathname === item.href ||
+              (pathname?.startsWith(item.href + '/') &&
+                !navItems.some(
+                  (other) =>
+                    other.href !== item.href &&
+                    other.href.startsWith(item.href + '/') &&
+                    (pathname === other.href || pathname?.startsWith(other.href + '/'))
+                ));
             const Icon = item.icon;
             return (
               <li key={item.href}>

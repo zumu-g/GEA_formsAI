@@ -5,17 +5,24 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, User, Pencil, Trash2, Star, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
-import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
 import { Modal } from '@/components/ui/Modal';
-import { DataProfile, DEFAULT_PROFILE_FIELDS } from '@/types/profile';
+import { DataProfile, PROFILE_RESUME_KEYS } from '@/types/profile';
+
+// ---------------------------------------------------------------------------
+// Field helpers
+// ---------------------------------------------------------------------------
 
 function fieldLabel(field: string): string {
+  // Use the friendly label from PROFILE_RESUME_KEYS when available
+  if (field in PROFILE_RESUME_KEYS) {
+    return PROFILE_RESUME_KEYS[field as keyof typeof PROFILE_RESUME_KEYS];
+  }
   return field.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-US', {
+  return new Date(iso).toLocaleDateString('en-AU', {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
@@ -25,6 +32,263 @@ function formatDate(iso: string): string {
 function filledFieldCount(data: Record<string, string>): number {
   return Object.values(data).filter((v) => v && v.trim().length > 0).length;
 }
+
+// ---------------------------------------------------------------------------
+// Tab definitions
+// ---------------------------------------------------------------------------
+
+type TabId = 'personal' | 'address' | 'professional' | 'online' | 'resume';
+
+interface TabDef {
+  id: TabId;
+  label: string;
+}
+
+const TABS: TabDef[] = [
+  { id: 'personal', label: 'Personal' },
+  { id: 'address', label: 'Address' },
+  { id: 'professional', label: 'Professional' },
+  { id: 'online', label: 'Online' },
+  { id: 'resume', label: 'Resume' },
+];
+
+// ---------------------------------------------------------------------------
+// Inline form field components
+// ---------------------------------------------------------------------------
+
+interface FieldInputProps {
+  label: string;
+  fieldKey: string;
+  value: string;
+  onChange: (key: string, value: string) => void;
+  placeholder?: string;
+  type?: 'text' | 'email' | 'tel' | 'url' | 'number';
+}
+
+function FieldInput({ label, fieldKey, value, onChange, placeholder, type = 'text' }: FieldInputProps) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <label className="text-sm font-medium text-[#1D1D1F]">{label}</label>
+      <input
+        type={type}
+        value={value}
+        onChange={(e) => onChange(fieldKey, e.target.value)}
+        placeholder={placeholder ?? `Enter ${label.toLowerCase()}`}
+        className="h-10 px-3 rounded-xl border border-[#E5E5EA] bg-white text-sm text-[#1D1D1F] placeholder:text-[#AEAEB2] transition-all duration-200 hover:border-[#C7C7CC] focus:outline-none focus:ring-2 focus:ring-[#5856D6]/20 focus:border-[#5856D6]"
+      />
+    </div>
+  );
+}
+
+interface FieldTextareaProps {
+  label: string;
+  fieldKey: string;
+  value: string;
+  onChange: (key: string, value: string) => void;
+  placeholder?: string;
+  rows?: number;
+}
+
+function FieldTextarea({ label, fieldKey, value, onChange, placeholder, rows = 4 }: FieldTextareaProps) {
+  return (
+    <div className="flex flex-col gap-1.5 col-span-2">
+      <label className="text-sm font-medium text-[#1D1D1F]">{label}</label>
+      <textarea
+        rows={rows}
+        value={value}
+        onChange={(e) => onChange(fieldKey, e.target.value)}
+        placeholder={placeholder ?? `Enter ${label.toLowerCase()}`}
+        className="px-3 py-2.5 rounded-xl border border-[#E5E5EA] bg-white text-sm text-[#1D1D1F] placeholder:text-[#AEAEB2] transition-all duration-200 hover:border-[#C7C7CC] focus:outline-none focus:ring-2 focus:ring-[#5856D6]/20 focus:border-[#5856D6] resize-none"
+      />
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Section heading
+// ---------------------------------------------------------------------------
+
+function SectionHeading({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="text-xs font-medium text-[#86868B] uppercase tracking-wide mb-3">
+      {children}
+    </p>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Tab panels
+// ---------------------------------------------------------------------------
+
+interface TabPanelProps {
+  values: Record<string, string>;
+  onChange: (key: string, value: string) => void;
+}
+
+function PersonalTab({ values, onChange }: TabPanelProps) {
+  return (
+    <div>
+      <SectionHeading>Personal Information</SectionHeading>
+      <div className="grid grid-cols-2 gap-3">
+        <FieldInput label="Full Name" fieldKey="full_name" value={values.full_name ?? ''} onChange={onChange} placeholder="e.g. Jane Smith" />
+        <FieldInput label="Email" fieldKey="email" value={values.email ?? ''} onChange={onChange} type="email" placeholder="e.g. jane@example.com" />
+        <FieldInput label="First Name" fieldKey="first_name" value={values.first_name ?? ''} onChange={onChange} placeholder="e.g. Jane" />
+        <FieldInput label="Last Name" fieldKey="last_name" value={values.last_name ?? ''} onChange={onChange} placeholder="e.g. Smith" />
+        <FieldInput label="Phone" fieldKey="phone" value={values.phone ?? ''} onChange={onChange} type="tel" placeholder="e.g. 0412 345 678" />
+        <FieldInput label="Date of Birth" fieldKey="date_of_birth" value={values.date_of_birth ?? ''} onChange={onChange} placeholder="dd/mm/yyyy" />
+      </div>
+    </div>
+  );
+}
+
+function AddressTab({ values, onChange }: TabPanelProps) {
+  return (
+    <div>
+      <SectionHeading>Address</SectionHeading>
+      <div className="grid grid-cols-2 gap-3">
+        <FieldInput label="Address Line 1" fieldKey="address_line_1" value={values.address_line_1 ?? ''} onChange={onChange} placeholder="e.g. 10 Collins Street" />
+        <FieldInput label="Address Line 2" fieldKey="address_line_2" value={values.address_line_2 ?? ''} onChange={onChange} placeholder="e.g. Unit 5" />
+        <FieldInput label="City / Suburb" fieldKey="city" value={values.city ?? ''} onChange={onChange} placeholder="e.g. Melbourne" />
+        <FieldInput label="State" fieldKey="state" value={values.state ?? ''} onChange={onChange} placeholder="e.g. VIC" />
+        <FieldInput label="Postcode" fieldKey="zip_code" value={values.zip_code ?? ''} onChange={onChange} placeholder="e.g. 3000" />
+        <FieldInput label="Country" fieldKey="country" value={values.country ?? ''} onChange={onChange} placeholder="e.g. Australia" />
+      </div>
+    </div>
+  );
+}
+
+function ProfessionalTab({ values, onChange }: TabPanelProps) {
+  return (
+    <div className="space-y-5">
+      <div>
+        <SectionHeading>Employment</SectionHeading>
+        <div className="grid grid-cols-2 gap-3">
+          <FieldInput label="Company Name" fieldKey="company_name" value={values.company_name ?? ''} onChange={onChange} placeholder="e.g. Acme Pty Ltd" />
+          <FieldInput label="Job Title" fieldKey="job_title" value={values.job_title ?? ''} onChange={onChange} placeholder="e.g. Senior Engineer" />
+          <FieldInput label="Current Employer" fieldKey="current_employer" value={values.current_employer ?? ''} onChange={onChange} placeholder="e.g. Acme Corp" />
+          <FieldInput label="Current Role" fieldKey="current_role" value={values.current_role ?? ''} onChange={onChange} placeholder="e.g. Product Manager" />
+          <FieldInput label="Years of Experience" fieldKey="years_experience" value={values.years_experience ?? ''} onChange={onChange} type="number" placeholder="e.g. 5" />
+        </div>
+      </div>
+
+      <div>
+        <SectionHeading>Registrations &amp; Licences</SectionHeading>
+        <div className="grid grid-cols-2 gap-3">
+          <FieldInput label="ABN" fieldKey="abn" value={values.abn ?? ''} onChange={onChange} placeholder="e.g. 12 345 678 901" />
+          <FieldInput label="ACN" fieldKey="acn" value={values.acn ?? ''} onChange={onChange} placeholder="e.g. 123 456 789" />
+          <FieldInput label="Tax ID / TFN" fieldKey="tax_id" value={values.tax_id ?? ''} onChange={onChange} placeholder="e.g. 123 456 789" />
+          <FieldInput label="Licence Number" fieldKey="licence_number" value={values.licence_number ?? ''} onChange={onChange} placeholder="e.g. VIC123456" />
+          <FieldInput label="Licence Type" fieldKey="licence_type" value={values.licence_type ?? ''} onChange={onChange} placeholder="e.g. Real Estate Agent" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function OnlineTab({ values, onChange }: TabPanelProps) {
+  return (
+    <div>
+      <SectionHeading>Online Profiles</SectionHeading>
+      <div className="grid grid-cols-2 gap-3">
+        <FieldInput label="LinkedIn URL" fieldKey="linkedin_url" value={values.linkedin_url ?? ''} onChange={onChange} type="url" placeholder="https://linkedin.com/in/yourname" />
+        <FieldInput label="Website / Portfolio" fieldKey="website_url" value={values.website_url ?? ''} onChange={onChange} type="url" placeholder="https://yourwebsite.com" />
+      </div>
+    </div>
+  );
+}
+
+function ResumeTab({ values, onChange }: TabPanelProps) {
+  return (
+    <div className="space-y-5">
+      <div>
+        <SectionHeading>Qualifications</SectionHeading>
+        <div className="grid grid-cols-2 gap-3">
+          <FieldInput label="Highest Education" fieldKey="education_level" value={values.education_level ?? ''} onChange={onChange} placeholder="e.g. Bachelor of Commerce" />
+        </div>
+      </div>
+
+      <div>
+        <SectionHeading>Skills &amp; Bio</SectionHeading>
+        <div className="grid grid-cols-2 gap-3">
+          <FieldTextarea
+            label="Skills (comma-separated)"
+            fieldKey="skills"
+            value={values.skills ?? ''}
+            onChange={onChange}
+            placeholder="e.g. Project Management, Stakeholder Engagement, Excel"
+            rows={3}
+          />
+          <FieldTextarea
+            label="Cover Letter / Bio"
+            fieldKey="cover_letter_blurb"
+            value={values.cover_letter_blurb ?? ''}
+            onChange={onChange}
+            placeholder="A short bio or cover letter opening paragraph…"
+            rows={5}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Tabbed form
+// ---------------------------------------------------------------------------
+
+interface ProfileFormProps {
+  values: Record<string, string>;
+  onChange: (key: string, value: string) => void;
+}
+
+function ProfileForm({ values, onChange }: ProfileFormProps) {
+  const [activeTab, setActiveTab] = useState<TabId>('personal');
+
+  return (
+    <div>
+      {/* Tab bar */}
+      <div className="flex gap-1 p-1 bg-[#F5F5F7] rounded-xl mb-5">
+        {TABS.map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => setActiveTab(tab.id)}
+            className={`
+              flex-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-150 cursor-pointer
+              ${activeTab === tab.id
+                ? 'bg-white shadow-sm border border-[#E5E5EA]/60 text-[#1D1D1F]'
+                : 'text-[#86868B] hover:text-[#1D1D1F]'
+              }
+            `}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Panel */}
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.div
+          key={activeTab}
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -4 }}
+          transition={{ duration: 0.15, ease: 'easeInOut' }}
+        >
+          {activeTab === 'personal' && <PersonalTab values={values} onChange={onChange} />}
+          {activeTab === 'address' && <AddressTab values={values} onChange={onChange} />}
+          {activeTab === 'professional' && <ProfessionalTab values={values} onChange={onChange} />}
+          {activeTab === 'online' && <OnlineTab values={values} onChange={onChange} />}
+          {activeTab === 'resume' && <ResumeTab values={values} onChange={onChange} />}
+        </motion.div>
+      </AnimatePresence>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Main page
+// ---------------------------------------------------------------------------
 
 export default function ProfilesPage() {
   useEffect(() => { document.title = 'Data Profiles — Slate'; }, []);
@@ -87,6 +351,10 @@ export default function ProfilesPage() {
     setEditingProfile(null);
   };
 
+  const handleFieldChange = (key: string, value: string) => {
+    setFieldValues((prev) => ({ ...prev, [key]: value }));
+  };
+
   const handleSave = async () => {
     if (!profileName.trim()) {
       setError('Profile name is required.');
@@ -97,14 +365,13 @@ export default function ProfilesPage() {
     setError(null);
 
     try {
-      // Strip empty values from fieldValues
+      // Strip empty values
       const cleanData: Record<string, string> = {};
       for (const [k, v] of Object.entries(fieldValues)) {
         if (v && v.trim()) cleanData[k] = v.trim();
       }
 
       if (editingProfile) {
-        // Update
         const res = await fetch(`/api/profiles/${editingProfile.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -116,7 +383,6 @@ export default function ProfilesPage() {
           return;
         }
       } else {
-        // Create
         const res = await fetch('/api/profiles', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -305,48 +571,35 @@ export default function ProfilesPage() {
         size="lg"
       >
         <div className="space-y-4 max-h-[65vh] overflow-y-auto pr-1">
-          <Input
-            label="Profile Name"
-            placeholder='e.g., "Personal", "Business", "Client - Acme"'
-            value={profileName}
-            onChange={(e) => setProfileName(e.target.value)}
-          />
-
-          <div className="flex items-center gap-3 py-1">
-            <button
-              type="button"
-              onClick={() => setIsDefault(!isDefault)}
-              className={`
-                relative w-10 h-6 rounded-full transition-colors duration-200 cursor-pointer
-                ${isDefault ? 'bg-[#5856D6]' : 'bg-[#E5E5EA]'}
-              `}
-            >
-              <span
-                className={`
-                  absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-sm
-                  transition-transform duration-200
-                  ${isDefault ? 'translate-x-4' : 'translate-x-0'}
-                `}
+          {/* Profile name + default toggle */}
+          <div className="flex gap-3 items-end">
+            <div className="flex-1 flex flex-col gap-1.5">
+              <label className="text-sm font-medium text-[#1D1D1F]">Profile Name</label>
+              <input
+                type="text"
+                value={profileName}
+                onChange={(e) => setProfileName(e.target.value)}
+                placeholder='e.g. "Personal", "Business", "Client — Acme"'
+                className="h-10 px-3 rounded-xl border border-[#E5E5EA] bg-white text-sm text-[#1D1D1F] placeholder:text-[#AEAEB2] transition-all duration-200 hover:border-[#C7C7CC] focus:outline-none focus:ring-2 focus:ring-[#5856D6]/20 focus:border-[#5856D6]"
               />
-            </button>
-            <span className="text-sm text-[#1D1D1F]">Set as default profile</span>
+            </div>
+            <div className="flex items-center gap-2 pb-0.5">
+              <button
+                type="button"
+                onClick={() => setIsDefault(!isDefault)}
+                className={`relative w-10 h-6 rounded-full transition-colors duration-200 cursor-pointer ${isDefault ? 'bg-[#5856D6]' : 'bg-[#E5E5EA]'}`}
+              >
+                <span
+                  className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform duration-200 ${isDefault ? 'translate-x-4' : 'translate-x-0'}`}
+                />
+              </button>
+              <span className="text-sm text-[#1D1D1F] whitespace-nowrap">Set as default</span>
+            </div>
           </div>
 
-          <div className="border-t border-[#E5E5EA] pt-4 mt-4">
-            <p className="text-sm font-medium text-[#1D1D1F] mb-3">Profile Fields</p>
-            <div className="grid grid-cols-2 gap-3">
-              {DEFAULT_PROFILE_FIELDS.map((field) => (
-                <Input
-                  key={field}
-                  label={fieldLabel(field)}
-                  placeholder={`Enter ${fieldLabel(field).toLowerCase()}`}
-                  value={fieldValues[field] ?? ''}
-                  onChange={(e) =>
-                    setFieldValues((prev) => ({ ...prev, [field]: e.target.value }))
-                  }
-                />
-              ))}
-            </div>
+          {/* Tabbed fields */}
+          <div className="border-t border-[#E5E5EA] pt-4 mt-2">
+            <ProfileForm values={fieldValues} onChange={handleFieldChange} />
           </div>
 
           {error && (
@@ -358,9 +611,15 @@ export default function ProfilesPage() {
           <Button variant="ghost" onClick={closeModal}>
             Cancel
           </Button>
-          <Button onClick={handleSave} loading={saving}>
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={saving}
+            className="bg-[#5856D6] text-white rounded-xl px-6 py-2.5 text-sm font-semibold transition-all duration-150 hover:bg-[#4A48C4] disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 cursor-pointer"
+          >
+            {saving && <Loader2 size={14} className="animate-spin" />}
             {editingProfile ? 'Save Changes' : 'Create Profile'}
-          </Button>
+          </button>
         </div>
       </Modal>
 
