@@ -22,10 +22,8 @@ export default function FillWorkspacePage() {
   useEffect(() => {
     async function init() {
       try {
-        // Fetch the original PDF to display
-        // For now, create a URL from the stored PDF via a simple endpoint
-        // In production this would come from Supabase Storage
         setFormName('Uploaded Form');
+        setOriginalPdfUrl(`/api/forms/${formId}/pdf`);
 
         // Detect fields via backend
         const detectRes = await fetch('/api/forms/detect', {

@@ -55,10 +55,12 @@ export async function POST(request: NextRequest) {
 
     // Path 2: Vision-based detection (for scanned PDFs without AcroForm fields)
     if (!pageImages?.length) {
-      return NextResponse.json(
-        { success: false, error: { code: 'NO_FIELDS', message: 'No form fields detected and no page images provided for vision detection.' } },
-        { status: 400 }
-      );
+      // No backend and no page images — return empty fields gracefully so the
+      // workspace still loads and the user can fill via AI instructions.
+      return NextResponse.json({
+        success: true,
+        data: { formId, fields: [], fieldCount: 0, method: 'none' },
+      });
     }
 
     const detectedFields = await detectFormFields(pageImages);
