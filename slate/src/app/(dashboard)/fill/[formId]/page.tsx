@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { Download, RotateCcw, Clock } from 'lucide-react';
 import { PDFViewer } from '@/components/fill/PDFViewer';
 import { StreamingFillChat } from '@/components/fill/StreamingFillChat';
+import { FieldsPanel, type FieldEntry } from '@/components/fill/FieldsPanel';
 import { useStreamingFill } from '@/hooks/useStreamingFill';
 import { addFillEntry } from '@/lib/fillHistory';
 
@@ -15,24 +16,21 @@ export default function FillWorkspacePage() {
 
   const [formName, setFormName] = useState<string>('');
   const [originalPdfUrl, setOriginalPdfUrl] = useState<string | null>(null);
-  const [fields, setFields] = useState<{ id: string; fieldName: string; fieldType: string }[]>([]);
+  const [fields, setFields] = useState<FieldEntry[]>([]);
   const [isDetecting, setIsDetecting] = useState(true);
   const [contextFiles, setContextFiles] = useState<File[]>([]);
 
-  // Track last instructions sent and whether this fill has been logged
   const lastInstructionsRef = useRef<string>('');
   const historyRecordedRef = useRef<boolean>(false);
 
   const { events, status, filledPdfUrl, sessionId, error, startFill, reset } = useStreamingFill();
 
-  // Load form metadata and detect fields on mount
   useEffect(() => {
     async function init() {
       try {
         setFormName('Uploaded Form');
         setOriginalPdfUrl(`/api/forms/${formId}/pdf`);
 
-        // Detect fields via backend
         const detectRes = await fetch('/api/forms/detect', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -40,8 +38,18 @@ export default function FillWorkspacePage() {
         });
 
         const detectData = await detectRes.json();
-        if (detectData.success) {
-          setFields(detectData.data.fields);
+        if (detectData.success && detectData.data.fields.length > 0) {
+          setFields(
+            detectData.data.fields.map(
+              (f: { id: string; fieldName: string; fieldType: string }) => ({
+                id: f.id,
+                fieldName: f.fieldName,
+                fieldType: (f.fieldType as FieldEntry['fieldType']) || 'text',
+                value: '',
+                manual: false,
+              })
+            )
+          );
         }
       } catch (err) {
         console.error('Init error:', err);
@@ -53,7 +61,6 @@ export default function FillWorkspacePage() {
     init();
   }, [formId]);
 
-  // Record fill history when streaming completes or errors
   useEffect(() => {
     if (status !== 'complete' && status !== 'error') return;
     if (historyRecordedRef.current) return;
@@ -83,10 +90,21 @@ export default function FillWorkspacePage() {
   const handleSend = useCallback(
     (message: string) => {
       historyRecordedRef.current = false;
+
+      // Prepend any pre-filled field values as context for the AI
+      const filledFields = fields.filter((f) => f.value.trim());
+      let fullMessage = message;
+      if (filledFields.length > 0) {
+        const fieldContext = filledFields
+          .map((f) => `- ${f.fieldName}: ${f.value}`)
+          .join('\n');
+        fullMessage = `Field values to use:\n${fieldContext}\n\n${message}`;
+      }
+
       lastInstructionsRef.current = message;
-      startFill(formId, message, sessionId ?? undefined, contextFiles.length > 0 ? contextFiles : undefined);
+      startFill(formId, fullMessage, sessionId ?? undefined, contextFiles.length > 0 ? contextFiles : undefined);
     },
-    [formId, sessionId, startFill, contextFiles]
+    [formId, sessionId, startFill, contextFiles, fields]
   );
 
   const handleDownload = useCallback(() => {
@@ -111,11 +129,10 @@ export default function FillWorkspacePage() {
       <div className="flex items-center justify-between px-6 py-3 border-b border-[#E5E5EA]">
         <div>
           <h1 className="text-lg font-semibold text-[#1D1D1F]">{formName || 'Form Workspace'}</h1>
-          {fields.length > 0 && (
-            <p className="text-xs text-[#86868B]">{fields.length} fields detected</p>
-          )}
-          {isDetecting && (
-            <p className="text-xs text-[#5856D6]">Detecting fields...</p>
+          {!isDetecting && (
+            <p className="text-xs text-[#86868B]">
+              {fields.length > 0 ? `${fields.length} fields detected` : 'No fields detected'}
+            </p>
           )}
         </div>
         <div className="flex items-center gap-2">
@@ -146,7 +163,7 @@ export default function FillWorkspacePage() {
         </div>
       </div>
 
-      {/* Main workspace: PDF viewer + Chat side by side */}
+      {/* Main workspace: PDF viewer + right panel */}
       <div className="flex-1 flex gap-4 p-4 overflow-hidden">
         {/* Left: PDF Viewer */}
         <div className="flex-1 min-w-0">
@@ -156,8 +173,14 @@ export default function FillWorkspacePage() {
           />
         </div>
 
-        {/* Right: Chat / Instructions */}
-        <div className="w-96 shrink-0 flex flex-col gap-3">
+        {/* Right: Fields + Chat */}
+        <div className="w-96 shrink-0 flex flex-col gap-3 overflow-y-auto">
+          <FieldsPanel
+            fields={fields}
+            isDetecting={isDetecting}
+            onChange={setFields}
+          />
+
           <StreamingFillChat
             events={events}
             status={status}
@@ -165,21 +188,6 @@ export default function FillWorkspacePage() {
             onSend={handleSend}
             onContextFilesChange={setContextFiles}
           />
-
-          {/* Field summary */}
-          {fields.length > 0 && (
-            <div className="rounded-xl border border-[#E5E5EA] p-3 max-h-48 overflow-y-auto">
-              <p className="text-xs font-medium text-[#86868B] mb-2">Detected Fields</p>
-              <div className="space-y-1">
-                {fields.map((f) => (
-                  <div key={f.id} className="flex items-center justify-between text-xs">
-                    <span className="text-[#1D1D1F] truncate">{f.fieldName}</span>
-                    <span className="text-[#AEAEB2] ml-2 shrink-0">{f.fieldType}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </div>
