@@ -15,7 +15,6 @@ function inferFieldType(label: string, value: string): DetectedField['type'] {
   if (/amount|price|fee|\$|cost|total|deposit|purchase/.test(l)) return 'currency';
   if (/\byes\b|\bno\b|\bcheck\b|tick|✓|✗/.test(l + value)) return 'checkbox';
   if (/notes?|comments?|description|details|address|remarks/.test(l)) return 'textarea';
-  // Real estate-specific patterns (use word boundaries to avoid substring matches)
   if (/commission|\brate\b|percent|%|\bgst\b/.test(l)) return 'currency';
   if (/\bperiod\b|\bfrom\b|\bstart\b|\bend\b/.test(l)) return 'date';
   return 'text';
@@ -31,9 +30,9 @@ function inferProfileKey(label: string): string | undefined {
   if (/\baddress\b|street/.test(l)) return 'address_line_1';
   if (/company|business|firm|entity/.test(l)) return 'company_name';
   if (/\babn\b/.test(l)) return 'abn';
+  if (/\bacn\b/.test(l)) return 'abn';
   if (/date.of.birth|dob/.test(l)) return 'date_of_birth';
   if (/licence|license/.test(l)) return 'licence_number';
-  // Real estate-specific mappings
   if (/\bagent\b/.test(l)) return 'full_name';
   if (/\bvendor\b/.test(l)) return 'full_name';
   if (/city|suburb/.test(l)) return 'city';
@@ -42,25 +41,77 @@ function inferProfileKey(label: string): string | undefined {
   return undefined;
 }
 
-// Labels that look like field headers but aren't fill targets
+// Labels that are never fill targets
 const SKIP_LABELS = new Set([
   'note', 'notes', 'see', 'refer', 'if', 'the', 'this', 'for',
-  'and', 'or', 'to', 'of', 'in', 'on', 'at', 'by', 'with',
-  // Legal boilerplate words common in Victorian real estate forms
+  'and', 'or', 'to', 'of', 'in', 'on', 'at', 'by', 'with', 'upon', 'where',
   'pursuant', 'subject', 'whereby', 'herein', 'thereof', 'notwithstanding',
 ]);
 
-// Known real estate field label keywords — used to relax the colon requirement
+// Keywords that relax the colon requirement for short lines
 const FIELD_KEYWORDS_RELAXED = [
   'commission', 'rate', 'period', 'from', 'gst', 'postcode', 'suburb',
   'state', 'price', 'deposit',
 ];
 
-// Known standalone field keywords — if label ends with one and has a garbled prefix, use just the keyword
+// Known field keywords — used to strip garbled prefixes and identify valid labels
 const FIELD_KEYWORDS_CLEAN = [
   'Email', 'Mobile', 'Phone', 'Fax', 'Address', 'Name', 'Date', 'Signature',
-  'Agent', 'Vendor', 'ABN', 'Attention', 'Property',
+  'Agent', 'Vendor', 'ABN', 'ACN', 'Attention', 'Property', 'Licence', 'License',
+  'GST', 'Commission', 'Price', 'Period', 'Suburb', 'State', 'Postcode',
 ];
+
+// Verbs and conjunctions that indicate form text rather than field labels
+const SENTENCE_PATTERN = /\b(is|are|was|were|been|sold|effective|upon|includes|requires|means|states|provides|acknowledges|warrants)\b/i;
+
+// Returns true if a short string looks like a real form field label
+function isCleanFieldLabel(label: string): boolean {
+  if (!label || label.length < 2 || label.length > 30) return false;
+  const words = label.toLowerCase().split(/\s+/).filter(Boolean);
+  if (words.length > 4) return false;
+  if (SKIP_LABELS.has(words[0])) return false;
+  if (/^\d/.test(label)) return false;   // starts with digit
+  if (/\d$/.test(label)) return false;   // ends with digit (clause numbers)
+  const asciiRatio = (label.match(/[\x20-\x7E]/g) ?? []).length / label.length;
+  if (asciiRatio < 0.85) return false;
+  // Garbled words: long words with very few vowels
+  const hasGarbled = words.some(w => {
+    if (w.length < 5) return false;
+    return (w.match(/[aeiou]/g) ?? []).length / w.length < 0.15;
+  });
+  if (hasGarbled) return false;
+  // All-caps sequences > 3 chars that aren't known abbreviations
+  const hasAllCapsGarble = words.some(w =>
+    w.length > 3 && w === w.toUpperCase() && /[A-Z]{4,}/.test(w)
+  );
+  if (hasAllCapsGarble) return false;
+  return true;
+}
+
+// Extract ALL potential field labels from a text line by splitting on ':'
+// Returns labels found as "...lastword(s):" patterns throughout the line
+function extractCandidatesFromLine(text: string): string[] {
+  if (!text.includes(':')) return [];
+  const parts = text.split(':');
+  const candidates: string[] = [];
+
+  for (let i = 0; i < parts.length - 1; i++) {
+    const segment = parts[i];
+    const words = segment.trim().split(/\s+/).filter(Boolean);
+    if (words.length === 0) continue;
+
+    // Try last 1–4 words as label; use shortest that passes quality checks
+    for (let n = 1; n <= Math.min(4, words.length); n++) {
+      const cand = words.slice(-n).join(' ').trim();
+      if (isCleanFieldLabel(cand)) {
+        candidates.push(cand);
+        break;
+      }
+    }
+  }
+
+  return candidates;
+}
 
 // Extract additional fields from text lines (catches labels Form Parser misses)
 function extractFieldsFromLines(
@@ -71,11 +122,6 @@ function extractFieldsFromLines(
   seenIds: Set<string>,
 ): DetectedField[] {
   const extra: DetectedField[] = [];
-
-  // Build a set of y-positions already covered by Form Parser fields (within 2% tolerance)
-  const coveredY = existingFields.map(f => f.bbox.y);
-  const isCovered = (y: number, page: number) =>
-    existingFields.some(f => f.page === page && Math.abs(f.bbox.y - y) < 0.025);
 
   for (const page of pages) {
     const pageNum = Number(page.pageNumber ?? 1);
@@ -94,116 +140,107 @@ function extractFieldsFromLines(
 
       if (text.length < 2) continue;
 
-      // For long lines (bleed-through after colon), extract just the prefix before the first ":"
-      // e.g. "Agent: 626,morw of bris vthodA..." → candidate = "Agent"
-      let candidate = text;
-      if (text.length > 35 && text.includes(':')) {
-        const prefix = text.split(':')[0].trim();
-        if (prefix.length >= 2 && prefix.length <= 30) {
-          candidate = prefix + ':'; // re-add colon so downstream logic works
-        } else {
-          continue; // prefix still too long or empty — skip line
-        }
-      } else if (text.length > 35) {
-        continue; // long line with no colon — not a field label
-      }
-
-      const candidateLower = candidate.toLowerCase();
-      // Match whole-word keywords only (avoid "rate" inside "incorporated")
-      const isKnownKeyword = FIELD_KEYWORDS_RELAXED.some(kw =>
-        new RegExp(`\\b${kw}\\b`).test(candidateLower)
-      );
-      if (!candidate.endsWith(':') && !isKnownKeyword) continue;
-
-      // Skip if it contains mostly non-ASCII (garbled bleed-through text)
-      const asciiRatio = (candidate.match(/[\x20-\x7E]/g) ?? []).length / candidate.length;
-      if (asciiRatio < 0.85) continue;
-
-      const label = candidate.replace(/:$/, '').trim();
-      if (!label) continue;
-
-      // Known standalone field keywords — if label ends with one and has a garbled prefix, use just the keyword
-      let cleanLabel = label;
-      const lastWord = label.split(/\s+/).pop() ?? '';
-      if (FIELD_KEYWORDS_CLEAN.some(kw => kw.toLowerCase() === lastWord.toLowerCase()) && label.split(/\s+/).length > 1) {
-        cleanLabel = lastWord;
-      }
-
-      // Skip if starts with a digit (legal clause numbering like "1.3 binding offer")
-      if (/^\d/.test(cleanLabel)) continue;
-
-      const cleanLabelLower = cleanLabel.toLowerCase();
-      const words = cleanLabelLower.split(/\s+/);
-
-      // Skip if first word is a common non-field word
-      if (SKIP_LABELS.has(words[0])) continue;
-      // Skip very long labels (likely headings, not field labels)
-      if (words.length > 4) continue;
-
-      // Detect garbled words: long words with very few vowels (bleed-through text)
-      const hasGarbledWord = words.some(w => {
-        if (w.length < 5) return false;
-        const vowels = (w.match(/[aeiou]/g) ?? []).length;
-        return vowels / w.length < 0.15; // < 15% vowels = likely garbled
-      });
-      if (hasGarbledWord) continue;
-
-      // Skip all-uppercase words longer than 3 chars (bleed-through caps text)
-      const hasAllCapsGarble = words.some(w => w.length > 3 && w === w.toUpperCase() && /[A-Z]{4,}/.test(w));
-      if (hasAllCapsGarble) continue;
-
-      // Get bounding box
+      // Get bounding box first — needed for bbox-based dedup and field position
       const poly = layout?.boundingPoly as Record<string, unknown> | undefined;
       const verts = (poly?.normalizedVertices ?? []) as Array<Record<string, number>>;
       if (verts.length < 2) continue;
 
       const xs = verts.map(v => v.x ?? 0);
       const ys = verts.map(v => v.y ?? 0);
-      const y = Math.min(...ys);
-      const x = Math.min(...xs);
+      const lineY = Math.min(...ys);
+      const lineX = Math.min(...xs);
 
-      // Skip if already covered by Form Parser at this position
-      if (isCovered(y, pageNum)) continue;
+      // Extract all label candidates from this line
+      const rawCandidates = extractCandidatesFromLine(text);
+      if (rawCandidates.length === 0) {
+        // No colon-delimited candidates — check if it's a bare keyword
+        if (text.length <= 35) {
+          const textLower = text.toLowerCase();
+          const isKeyword = FIELD_KEYWORDS_RELAXED.some(kw =>
+            new RegExp(`\\b${kw}\\b`).test(textLower)
+          );
+          if (isKeyword && isCleanFieldLabel(text)) {
+            rawCandidates.push(text);
+          }
+        }
+        if (rawCandidates.length === 0) continue;
+      }
 
-      // Deduplicate by normalised label — skip if already on this page at same y-position.
-      // Allow duplicate labels (e.g. "Address") at different y-positions (> 5% apart).
-      const normalizedLabel = cleanLabel.toLowerCase().replace(/[^a-z0-9]/g, '');
-      const isDuplicate = [...existingFields, ...extra].some(f =>
-        f.page === pageNum &&
-        f.label.toLowerCase().replace(/[^a-z0-9]/g, '') === normalizedLabel &&
-        Math.abs(f.bbox.y - y) < 0.05
-      );
-      if (isDuplicate) continue;
+      // For single-candidate lines, apply an extra gate: the candidate must
+      // start the line (i.e. "Label: ..." not "...text label:") or be a known keyword
+      const validCandidates: string[] = [];
+      for (const cand of rawCandidates) {
+        if (rawCandidates.length === 1) {
+          const candLower = cand.toLowerCase();
+          const startsLine = text.trim().toLowerCase().startsWith(candLower);
+          const isKnownKeyword = FIELD_KEYWORDS_RELAXED.some(kw =>
+            new RegExp(`\\b${kw}\\b`).test(candLower)
+          );
+          const isKnownClean = FIELD_KEYWORDS_CLEAN.some(kw =>
+            kw.toLowerCase() === candLower
+          );
+          if (!startsLine && !isKnownKeyword && !isKnownClean) continue;
+        }
+        // Multi-candidate lines: trust extractCandidatesFromLine quality gate
+        validCandidates.push(cand);
+      }
 
-      // Build id
-      let id = cleanLabel.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 55);
-      if (!id) continue;
-      const base = id;
-      let s = 2;
-      while (seenIds.has(id)) id = `${base}_${s++}`;
-      seenIds.add(id);
+      if (validCandidates.length === 0) continue;
 
-      // Field value area is to the right of and below the label
-      extra.push({
-        id,
-        label: cleanLabel,
-        type: inferFieldType(cleanLabel, ''),
-        page: pageNum,
-        bbox: {
-          x: Math.min(x + 0.15, 0.85), // value area starts right of label
-          y,
-          w: Math.max(0.95 - x - 0.15, 0.1),
-          h: 0.025,
-        },
-        required: false,
-        value: '',
-        profileKey: inferProfileKey(cleanLabel),
-        confidence: 0.6,
-      } satisfies DetectedField);
+      // Distribute value-area bbox across line width
+      const valueStartX = Math.min(lineX + 0.15, 0.85);
+      const totalValueW = Math.max(0.95 - lineX - 0.15, 0.1);
+      const segW = totalValueW / validCandidates.length;
+
+      for (let ci = 0; ci < validCandidates.length; ci++) {
+        let rawLabel = validCandidates[ci];
+
+        // Strip garbled prefix — if label ends with a known keyword word, use just that
+        const lastWord = rawLabel.split(/\s+/).pop() ?? '';
+        if (
+          FIELD_KEYWORDS_CLEAN.some(kw => kw.toLowerCase() === lastWord.toLowerCase()) &&
+          rawLabel.split(/\s+/).length > 1
+        ) {
+          rawLabel = lastWord;
+        }
+
+        // Deduplicate: skip if a field with same normalised label exists nearby (< 5% y)
+        const normalised = rawLabel.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const isDuplicate = [...existingFields, ...extra].some(f =>
+          f.page === pageNum &&
+          f.label.toLowerCase().replace(/[^a-z0-9]/g, '') === normalised &&
+          Math.abs(f.bbox.y - lineY) < 0.05
+        );
+        if (isDuplicate) continue;
+
+        // Build unique id
+        let id = rawLabel.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 55);
+        if (!id) continue;
+        const base = id;
+        let s = 2;
+        while (seenIds.has(id)) id = `${base}_${s++}`;
+        seenIds.add(id);
+
+        extra.push({
+          id,
+          label: rawLabel,
+          type: inferFieldType(rawLabel, ''),
+          page: pageNum,
+          bbox: {
+            x: Math.min(valueStartX + ci * segW, 0.9),
+            y: lineY,
+            w: Math.max(segW, 0.1),
+            h: 0.025,
+          },
+          required: false,
+          value: '',
+          profileKey: inferProfileKey(rawLabel),
+          confidence: 0.6,
+        } satisfies DetectedField);
+      }
     }
   }
 
-  void coveredY; // suppress unused warning
   return extra;
 }
 
@@ -216,7 +253,6 @@ export async function detectWithGoogleDocumentAI(
 
   const { DocumentProcessorServiceClient } = await import('@google-cloud/documentai');
 
-  // Build client options — prefer inline JSON, then explicit file path, then ADC
   const clientOptions: { credentials?: object; keyFilename?: string } = {};
   if (process.env.GOOGLE_SERVICE_ACCOUNT_JSON) {
     clientOptions.credentials = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON) as object;
@@ -246,8 +282,7 @@ export async function detectWithGoogleDocumentAI(
     const pageNum = Number(page.pageNumber ?? 1);
 
     for (const formField of page.formFields ?? []) {
-      const vertices =
-        formField.fieldValue?.boundingPoly?.normalizedVertices ?? [];
+      const vertices = formField.fieldValue?.boundingPoly?.normalizedVertices ?? [];
       if (vertices.length < 2) continue;
 
       const xs = vertices.map((v) => v.x ?? 0);
@@ -266,6 +301,18 @@ export async function detectWithGoogleDocumentAI(
           ?.trim() ?? '';
 
       if (!rawLabel && !rawValue) continue;
+
+      // Quality filter: reject labels that look like form text, not field labels
+      if (rawLabel) {
+        const labelLower = rawLabel.toLowerCase();
+        const labelWords = labelLower.trim().split(/\s+/).filter(Boolean);
+        if (labelWords.length > 4) continue;                         // too wordy
+        if (SKIP_LABELS.has(labelWords[0])) continue;               // non-field first word
+        if (/\d$/.test(rawLabel.trim())) continue;                   // ends with digit (clause numbers)
+        if (SENTENCE_PATTERN.test(labelLower)) continue;             // contains a verb
+        // Contains sentence-level conjunction (but not slash combos like "Fax/Email")
+        if (/ and | or /.test(rawLabel) && !/\//.test(rawLabel)) continue;
+      }
 
       const label = rawLabel || `Field ${fields.length + 1}`;
       let id = label.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 55);
