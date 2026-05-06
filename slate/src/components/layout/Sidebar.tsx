@@ -13,6 +13,7 @@ import {
   Zap,
   LogOut,
   Clock,
+  Sparkles,
 } from 'lucide-react';
 import { useCreditStore } from '@/stores/creditStore';
 import { createClient } from '@/lib/supabase/client';
@@ -20,6 +21,7 @@ import { createClient } from '@/lib/supabase/client';
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/fill', label: 'Fill a Form', icon: FileText },
+  { href: '/fill/smart', label: 'Smart Fill', icon: Sparkles },
   { href: '/fill/history', label: 'Fill History', icon: Clock },
   { href: '/skills', label: 'Skills', icon: Wand2 },
   { href: '/templates', label: 'Templates', icon: BookTemplate },

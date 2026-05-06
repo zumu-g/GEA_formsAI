@@ -26,7 +26,13 @@ export async function ocrWithZerox(
   filename: string = 'document.pdf'
 ): Promise<ZeroxDocumentResult> {
   // Zerox requires a file path — write to temp
-  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'zerox-'));
+  // Try os.tmpdir() first, fall back to /tmp if permissions fail
+  let tempDir: string;
+  try {
+    tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'zerox-'));
+  } catch {
+    tempDir = await fs.mkdtemp('/tmp/zerox-');
+  }
   const tempPath = path.join(tempDir, filename);
   await fs.writeFile(tempPath, pdfBytes);
 
