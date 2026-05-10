@@ -63,11 +63,47 @@ interface FieldOverlayProps {
   field: DetectedField;
   isActive: boolean;
   isFilled: boolean;
+  value: string;
   onFieldClick: (fieldId: string) => void;
   overlayRef: (el: HTMLDivElement | null) => void;
 }
 
-function FieldOverlay({ field, isActive, isFilled, onFieldClick, overlayRef }: FieldOverlayProps) {
+function FieldValueDisplay({ type, value }: { type: DetectedField['type']; value: string }) {
+  if (!value) return null;
+
+  if (type === 'checkbox') {
+    return value === 'true' ? (
+      <span className="flex items-center justify-center w-full h-full text-[11px] text-gray-900 bg-white/70">
+        ✓
+      </span>
+    ) : null;
+  }
+
+  let displayValue = value;
+  let extraClass = '';
+
+  if (type === 'currency') {
+    displayValue = `$${value}`;
+  } else if (type === 'signature') {
+    extraClass = 'italic';
+  }
+
+  return (
+    <span
+      className={`
+        block w-full
+        text-[10px] leading-tight text-gray-900 font-normal
+        bg-white/70 px-0.5
+        truncate
+        ${extraClass}
+      `}
+    >
+      {displayValue}
+    </span>
+  );
+}
+
+function FieldOverlay({ field, isActive, isFilled, value, onFieldClick, overlayRef }: FieldOverlayProps) {
   const { bbox, type, label, id } = field;
 
   const baseStyle: React.CSSProperties = {
@@ -91,7 +127,7 @@ function FieldOverlay({ field, isActive, isFilled, onFieldClick, overlayRef }: F
     <div
       ref={overlayRef}
       style={baseStyle}
-      className={`group cursor-pointer transition-all duration-150 ${borderClasses}`}
+      className={`group cursor-pointer transition-all duration-150 overflow-hidden ${borderClasses}`}
       onClick={() => onFieldClick(id)}
       role="button"
       aria-label={label}
@@ -103,20 +139,25 @@ function FieldOverlay({ field, isActive, isFilled, onFieldClick, overlayRef }: F
         }
       }}
     >
-      {/* Hover tooltip */}
-      <span
-        className="
-          pointer-events-none
-          absolute -top-6 left-0
-          text-xs bg-gray-900 text-white
-          px-1.5 py-0.5 rounded
-          whitespace-nowrap z-10
-          opacity-0 group-hover:opacity-100
-          transition-opacity duration-100
-        "
-      >
-        {label}
-      </span>
+      {/* Hover tooltip — only shown when the field is unfilled */}
+      {!isFilled && (
+        <span
+          className="
+            pointer-events-none
+            absolute -top-6 left-0
+            text-xs bg-gray-900 text-white
+            px-1.5 py-0.5 rounded
+            whitespace-nowrap z-10
+            opacity-0 group-hover:opacity-100
+            transition-opacity duration-100
+          "
+        >
+          {label}
+        </span>
+      )}
+
+      {/* Filled value rendered in-place */}
+      <FieldValueDisplay type={type} value={value} />
     </div>
   );
 }
@@ -184,6 +225,7 @@ function PageView({
           field={field}
           isActive={activeFieldId === field.id}
           isFilled={Boolean(filledFields[field.id])}
+          value={filledFields[field.id] ?? ''}
           onFieldClick={onFieldClick}
           overlayRef={(el) => {
             if (el) {

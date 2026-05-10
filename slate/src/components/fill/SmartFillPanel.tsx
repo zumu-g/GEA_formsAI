@@ -74,6 +74,157 @@ function ToggleSwitch({
   );
 }
 
+// ─── Signature canvas drawing widget ─────────────────────────────────────────
+
+interface SignatureCanvasProps {
+  value: string;          // base64 PNG data URL string (empty = blank)
+  onChange: (dataUrl: string) => void;
+}
+
+function SignatureCanvas({ value, onChange }: SignatureCanvasProps) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const isDrawing = useRef(false);
+  const lastPos = useRef<{ x: number; y: number } | null>(null);
+  const [typedName, setTypedName] = useState('');
+
+  // Restore drawn signature from value (data URL) on mount / value change.
+  // Plain text values (typed name fallback) are not drawn onto the canvas.
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    if (value && value.startsWith('data:image/')) {
+      const img = new Image();
+      img.onload = () => {
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      };
+      img.src = value;
+    }
+  // Only run when value changes externally (not while drawing).
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]);
+
+  const getPos = (
+    e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>
+  ): { x: number; y: number } | null => {
+    const canvas = canvasRef.current;
+    if (!canvas) return null;
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    if ('touches' in e) {
+      const touch = e.touches[0];
+      if (!touch) return null;
+      return {
+        x: (touch.clientX - rect.left) * scaleX,
+        y: (touch.clientY - rect.top) * scaleY,
+      };
+    }
+    return {
+      x: (e.clientX - rect.left) * scaleX,
+      y: (e.clientY - rect.top) * scaleY,
+    };
+  };
+
+  const startDrawing = (
+    e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>
+  ) => {
+    e.preventDefault();
+    isDrawing.current = true;
+    lastPos.current = getPos(e);
+  };
+
+  const draw = (
+    e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>
+  ) => {
+    if (!isDrawing.current) return;
+    e.preventDefault();
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    const pos = getPos(e);
+    if (!pos || !lastPos.current) return;
+    ctx.beginPath();
+    ctx.moveTo(lastPos.current.x, lastPos.current.y);
+    ctx.lineTo(pos.x, pos.y);
+    ctx.strokeStyle = '#1a1a2e';
+    ctx.lineWidth = 1.5;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.stroke();
+    lastPos.current = pos;
+  };
+
+  const endDrawing = () => {
+    if (!isDrawing.current) return;
+    isDrawing.current = false;
+    lastPos.current = null;
+    const canvas = canvasRef.current;
+    if (canvas) {
+      onChange(canvas.toDataURL('image/png'));
+    }
+  };
+
+  const handleClear = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    setTypedName('');
+    onChange('');
+  };
+
+  const handleTypedName = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const name = e.target.value;
+    setTypedName(name);
+    onChange(name);
+  };
+
+  return (
+    <div className="flex-1 min-w-0 space-y-2">
+      {/* Canvas container */}
+      <div className="relative w-full">
+        <canvas
+          ref={canvasRef}
+          width={600}
+          height={160}
+          onMouseDown={startDrawing}
+          onMouseMove={draw}
+          onMouseUp={endDrawing}
+          onMouseLeave={endDrawing}
+          onTouchStart={startDrawing}
+          onTouchMove={draw}
+          onTouchEnd={endDrawing}
+          className="rounded-lg border border-gray-700 bg-white cursor-crosshair w-full"
+          style={{ touchAction: 'none' }}
+          aria-label="Signature drawing area"
+        />
+        <button
+          type="button"
+          onClick={handleClear}
+          className="absolute top-1.5 right-1.5 text-[10px] font-medium text-gray-500 hover:text-gray-800 bg-white/80 hover:bg-white px-1.5 py-0.5 rounded transition-colors duration-150"
+        >
+          Clear
+        </button>
+      </div>
+      {/* Typed-name fallback */}
+      <input
+        type="text"
+        value={typedName}
+        onChange={handleTypedName}
+        placeholder="or type name as text fallback…"
+        className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-100 placeholder-gray-500 focus:outline-none focus:border-blue-500/70 focus:ring-1 focus:ring-blue-500/30 transition-colors duration-150"
+      />
+    </div>
+  );
+}
+
 // ─── Individual field card ────────────────────────────────────────────────────
 
 interface FieldCardProps {
@@ -131,14 +282,9 @@ function FieldCard({
 
     if (field.type === 'signature') {
       return (
-        <input
-          ref={inputRef as (el: HTMLInputElement | null) => void}
-          type="text"
+        <SignatureCanvas
           value={value}
-          disabled
-          placeholder="Signature field – leave blank or type name"
-          className={sharedInputClass}
-          onFocus={onFocus}
+          onChange={onValueChange}
         />
       );
     }
