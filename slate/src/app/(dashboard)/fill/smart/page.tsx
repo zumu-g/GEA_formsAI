@@ -137,30 +137,38 @@ function DetectingScreen({ pageCount }: DetectingScreenProps) {
   );
 }
 
-// ─── Done screen ──────────────────────────────────────────────────────────────
+// ─── Done panel (compact right-column version) ────────────────────────────────
 
-interface DoneScreenProps {
+interface DonePanelProps {
   pdfUrl: string;
   onStartOver: () => void;
 }
 
-function DoneScreen({ pdfUrl, onStartOver }: DoneScreenProps) {
+function DonePanel({ pdfUrl, onStartOver }: DonePanelProps) {
   return (
-    <div className="max-w-md mx-auto text-center py-16">
-      <div className="w-16 h-16 rounded-full bg-green-900/30 flex items-center justify-center mx-auto mb-5">
-        <CheckCircle2 size={32} className="text-green-400" />
+    <div className="h-full flex flex-col bg-gray-900 rounded-xl border border-gray-800 p-6">
+      {/* Success icon */}
+      <div className="flex flex-col items-center text-center pt-6 pb-5">
+        <div className="w-14 h-14 rounded-full bg-green-900/30 flex items-center justify-center mb-4">
+          <CheckCircle2 size={28} className="text-green-400" />
+        </div>
+        <h2 className="text-lg font-semibold text-gray-100">PDF Ready</h2>
+        <p className="text-sm text-gray-400 mt-2 leading-relaxed">
+          Your form has been filled. Review it on the left then download.
+        </p>
       </div>
-      <h2 className="text-xl font-semibold text-gray-100 mb-2">PDF Ready</h2>
-      <p className="text-sm text-gray-400 mb-8">
-        Your filled PDF has been generated and is ready to download.
-      </p>
-      <div className="flex flex-col sm:flex-row gap-3 justify-center">
+
+      {/* Spacer */}
+      <div className="flex-1" />
+
+      {/* Actions */}
+      <div className="flex flex-col gap-3">
         <a
           href={pdfUrl}
           download="filled-form.pdf"
           className="
             inline-flex items-center justify-center gap-2
-            px-6 py-3 rounded-xl text-sm font-semibold text-white
+            w-full px-5 py-3 rounded-xl text-sm font-semibold text-white
             bg-[#5856D6] hover:bg-[#4644C4]
             transition-colors duration-150
           "
@@ -171,7 +179,7 @@ function DoneScreen({ pdfUrl, onStartOver }: DoneScreenProps) {
         <button
           onClick={onStartOver}
           className="
-            px-6 py-3 rounded-xl text-sm font-medium text-gray-300
+            w-full px-5 py-3 rounded-xl text-sm font-medium text-gray-300
             bg-gray-800 hover:bg-gray-700
             transition-colors duration-150
           "
@@ -619,8 +627,21 @@ export default function SmartFillPage() {
 
       {/* ── Stage: Done ── */}
       {stage === 'done' && filledPdfUrl && (
-        <div className="flex-1 flex items-center justify-center">
-          <DoneScreen pdfUrl={filledPdfUrl} onStartOver={handleStartOver} />
+        <div className="flex flex-col lg:flex-row gap-4" style={{ height: 'calc(100vh - 160px)' }}>
+          {/* Left: filled PDF preview (60%) */}
+          <div className="w-full lg:w-[60%] h-full overflow-hidden rounded-xl">
+            <iframe
+              src={filledPdfUrl}
+              className="w-full h-full rounded-xl border border-gray-800"
+              title="Filled PDF"
+              style={{ border: 'none', display: 'block' }}
+            />
+          </div>
+
+          {/* Right: done panel (40%) */}
+          <div className="w-full lg:w-[40%] h-full overflow-hidden">
+            <DonePanel pdfUrl={filledPdfUrl} onStartOver={handleStartOver} />
+          </div>
         </div>
       )}
 

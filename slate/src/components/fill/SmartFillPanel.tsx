@@ -431,6 +431,7 @@ export function SmartFillPanel({
   const [isAddingField, setIsAddingField] = useState(false);
   const [newLabel, setNewLabel] = useState('');
   const [newType, setNewType] = useState<DetectedField['type']>('text');
+  const [isAutoFilling, setIsAutoFilling] = useState(false);
 
   const setCardRef = useCallback(
     (id: string) => (el: HTMLDivElement | null) => {
@@ -465,6 +466,28 @@ export function SmartFillPanel({
     setNewType('text');
     setIsAddingField(false);
   }, [fields, newLabel, newType, onFieldsChange]);
+
+  const handleAutoFill = useCallback(async () => {
+    if (profiles.length === 0 || isAutoFilling) return;
+    const profile = profiles.find((p) => p.isDefault) ?? profiles[0];
+    setIsAutoFilling(true);
+    try {
+      const res = await fetch('/api/forms/auto-fill', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fields, profileData: profile.data }),
+      });
+      if (!res.ok) return;
+      const { values: suggested } = (await res.json()) as { values: Record<string, string> };
+      for (const [fieldId, value] of Object.entries(suggested)) {
+        if (value) onValueChange(fieldId, value);
+      }
+    } catch {
+      // silently do nothing
+    } finally {
+      setIsAutoFilling(false);
+    }
+  }, [fields, profiles, isAutoFilling, onValueChange]);
 
   // Scroll active card into view and focus its input
   useEffect(() => {
@@ -558,7 +581,29 @@ export function SmartFillPanel({
           <span className="text-xs font-medium text-gray-300">
             {filled} of {total} field{total !== 1 ? 's' : ''} filled
           </span>
-          <span className="text-xs text-gray-500">{Math.round(progressPct)}%</span>
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-gray-500">{Math.round(progressPct)}%</span>
+            {profiles.length > 0 && (
+              <button
+                type="button"
+                onClick={handleAutoFill}
+                disabled={isAutoFilling}
+                className="text-xs font-medium text-[#5856D6] hover:text-[#4644C4] flex items-center gap-1 transition-colors duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {isAutoFilling ? (
+                  <>
+                    <Loader2 size={11} className="animate-spin" />
+                    Filling…
+                  </>
+                ) : (
+                  <>
+                    <Sparkles size={11} />
+                    Auto-fill
+                  </>
+                )}
+              </button>
+            )}
+          </div>
         </div>
         <div className="h-1 w-full bg-gray-800 rounded-full overflow-hidden">
           <div
