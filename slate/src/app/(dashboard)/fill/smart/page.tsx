@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Upload, Loader2, CheckCircle2, AlertCircle, Download, X, Sparkles } from 'lucide-react';
+import { Upload, Loader2, CheckCircle2, AlertCircle, Download, X, Sparkles, Crosshair } from 'lucide-react';
 import { SmartPDFViewer } from '@/components/fill/SmartPDFViewer';
 import { SmartFillPanel } from '@/components/fill/SmartFillPanel';
 import type { DetectedField, SmartDetectResult } from '@/types/smartFill';
@@ -251,6 +251,16 @@ export default function SmartFillPage() {
   const [filledPdfUrl, setFilledPdfUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  interface PendingRegion {
+    page: number;
+    bbox: { x: number; y: number; w: number; h: number };
+    cropDataUrl: string;
+    label: string;
+    type: DetectedField['type'];
+    isLoading: boolean;
+  }
+  const [pendingRegion, setPendingRegion] = useState<PendingRegion | null>(null);
+
   // ── Load profiles on mount ──
   useEffect(() => {
     fetch('/api/profiles')
@@ -394,6 +404,52 @@ export default function SmartFillPage() {
       setStage('no-fields');
     }
   }, [detectResult, profiles]);
+
+  // ── Draw-to-add field handlers ──
+  const handleRegionDrawn = useCallback(async (
+    page: number,
+    bbox: { x: number; y: number; w: number; h: number },
+    cropDataUrl: string,
+  ) => {
+    setPendingRegion({ page, bbox, cropDataUrl, label: '', type: 'text', isLoading: true });
+    try {
+      const res = await fetch('/api/forms/parse-region', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageBase64: cropDataUrl }),
+      });
+      if (res.ok) {
+        const { label, type } = await res.json() as { label: string; type: DetectedField['type'] };
+        setPendingRegion((prev) =>
+          prev
+            ? { ...prev, label: prev.label || label, type: prev.label ? prev.type : (type as DetectedField['type']), isLoading: false }
+            : null
+        );
+      } else {
+        setPendingRegion((prev) => prev ? { ...prev, isLoading: false } : null);
+      }
+    } catch {
+      setPendingRegion((prev) => prev ? { ...prev, isLoading: false } : null);
+    }
+  }, []);
+
+  const confirmRegion = useCallback(() => {
+    if (!pendingRegion?.label.trim()) return;
+    const id = `drawn_${Date.now()}`;
+    const newField: DetectedField = {
+      id,
+      label: pendingRegion.label.trim(),
+      type: pendingRegion.type,
+      page: pendingRegion.page,
+      bbox: pendingRegion.bbox,
+      required: false,
+      value: '',
+      confidence: 0,
+    };
+    setFields((prev) => [...prev, newField]);
+    setActiveFieldId(id);
+    setPendingRegion(null);
+  }, [pendingRegion]);
 
   // ── Generate PDF handler ──
   const handleGenerate = useCallback(async () => {
@@ -539,6 +595,7 @@ export default function SmartFillPage() {
               filledFields={values}
               onFieldClick={setActiveFieldId}
               formId={formId ?? undefined}
+              onRegionDrawn={stage === 'fill' ? handleRegionDrawn : undefined}
             />
           </div>
 
@@ -564,6 +621,90 @@ export default function SmartFillPage() {
       {stage === 'done' && filledPdfUrl && (
         <div className="flex-1 flex items-center justify-center">
           <DoneScreen pdfUrl={filledPdfUrl} onStartOver={handleStartOver} />
+        </div>
+      )}
+
+      {/* ── Draw-to-add confirmation modal ── */}
+      {pendingRegion && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-gray-900 rounded-2xl p-5 w-80 shadow-2xl border border-gray-800">
+            <div className="flex items-center gap-2 mb-3">
+              <Crosshair size={15} className="text-[#5856D6]" />
+              <h3 className="text-sm font-semibold text-gray-100">Add Field</h3>
+            </div>
+
+            {/* Cropped preview */}
+            <div className="mb-3 rounded-lg overflow-hidden border border-gray-700 bg-white max-h-24 flex items-center justify-center">
+              <img
+                src={`data:image/png;base64,${pendingRegion.cropDataUrl}`}
+                className="w-full object-contain"
+                alt="Selected region"
+              />
+            </div>
+
+            {/* Label */}
+            <div className="mb-3">
+              <label className="text-xs text-gray-400 block mb-1">Field label</label>
+              <div className="relative">
+                <input
+                  autoFocus
+                  type="text"
+                  value={pendingRegion.label}
+                  onChange={(e) =>
+                    setPendingRegion((prev) => prev ? { ...prev, label: e.target.value } : null)
+                  }
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') confirmRegion();
+                    if (e.key === 'Escape') setPendingRegion(null);
+                  }}
+                  placeholder={pendingRegion.isLoading ? 'Analysing…' : 'e.g. Full Name'}
+                  className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-100 placeholder-gray-500 focus:outline-none focus:border-[#5856D6]/70 focus:ring-1 focus:ring-[#5856D6]/30 transition-colors duration-150"
+                />
+                {pendingRegion.isLoading && (
+                  <Loader2
+                    size={13}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 animate-spin"
+                  />
+                )}
+              </div>
+            </div>
+
+            {/* Type */}
+            <div className="mb-4">
+              <label className="text-xs text-gray-400 block mb-1">Field type</label>
+              <select
+                value={pendingRegion.type}
+                onChange={(e) =>
+                  setPendingRegion((prev) =>
+                    prev ? { ...prev, type: e.target.value as DetectedField['type'] } : null
+                  )
+                }
+                className="w-full bg-gray-800 border border-gray-700 rounded-lg px-2 py-2 text-sm text-gray-100 focus:outline-none focus:border-[#5856D6]/70 transition-colors duration-150"
+              >
+                {(['text', 'textarea', 'date', 'currency', 'checkbox', 'signature'] as DetectedField['type'][]).map((t) => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setPendingRegion(null)}
+                className="flex-1 py-2 text-sm text-gray-400 rounded-xl bg-gray-800 hover:bg-gray-700 transition-colors duration-150"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmRegion}
+                disabled={!pendingRegion.label.trim()}
+                className="flex-1 py-2 text-sm font-semibold text-white rounded-xl bg-[#5856D6] hover:bg-[#4644C4] disabled:opacity-40 disabled:cursor-not-allowed transition-colors duration-150"
+              >
+                Add Field
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

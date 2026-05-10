@@ -1,6 +1,7 @@
 'use client';
 
-import { useRef, useEffect, useCallback } from 'react';
+import { useRef, useEffect, useCallback, useState } from 'react';
+import { Crosshair } from 'lucide-react';
 import type { DetectedField } from '@/types/smartFill';
 
 interface SmartPDFViewerProps {
@@ -10,6 +11,7 @@ interface SmartPDFViewerProps {
   filledFields: Record<string, string>; // fieldId -> value
   onFieldClick: (fieldId: string) => void;
   formId?: string;
+  onRegionDrawn?: (page: number, bbox: { x: number; y: number; w: number; h: number }, cropDataUrl: string) => void;
 }
 
 // ─── Colour coding by field type ────────────────────────────────────────────
@@ -31,6 +33,29 @@ const TYPE_BORDER_ACTIVE: Record<DetectedField['type'], string> = {
   signature: 'border-red-500 bg-red-500/10 shadow-sm shadow-red-500/20',
   textarea: 'border-blue-500 bg-blue-500/10 shadow-sm shadow-blue-500/20',
 };
+
+// ─── Crop helper ─────────────────────────────────────────────────────────────
+
+async function cropPageImage(
+  imgBase64: string,
+  bbox: { x: number; y: number; w: number; h: number },
+): Promise<string> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const sx = img.width * bbox.x;
+      const sy = img.height * bbox.y;
+      const sw = Math.max(img.width * bbox.w, 1);
+      const sh = Math.max(img.height * bbox.h, 1);
+      const canvas = document.createElement('canvas');
+      canvas.width = sw;
+      canvas.height = sh;
+      canvas.getContext('2d')!.drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
+      resolve(canvas.toDataURL('image/png').split(',')[1]);
+    };
+    img.src = `data:image/png;base64,${imgBase64}`;
+  });
+}
 
 // ─── FieldOverlay ────────────────────────────────────────────────────────────
 
@@ -106,6 +131,9 @@ interface PageViewProps {
   filledFields: Record<string, string>;
   onFieldClick: (fieldId: string) => void;
   overlayRefs: React.MutableRefObject<Map<string, HTMLDivElement>>;
+  drawMode: boolean;
+  liveRect: { page: number; x: number; y: number; w: number; h: number } | null;
+  onPageMouseDown: (e: React.MouseEvent<HTMLDivElement>, pageNum: number, el: HTMLDivElement) => void;
 }
 
 function PageView({
@@ -116,9 +144,26 @@ function PageView({
   filledFields,
   onFieldClick,
   overlayRefs,
+  drawMode,
+  liveRect,
+  onPageMouseDown,
 }: PageViewProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const showLiveRect = liveRect?.page === pageNum;
+  const lx = showLiveRect ? Math.min(liveRect!.x, liveRect!.x + liveRect!.w) * 100 : 0;
+  const ly = showLiveRect ? Math.min(liveRect!.y, liveRect!.y + liveRect!.h) * 100 : 0;
+  const lw = showLiveRect ? Math.abs(liveRect!.w) * 100 : 0;
+  const lh = showLiveRect ? Math.abs(liveRect!.h) * 100 : 0;
+
   return (
-    <div className="relative w-full rounded-xl overflow-hidden">
+    <div
+      ref={containerRef}
+      className={`relative w-full rounded-xl overflow-hidden ${drawMode ? 'cursor-crosshair select-none' : ''}`}
+      onMouseDown={drawMode && containerRef.current
+        ? (e) => onPageMouseDown(e, pageNum, containerRef.current!)
+        : undefined}
+    >
       {/* Page image */}
       <img
         src={`data:image/png;base64,${image}`}
@@ -132,8 +177,8 @@ function PageView({
         {pageNum}
       </span>
 
-      {/* Field overlays */}
-      {fields.map((field) => (
+      {/* Field overlays — hidden in draw mode to avoid click conflicts */}
+      {!drawMode && fields.map((field) => (
         <FieldOverlay
           key={field.id}
           field={field}
@@ -149,6 +194,20 @@ function PageView({
           }}
         />
       ))}
+
+      {/* Live draw rect */}
+      {showLiveRect && lw > 0 && lh > 0 && (
+        <div
+          style={{
+            position: 'absolute',
+            left: `${lx}%`,
+            top: `${ly}%`,
+            width: `${lw}%`,
+            height: `${lh}%`,
+          }}
+          className="border-2 border-[#5856D6] bg-[#5856D6]/10 rounded-sm pointer-events-none"
+        />
+      )}
     </div>
   );
 }
@@ -178,9 +237,19 @@ export function SmartPDFViewer({
   filledFields,
   onFieldClick,
   formId,
+  onRegionDrawn,
 }: SmartPDFViewerProps) {
-  // Map of fieldId -> overlay DOM element, populated by PageView children
   const overlayRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const [drawMode, setDrawMode] = useState(false);
+  const [liveRect, setLiveRect] = useState<{ page: number; x: number; y: number; w: number; h: number } | null>(null);
+
+  const drawStateRef = useRef<{
+    pageNum: number;
+    imgBase64: string;
+    startX: number;
+    startY: number;
+    pageEl: HTMLDivElement;
+  } | null>(null);
 
   // Scroll active field into view whenever activeFieldId changes
   const scrollToField = useCallback((fieldId: string | null) => {
@@ -195,9 +264,108 @@ export function SmartPDFViewer({
     scrollToField(activeFieldId);
   }, [activeFieldId, scrollToField]);
 
+  // ── Global mouse move/up for draw mode ──────────────────────────────────────
+  useEffect(() => {
+    if (!drawMode) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const ds = drawStateRef.current;
+      if (!ds) return;
+      const rect = ds.pageEl.getBoundingClientRect();
+      const cx = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+      const cy = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
+      setLiveRect({
+        page: ds.pageNum,
+        x: ds.startX,
+        y: ds.startY,
+        w: cx - ds.startX,
+        h: cy - ds.startY,
+      });
+    };
+
+    const handleMouseUp = async (e: MouseEvent) => {
+      const ds = drawStateRef.current;
+      if (!ds) return;
+
+      const rect = ds.pageEl.getBoundingClientRect();
+      const cx = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+      const cy = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
+
+      const x = Math.min(ds.startX, cx);
+      const y = Math.min(ds.startY, cy);
+      const w = Math.abs(cx - ds.startX);
+      const h = Math.abs(cy - ds.startY);
+
+      drawStateRef.current = null;
+      setLiveRect(null);
+      setDrawMode(false);
+
+      // Minimum size threshold — ignore accidental clicks
+      if (w < 0.01 || h < 0.005) return;
+
+      if (onRegionDrawn) {
+        const cropDataUrl = await cropPageImage(ds.imgBase64, { x, y, w, h });
+        onRegionDrawn(ds.pageNum, { x, y, w, h }, cropDataUrl);
+      }
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [drawMode, onRegionDrawn]);
+
+  const handlePageMouseDown = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>, pageNum: number, el: HTMLDivElement) => {
+      e.preventDefault();
+      const rect = el.getBoundingClientRect();
+      const sx = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+      const sy = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
+      drawStateRef.current = {
+        pageNum,
+        imgBase64: pageImages[pageNum - 1] ?? '',
+        startX: sx,
+        startY: sy,
+        pageEl: el,
+      };
+    },
+    [pageImages],
+  );
+
+  const toggleDrawMode = useCallback(() => {
+    setDrawMode((d) => !d);
+    setLiveRect(null);
+    drawStateRef.current = null;
+  }, []);
+
+  const showDrawToolbar = pageImages.length > 0 && Boolean(onRegionDrawn);
+
   return (
-    <div className="w-full h-full bg-gray-950 rounded-xl overflow-hidden">
-      <div className="h-full overflow-y-auto p-4 space-y-4">
+    <div className="w-full h-full bg-gray-950 rounded-xl overflow-hidden flex flex-col">
+      {/* Draw mode toolbar */}
+      {showDrawToolbar && (
+        <div className="shrink-0 px-3 py-2 border-b border-gray-800 flex items-center gap-3">
+          <button
+            type="button"
+            onClick={toggleDrawMode}
+            className={`flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg transition-colors duration-150 ${
+              drawMode
+                ? 'bg-[#5856D6] text-white'
+                : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800'
+            }`}
+          >
+            <Crosshair size={12} />
+            {drawMode ? 'Drawing — drag to select' : 'Draw Field'}
+          </button>
+          {drawMode && (
+            <span className="text-xs text-gray-500">Click and drag over a missed field</span>
+          )}
+        </div>
+      )}
+
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {/* Three-way branch: skeleton | iframe | page images with overlays */}
         {pageImages.length === 0 && !formId && <SkeletonLoader />}
 
@@ -222,6 +390,9 @@ export function SmartPDFViewer({
             filledFields={filledFields}
             onFieldClick={onFieldClick}
             overlayRefs={overlayRefs}
+            drawMode={drawMode}
+            liveRect={liveRect}
+            onPageMouseDown={handlePageMouseDown}
           />
         ))}
       </div>
