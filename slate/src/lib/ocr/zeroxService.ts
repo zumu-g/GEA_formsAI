@@ -25,6 +25,11 @@ export async function ocrWithZerox(
   pdfBytes: Uint8Array,
   filename: string = 'document.pdf'
 ): Promise<ZeroxDocumentResult> {
+  try {
+    require.resolve('zerox');
+  } catch {
+    throw new Error('zerox package not installed — skipping Zerox OCR step');
+  }
   // Zerox requires a file path — write to temp
   // Try os.tmpdir() first, fall back to /tmp if permissions fail
   let tempDir: string;

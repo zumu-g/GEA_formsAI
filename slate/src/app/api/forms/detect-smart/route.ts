@@ -5,7 +5,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import type { ContentBlockParam } from '@anthropic-ai/sdk/resources/messages/messages';
 import { getPdf } from '@/lib/services/pdfStore';
-import { analyzeForm } from '@/lib/services/formFillingBackend';
+import { analyzeForm, detectFieldsDocling } from '@/lib/services/formFillingBackend';
 import { ocrWithZerox } from '@/lib/ocr/zeroxService';
 import { discoverFields } from '@/lib/ocr/fieldDiscovery';
 import type { DiscoveredField } from '@/lib/ocr/fieldDiscovery';
@@ -329,7 +329,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const backendFields = result.fields ?? [];
     if (backendFields.length > 0) {
       console.log(`[detect-smart] AcroForm detected ${backendFields.length} native fields`);
-      await pageImagesPromise; // wait for images
+      await pageImagesPromise;
       return NextResponse.json({
         fields: backendFields.map(f => backendFieldToDetected(f)),
         pageImages,
@@ -373,9 +373,34 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     }
   }
 
+  // ── STEP 2.5: Docling structured document analysis ────────────────────────
+  try {
+    console.log('[detect-smart] Trying Docling structured field detection');
+    const doclingResult = await detectFieldsDocling(stored.bytes, stored.filename);
+    const doclingFields = doclingResult.fields ?? [];
+    if (doclingFields.length > 0) {
+      console.log(`[detect-smart] Docling detected ${doclingFields.length} fields`);
+      await pageImagesPromise;
+      return NextResponse.json({
+        fields: doclingFields.map(f => backendFieldToDetected(f)),
+        pageImages,
+        pageCount: pageCount || 1,
+        pageDimensions: pageDimensions.length
+          ? pageDimensions
+          : [{ width: 595.28, height: 841.89 }],
+        detectionMethod: 'docling' as DetectionMethod,
+      } satisfies SmartDetectResult);
+    }
+  } catch (err) {
+    console.warn(
+      '[detect-smart] Docling detection skipped:',
+      err instanceof Error ? err.message : err,
+    );
+  }
+
   // ── STEP 3: Zerox OCR fallback ────────────────────────────────────────────
   try {
-    console.log('[detect-smart] No AcroForm fields — trying Zerox OCR');
+    console.log('[detect-smart] Trying Zerox OCR');
     const ocrResult = await ocrWithZerox(stored.bytes, stored.filename);
     const discovered = await discoverFields(ocrResult);
     if (discovered.length > 0) {
@@ -392,8 +417,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       } satisfies SmartDetectResult);
     }
   } catch (err) {
-    console.error(
-      '[detect-smart] Zerox fallback failed:',
+    console.warn(
+      '[detect-smart] Zerox fallback skipped:',
       err instanceof Error ? err.message : err,
     );
   }

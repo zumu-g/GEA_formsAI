@@ -1,4 +1,4 @@
-# Cloned external repos (managed separately)
+# Cloned external repos (managed separately, each has its own git)
 form_filling_app/
 skyvern/
 

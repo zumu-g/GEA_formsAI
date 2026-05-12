@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { Plus, X, Loader2 } from 'lucide-react';
+import { Plus, X, Loader2, Sparkles } from 'lucide-react';
+import type { DetectionMethod } from '@/types/smartFill';
 
 export interface FieldEntry {
   id: string;
@@ -12,9 +13,18 @@ export interface FieldEntry {
   pageNumber?: number;
 }
 
+const METHOD_LABELS: Partial<Record<DetectionMethod, string>> = {
+  acroform: 'AcroForm',
+  docai: 'Document AI',
+  docling: 'Docling',
+  vision: 'AI Vision',
+  zerox: 'OCR',
+};
+
 interface FieldsPanelProps {
   fields: FieldEntry[];
   isDetecting: boolean;
+  detectionMethod?: DetectionMethod;
   onChange: (fields: FieldEntry[]) => void;
 }
 
@@ -83,7 +93,7 @@ function FieldRow({
   );
 }
 
-export function FieldsPanel({ fields, isDetecting, onChange }: FieldsPanelProps) {
+export function FieldsPanel({ fields, isDetecting, detectionMethod, onChange }: FieldsPanelProps) {
   const [isAdding, setIsAdding] = useState(false);
   const [newName, setNewName] = useState('');
   const [newType, setNewType] = useState<FieldEntry['fieldType']>('text');
@@ -134,6 +144,12 @@ export function FieldsPanel({ fields, isDetecting, onChange }: FieldsPanelProps)
               {fields.length}
             </span>
           ) : null}
+          {!isDetecting && detectionMethod && detectionMethod !== 'empty' && fields.length > 0 && (
+            <span className="flex items-center gap-0.5 text-[10px] text-[#AEAEB2]">
+              <Sparkles size={9} />
+              {METHOD_LABELS[detectionMethod] ?? detectionMethod}
+            </span>
+          )}
         </div>
         <button
           onClick={() => setIsAdding((v) => !v)}
@@ -157,10 +173,11 @@ export function FieldsPanel({ fields, isDetecting, onChange }: FieldsPanelProps)
           </div>
         ) : fields.length === 0 ? (
           <div className="py-5 text-center">
-            <p className="text-xs text-[#86868B]">No fields detected.</p>
+            <p className="text-xs text-[#86868B]">No fields detected automatically.</p>
+            <p className="mt-0.5 text-[11px] text-[#AEAEB2]">Draw fields on the PDF or describe them to the AI.</p>
             <button
               onClick={() => setIsAdding(true)}
-              className="mt-1.5 text-xs text-[#5856D6] hover:underline"
+              className="mt-2 text-xs text-[#5856D6] hover:underline"
             >
               Add fields manually
             </button>

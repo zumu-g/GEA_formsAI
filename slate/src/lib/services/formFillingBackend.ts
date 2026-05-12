@@ -15,7 +15,23 @@ export interface DoclingExtractResult {
   error?: string;
 }
 
-const BACKEND_URL = process.env.FORM_FILLING_BACKEND_URL || 'http://localhost:8000';
+const BACKEND_URL = process.env.FORM_FILLING_BACKEND_URL || 'http://localhost:8001';
+
+export async function detectFieldsDocling(pdfBytes: Uint8Array, filename: string = 'form.pdf'): Promise<BackendAnalyzeResponse> {
+  const formData = new FormData();
+  formData.append('file', new Blob([Buffer.from(pdfBytes)], { type: 'application/pdf' }), filename);
+
+  const res = await fetch(`${BACKEND_URL}/detect-fields-docling`, {
+    method: 'POST',
+    body: formData,
+  });
+
+  if (!res.ok) {
+    throw new Error(`Docling detect failed: ${res.status} ${res.statusText}`);
+  }
+
+  return res.json();
+}
 
 export async function analyzeForm(pdfBytes: Uint8Array, filename: string = 'form.pdf'): Promise<BackendAnalyzeResponse> {
   const formData = new FormData();

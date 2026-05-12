@@ -18,6 +18,7 @@ export default function FillWorkspacePage() {
   const [originalPdfUrl, setOriginalPdfUrl] = useState<string | null>(null);
   const [fields, setFields] = useState<FieldEntry[]>([]);
   const [isDetecting, setIsDetecting] = useState(true);
+  const [detectionMethod, setDetectionMethod] = useState<import('@/types/smartFill').DetectionMethod | undefined>(undefined);
   const [contextFiles, setContextFiles] = useState<File[]>([]);
 
   const lastInstructionsRef = useRef<string>('');
@@ -31,23 +32,26 @@ export default function FillWorkspacePage() {
         setFormName('Uploaded Form');
         setOriginalPdfUrl(`/api/forms/${formId}/pdf`);
 
-        const detectRes = await fetch('/api/forms/detect', {
+        const detectRes = await fetch('/api/forms/detect-smart', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ formId }),
         });
 
         const detectData = await detectRes.json();
-        if (detectData.success && detectData.data.fields.length > 0) {
+        if (detectData.detectionMethod) {
+          setDetectionMethod(detectData.detectionMethod);
+        }
+        if (Array.isArray(detectData.fields) && detectData.fields.length > 0) {
           setFields(
-            detectData.data.fields.map(
-              (f: { id: string; fieldName: string; fieldType: string; pageNumber?: number }) => ({
+            detectData.fields.map(
+              (f: { id: string; label: string; type: string; page?: number }) => ({
                 id: f.id,
-                fieldName: f.fieldName,
-                fieldType: (f.fieldType as FieldEntry['fieldType']) || 'text',
+                fieldName: f.label,
+                fieldType: (f.type as FieldEntry['fieldType']) || 'text',
                 value: '',
                 manual: false,
-                pageNumber: f.pageNumber,
+                pageNumber: f.page,
               })
             )
           );
@@ -179,6 +183,7 @@ export default function FillWorkspacePage() {
           <FieldsPanel
             fields={fields}
             isDetecting={isDetecting}
+            detectionMethod={detectionMethod}
             onChange={setFields}
           />
 
