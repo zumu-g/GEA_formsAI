@@ -105,15 +105,14 @@ function FieldRow({
             <Star size={12} className={isFav ? 'fill-amber-400' : ''} />
           </button>
         )}
-        {field.manual && (
-          <button
-            onClick={() => onRemove(field.id)}
-            className="p-0.5 rounded text-[#C7C7CC] hover:text-red-500 hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100"
-            aria-label="Remove field"
-          >
-            <X size={12} />
-          </button>
-        )}
+        <button
+          onClick={() => onRemove(field.id)}
+          className="p-0.5 rounded text-[#C7C7CC] hover:text-red-500 hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100"
+          aria-label="Remove field"
+          title="Remove field"
+        >
+          <X size={12} />
+        </button>
       </div>
     </div>
   );

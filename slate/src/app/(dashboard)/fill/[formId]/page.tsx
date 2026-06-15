@@ -29,6 +29,7 @@ export default function FillWorkspacePage() {
   const [detectionMethod, setDetectionMethod] = useState<import('@/types/smartFill').DetectionMethod | undefined>(undefined);
   const [contextFiles, setContextFiles] = useState<File[]>([]);
   const [favourites, setFavourites] = useState<FavouriteField[]>([]);
+  const [confirmingReset, setConfirmingReset] = useState(false);
 
   const lastInstructionsRef = useRef<string>('');
   const historyRecordedRef = useRef<boolean>(false);
@@ -133,11 +134,27 @@ export default function FillWorkspacePage() {
     a.click();
   }, [filledPdfUrl, formName]);
 
-  const handleReset = useCallback(() => {
+  const performReset = useCallback(() => {
     historyRecordedRef.current = false;
     lastInstructionsRef.current = '';
     reset();
+    setConfirmingReset(false);
   }, [reset]);
+
+  // Only worth confirming if the user has work that reset would destroy.
+  const hasWorkToLose =
+    events.length > 0 ||
+    !!filledPdfUrl ||
+    status === 'streaming' ||
+    fields.some((f) => f.value.trim());
+
+  const handleReset = useCallback(() => {
+    if (hasWorkToLose) {
+      setConfirmingReset(true);
+    } else {
+      performReset();
+    }
+  }, [hasWorkToLose, performReset]);
 
   const handleAddToFavourite = useCallback((field: FieldEntry) => {
     if (isFavourite(field.fieldName)) {
@@ -254,6 +271,39 @@ export default function FillWorkspacePage() {
           />
         </div>
       </div>
+
+      {/* Reset confirmation */}
+      {confirmingReset && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4"
+          onClick={() => setConfirmingReset(false)}
+        >
+          <div
+            className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="text-base font-semibold text-[#1D1D1F]">Reset this session?</h2>
+            <p className="mt-1.5 text-sm text-[#86868B]">
+              This clears the AI conversation and any filled PDF for this form. Field values you entered
+              will remain. This can&apos;t be undone.
+            </p>
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                onClick={() => setConfirmingReset(false)}
+                className="px-3 py-1.5 text-sm font-medium text-[#86868B] bg-[#F5F5F7] rounded-lg hover:bg-[#E5E5EA] transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={performReset}
+                className="px-3 py-1.5 text-sm font-medium text-white bg-[#FF3B30] rounded-lg hover:bg-[#E0352B] transition-colors"
+              >
+                Reset
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

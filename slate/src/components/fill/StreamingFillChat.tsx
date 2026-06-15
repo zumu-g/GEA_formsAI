@@ -178,6 +178,21 @@ export function StreamingFillChat({ events, status, error, onSend, onContextFile
   );
 }
 
+const TOOL_LABELS: Record<string, string> = {
+  fill_fields_smart: 'Writing to form',
+  fill_pdf_form: 'Writing to form',
+  extract_field_values: 'Reading field values',
+  analyze_form: 'Analysing the form',
+  detect_fields: 'Detecting fields',
+};
+
+function friendlyToolName(name: string): string {
+  if (TOOL_LABELS[name]) return TOOL_LABELS[name];
+  // Fall back: humanise snake_case tool names (e.g. "do_thing" → "Do thing")
+  const spaced = name.replace(/_/g, ' ').trim();
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+}
+
 function EventBubble({ event }: { event: StreamEvent }) {
   const { type, data } = event;
 
@@ -193,17 +208,17 @@ function EventBubble({ event }: { event: StreamEvent }) {
   }
 
   if (type === 'tool_start') {
-    const name = (data.tool_name as string) || (data.name as string) || 'tool';
+    const name = friendlyToolName((data.tool_name as string) || (data.name as string) || 'tool');
     return (
       <div className="flex items-center gap-2 text-xs text-[#86868B]">
         <Wrench className="w-3 h-3" />
-        <span>Using {name}...</span>
+        <span>{name}…</span>
       </div>
     );
   }
 
   if (type === 'tool_end') {
-    const name = (data.tool_name as string) || (data.name as string) || 'tool';
+    const name = friendlyToolName((data.tool_name as string) || (data.name as string) || 'tool');
     const result = (data.result as string) || '';
     return (
       <div className="ml-5 p-2 bg-[#F5F5F7] rounded-lg">
