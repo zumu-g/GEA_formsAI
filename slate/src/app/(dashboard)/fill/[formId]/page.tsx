@@ -7,8 +7,16 @@ import { Download, RotateCcw, Clock } from 'lucide-react';
 import { PDFViewer } from '@/components/fill/PDFViewer';
 import { StreamingFillChat } from '@/components/fill/StreamingFillChat';
 import { FieldsPanel, type FieldEntry } from '@/components/fill/FieldsPanel';
+import { FavouritesPanel } from '@/components/fill/FavouritesPanel';
 import { useStreamingFill } from '@/hooks/useStreamingFill';
 import { addFillEntry } from '@/lib/fillHistory';
+import {
+  getFavourites,
+  saveFavourite,
+  removeFavourite,
+  isFavourite,
+  type FavouriteField,
+} from '@/lib/favouriteFields';
 
 export default function FillWorkspacePage() {
   const params = useParams();
@@ -20,9 +28,14 @@ export default function FillWorkspacePage() {
   const [isDetecting, setIsDetecting] = useState(true);
   const [detectionMethod, setDetectionMethod] = useState<import('@/types/smartFill').DetectionMethod | undefined>(undefined);
   const [contextFiles, setContextFiles] = useState<File[]>([]);
+  const [favourites, setFavourites] = useState<FavouriteField[]>([]);
 
   const lastInstructionsRef = useRef<string>('');
   const historyRecordedRef = useRef<boolean>(false);
+
+  useEffect(() => {
+    setFavourites(getFavourites());
+  }, []);
 
   const { events, status, filledPdfUrl, sessionId, error, startFill, reset } = useStreamingFill();
 
@@ -126,6 +139,43 @@ export default function FillWorkspacePage() {
     reset();
   }, [reset]);
 
+  const handleAddToFavourite = useCallback((field: FieldEntry) => {
+    if (isFavourite(field.fieldName)) {
+      const current = getFavourites();
+      const match = current.find(
+        (f) => f.fieldName.trim().toLowerCase() === field.fieldName.trim().toLowerCase()
+      );
+      if (match) removeFavourite(match.id);
+    } else {
+      saveFavourite(field);
+    }
+    setFavourites(getFavourites());
+  }, []);
+
+  const handleRemoveFavourite = useCallback((id: string) => {
+    removeFavourite(id);
+    setFavourites(getFavourites());
+  }, []);
+
+  const handleDropFavourite = useCallback((fav: FavouriteField) => {
+    setFields((prev) => {
+      const alreadyExists = prev.some(
+        (f) => f.fieldName.trim().toLowerCase() === fav.fieldName.trim().toLowerCase()
+      );
+      if (alreadyExists) return prev;
+      return [
+        ...prev,
+        {
+          id: `fav_${Date.now()}`,
+          fieldName: fav.fieldName,
+          fieldType: fav.fieldType,
+          value: fav.value,
+          manual: true,
+        },
+      ];
+    });
+  }, []);
+
   const displayPdfUrl = filledPdfUrl || originalPdfUrl;
 
   return (
@@ -180,11 +230,19 @@ export default function FillWorkspacePage() {
 
         {/* Right: Fields + Chat */}
         <div className="w-96 shrink-0 flex flex-col gap-3 overflow-y-auto">
+          <FavouritesPanel
+            favourites={favourites}
+            onRemove={handleRemoveFavourite}
+          />
+
           <FieldsPanel
             fields={fields}
             isDetecting={isDetecting}
             detectionMethod={detectionMethod}
             onChange={setFields}
+            onAddToFavourite={handleAddToFavourite}
+            isFavourite={isFavourite}
+            onDropFavourite={handleDropFavourite}
           />
 
           <StreamingFillChat

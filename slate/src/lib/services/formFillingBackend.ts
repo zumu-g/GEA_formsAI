@@ -17,6 +17,22 @@ export interface DoclingExtractResult {
 
 const BACKEND_URL = process.env.FORM_FILLING_BACKEND_URL || 'http://localhost:8001';
 
+export async function detectFieldsPdfplumber(pdfBytes: Uint8Array, filename: string = 'form.pdf'): Promise<BackendAnalyzeResponse> {
+  const formData = new FormData();
+  formData.append('file', new Blob([Buffer.from(pdfBytes)], { type: 'application/pdf' }), filename);
+  const res = await fetch(`${BACKEND_URL}/detect-fields-pdfplumber`, { method: 'POST', body: formData });
+  if (!res.ok) throw new Error(`pdfplumber detect failed: ${res.status} ${res.statusText}`);
+  return res.json();
+}
+
+export async function detectFieldsCommonForms(pdfBytes: Uint8Array, filename: string = 'form.pdf'): Promise<BackendAnalyzeResponse> {
+  const formData = new FormData();
+  formData.append('file', new Blob([Buffer.from(pdfBytes)], { type: 'application/pdf' }), filename);
+  const res = await fetch(`${BACKEND_URL}/detect-fields-commonforms`, { method: 'POST', body: formData });
+  if (!res.ok) throw new Error(`CommonForms detect failed: ${res.status} ${res.statusText}`);
+  return res.json();
+}
+
 export async function detectFieldsDocling(pdfBytes: Uint8Array, filename: string = 'form.pdf'): Promise<BackendAnalyzeResponse> {
   const formData = new FormData();
   formData.append('file', new Blob([Buffer.from(pdfBytes)], { type: 'application/pdf' }), filename);

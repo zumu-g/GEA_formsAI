@@ -4,3 +4,8 @@ skyvern/
 
 # Claude Code config
 .claude/skills/
+
+# Local Claude Code settings
+.claude/settings.local.json
+.DS_Store
+.claude/.DS_Store

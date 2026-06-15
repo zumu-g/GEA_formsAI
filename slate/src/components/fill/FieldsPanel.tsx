@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { Plus, X, Loader2, Sparkles } from 'lucide-react';
+import { Plus, X, Loader2, Sparkles, Star } from 'lucide-react';
 import type { DetectionMethod } from '@/types/smartFill';
+import type { FavouriteField } from '@/lib/favouriteFields';
 
 export interface FieldEntry {
   id: string;
@@ -15,6 +16,8 @@ export interface FieldEntry {
 
 const METHOD_LABELS: Partial<Record<DetectionMethod, string>> = {
   acroform: 'AcroForm',
+  pdfplumber: 'pdfplumber',
+  commonforms: 'CommonForms',
   docai: 'Document AI',
   docling: 'Docling',
   vision: 'AI Vision',
@@ -26,6 +29,9 @@ interface FieldsPanelProps {
   isDetecting: boolean;
   detectionMethod?: DetectionMethod;
   onChange: (fields: FieldEntry[]) => void;
+  onAddToFavourite?: (field: FieldEntry) => void;
+  isFavourite?: (fieldName: string) => boolean;
+  onDropFavourite?: (fav: FavouriteField) => void;
 }
 
 const TYPE_OPTIONS: FieldEntry['fieldType'][] = ['text', 'checkbox', 'date', 'dropdown', 'signature', 'radio'];
@@ -41,12 +47,16 @@ const TYPE_COLOURS: Record<FieldEntry['fieldType'], string> = {
 
 function FieldRow({
   field,
+  isFav,
   onValueChange,
   onRemove,
+  onAddToFavourite,
 }: {
   field: FieldEntry;
+  isFav: boolean;
   onValueChange: (id: string, value: string) => void;
   onRemove: (id: string) => void;
+  onAddToFavourite?: (field: FieldEntry) => void;
 }) {
   return (
     <div className="group flex items-start gap-2 py-2 border-b border-[#F5F5F7] last:border-0">
@@ -80,23 +90,48 @@ function FieldRow({
           />
         )}
       </div>
-      {field.manual && (
-        <button
-          onClick={() => onRemove(field.id)}
-          className="mt-1 p-0.5 rounded text-[#C7C7CC] hover:text-red-500 hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100"
-          aria-label="Remove field"
-        >
-          <X size={12} />
-        </button>
-      )}
+      <div className="mt-1 flex items-center gap-0.5">
+        {onAddToFavourite && (
+          <button
+            onClick={() => onAddToFavourite(field)}
+            className={`p-0.5 rounded transition-colors ${
+              isFav
+                ? 'text-amber-400'
+                : 'text-[#C7C7CC] hover:text-amber-400 opacity-0 group-hover:opacity-100'
+            }`}
+            aria-label={isFav ? 'Remove from favourites' : 'Add to favourites'}
+            title={isFav ? 'Remove from favourites' : 'Save to favourites'}
+          >
+            <Star size={12} className={isFav ? 'fill-amber-400' : ''} />
+          </button>
+        )}
+        {field.manual && (
+          <button
+            onClick={() => onRemove(field.id)}
+            className="p-0.5 rounded text-[#C7C7CC] hover:text-red-500 hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100"
+            aria-label="Remove field"
+          >
+            <X size={12} />
+          </button>
+        )}
+      </div>
     </div>
   );
 }
 
-export function FieldsPanel({ fields, isDetecting, detectionMethod, onChange }: FieldsPanelProps) {
+export function FieldsPanel({
+  fields,
+  isDetecting,
+  detectionMethod,
+  onChange,
+  onAddToFavourite,
+  isFavourite,
+  onDropFavourite,
+}: FieldsPanelProps) {
   const [isAdding, setIsAdding] = useState(false);
   const [newName, setNewName] = useState('');
   const [newType, setNewType] = useState<FieldEntry['fieldType']>('text');
+  const [isDragOver, setIsDragOver] = useState(false);
 
   const handleValueChange = useCallback(
     (id: string, value: string) => {
@@ -128,8 +163,39 @@ export function FieldsPanel({ fields, isDetecting, detectionMethod, onChange }: 
     setIsAdding(false);
   }, [fields, newName, newType, onChange]);
 
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    if (e.dataTransfer.types.includes('application/slate-favourite')) {
+      e.preventDefault();
+      setIsDragOver(true);
+    }
+  }, []);
+
+  const handleDragLeave = useCallback(() => setIsDragOver(false), []);
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      setIsDragOver(false);
+      const raw = e.dataTransfer.getData('application/slate-favourite');
+      if (!raw || !onDropFavourite) return;
+      try {
+        onDropFavourite(JSON.parse(raw));
+      } catch {
+        // malformed drag data — ignore
+      }
+    },
+    [onDropFavourite]
+  );
+
   return (
-    <div className="rounded-xl border border-[#E5E5EA] bg-white flex flex-col overflow-hidden">
+    <div
+      className={`rounded-xl border bg-white flex flex-col overflow-hidden transition-colors ${
+        isDragOver ? 'border-[#5856D6] border-dashed bg-[#5856D6]/5' : 'border-[#E5E5EA]'
+      }`}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
       {/* Header */}
       <div className="flex items-center justify-between px-3 py-2.5 border-b border-[#F5F5F7]">
         <div className="flex items-center gap-2">
@@ -188,8 +254,10 @@ export function FieldsPanel({ fields, isDetecting, detectionMethod, onChange }: 
               <FieldRow
                 key={f.id}
                 field={f}
+                isFav={isFavourite ? isFavourite(f.fieldName) : false}
                 onValueChange={handleValueChange}
                 onRemove={handleRemove}
+                onAddToFavourite={onAddToFavourite}
               />
             ))}
           </div>
