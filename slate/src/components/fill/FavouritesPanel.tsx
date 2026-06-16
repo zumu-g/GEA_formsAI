@@ -19,7 +19,8 @@ interface FavouritesPanelProps {
 }
 
 export function FavouritesPanel({ favourites, onRemove }: FavouritesPanelProps) {
-  const [collapsed, setCollapsed] = useState(false);
+  // Default collapsed when there's nothing saved — keep it out of the way until used.
+  const [collapsed, setCollapsed] = useState(favourites.length === 0);
 
   const handleDragStart = (e: React.DragEvent, fav: FavouriteField) => {
     e.dataTransfer.setData('application/slate-favourite', JSON.stringify(fav));

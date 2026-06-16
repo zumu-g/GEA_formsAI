@@ -247,11 +247,6 @@ export default function FillWorkspacePage() {
 
         {/* Right: Fields + Chat */}
         <div className="w-96 shrink-0 flex flex-col gap-3 overflow-y-auto">
-          <FavouritesPanel
-            favourites={favourites}
-            onRemove={handleRemoveFavourite}
-          />
-
           <FieldsPanel
             fields={fields}
             isDetecting={isDetecting}
@@ -268,6 +263,11 @@ export default function FillWorkspacePage() {
             error={error}
             onSend={handleSend}
             onContextFilesChange={setContextFiles}
+          />
+
+          <FavouritesPanel
+            favourites={favourites}
+            onRemove={handleRemoveFavourite}
           />
         </div>
       </div>
