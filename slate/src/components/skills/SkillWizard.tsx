@@ -185,8 +185,8 @@ export function SkillWizard({ skill }: SkillWizardProps) {
         <div className="w-16 h-16 rounded-2xl bg-green-100 flex items-center justify-center mx-auto mb-4">
           <Check size={32} className="text-green-600" />
         </div>
-        <h2 className="text-xl font-semibold text-[#1D1D1F] mb-2">PDF Generated</h2>
-        <p className="text-sm text-[#86868B] mb-6">
+        <h2 className="text-xl font-semibold text-[#1B1D24] mb-2">PDF Generated</h2>
+        <p className="text-sm text-[#767A85] mb-6">
           Your filled {skill.documentType} is ready to download.
         </p>
         <div className="flex flex-col gap-3">
@@ -250,8 +250,8 @@ export function SkillWizard({ skill }: SkillWizardProps) {
                     !canNavigate
                       ? 'text-[#D1D1D6] cursor-not-allowed opacity-50'
                       : isActive
-                        ? 'bg-white text-[#1D1D1F] shadow-sm border border-[#E5E5EA]/60 font-medium cursor-pointer'
-                        : 'text-[#86868B] hover:bg-white/60 hover:text-[#1D1D1F] cursor-pointer'
+                        ? 'bg-white text-[#1B1D24] shadow-sm border border-[#E2E4EA]/60 font-medium cursor-pointer'
+                        : 'text-[#767A85] hover:bg-white/60 hover:text-[#1B1D24] cursor-pointer'
                   }
                 `}
               >
@@ -287,8 +287,8 @@ export function SkillWizard({ skill }: SkillWizardProps) {
                     !allComplete && !isReview
                       ? 'text-[#D1D1D6] cursor-not-allowed opacity-50'
                       : isReview
-                        ? 'bg-white text-[#1D1D1F] shadow-sm border border-[#E5E5EA]/60 font-medium cursor-pointer'
-                        : 'text-[#86868B] hover:bg-white/60 hover:text-[#1D1D1F] cursor-pointer'
+                        ? 'bg-white text-[#1B1D24] shadow-sm border border-[#E2E4EA]/60 font-medium cursor-pointer'
+                        : 'text-[#767A85] hover:bg-white/60 hover:text-[#1B1D24] cursor-pointer'
                   }
                 `}
               >
@@ -317,7 +317,7 @@ export function SkillWizard({ skill }: SkillWizardProps) {
           <>
             {/* Progress */}
             <div className="flex items-center justify-between mb-6">
-              <span className="text-xs text-[#86868B] font-medium">
+              <span className="text-xs text-[#767A85] font-medium">
                 Step {session.currentSectionIndex + 1} of {skill.sections.length + 1}
               </span>
               <div className="flex gap-1">
@@ -325,7 +325,7 @@ export function SkillWizard({ skill }: SkillWizardProps) {
                   <div
                     key={idx}
                     className={`h-1 w-6 rounded-full transition-colors ${
-                      idx <= session.currentSectionIndex ? 'bg-[#5856D6]' : 'bg-[#E5E5EA]'
+                      idx <= session.currentSectionIndex ? 'bg-[#5856D6]' : 'bg-[#E2E4EA]'
                     }`}
                   />
                 ))}
@@ -341,7 +341,7 @@ export function SkillWizard({ skill }: SkillWizardProps) {
             />
 
             {/* Navigation */}
-            <div className="flex items-center justify-between mt-8 pt-6 border-t border-[#E5E5EA]/60">
+            <div className="flex items-center justify-between mt-8 pt-6 border-t border-[#E2E4EA]/60">
               <button
                 onClick={handleBack}
                 disabled={isFirstSection}
@@ -352,7 +352,7 @@ export function SkillWizard({ skill }: SkillWizardProps) {
                   ${
                     isFirstSection
                       ? 'text-[#D1D1D6] cursor-not-allowed'
-                      : 'text-[#86868B] hover:text-[#1D1D1F] hover:bg-[#F5F5F7]'
+                      : 'text-[#767A85] hover:text-[#1B1D24] hover:bg-[#F2F4F7]'
                   }
                 `}
               >

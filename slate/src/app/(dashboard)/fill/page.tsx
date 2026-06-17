@@ -65,20 +65,20 @@ export default function FillPage() {
   return (
     <div className="max-w-3xl mx-auto">
       <div className="text-center mb-10">
-        <h1 className="text-2xl font-bold text-[#1D1D1F]">Fill a Form</h1>
-        <p className="text-sm text-[#86868B] mt-2">
+        <h1 className="text-2xl font-bold text-[#1B1D24]">Fill a Form</h1>
+        <p className="text-sm text-[#767A85] mt-2">
           Upload a PDF or provide a web form URL — AI fills it for you.
         </p>
       </div>
 
       {/* Tab switcher */}
-      <div className="flex items-center justify-center gap-1 mb-8 p-1 bg-[#F5F5F7] rounded-lg w-fit mx-auto">
+      <div className="flex items-center justify-center gap-1 mb-8 p-1 bg-[#F2F4F7] rounded-lg w-fit mx-auto">
         <button
           onClick={() => setActiveTab('pdf')}
           className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
             activeTab === 'pdf'
-              ? 'bg-white text-[#1D1D1F] shadow-sm'
-              : 'text-[#86868B] hover:text-[#1D1D1F]'
+              ? 'bg-white text-[#1B1D24] shadow-sm'
+              : 'text-[#767A85] hover:text-[#1B1D24]'
           }`}
         >
           PDF Form
@@ -87,8 +87,8 @@ export default function FillPage() {
           onClick={() => setActiveTab('web')}
           className={`flex items-center gap-1.5 px-4 py-2 text-sm font-medium rounded-md transition-colors ${
             activeTab === 'web'
-              ? 'bg-white text-[#1D1D1F] shadow-sm'
-              : 'text-[#86868B] hover:text-[#1D1D1F]'
+              ? 'bg-white text-[#1B1D24] shadow-sm'
+              : 'text-[#767A85] hover:text-[#1B1D24]'
           }`}
         >
           <Globe className="w-3.5 h-3.5" />
@@ -101,7 +101,7 @@ export default function FillPage() {
         <>
           <PDFUploader onUpload={handleUpload} isUploading={isUploading} />
           <div className="mt-10 text-center">
-            <p className="text-xs text-[#AEAEB2]">
+            <p className="text-xs text-[#A2A6B0]">
               Supported: PDF files up to 25MB, up to 100 pages.
               <br />
               Your documents are encrypted and never used for AI training.
@@ -113,9 +113,9 @@ export default function FillPage() {
       {/* Web Form */}
       {activeTab === 'web' && (
         <form onSubmit={handleWebFill} className="space-y-4">
-          <div className="p-6 rounded-xl border border-[#E5E5EA] bg-white space-y-4">
+          <div className="p-6 rounded-xl border border-[#E2E4EA] bg-white space-y-4">
             <div>
-              <label className="block text-sm font-medium text-[#1D1D1F] mb-1">
+              <label className="block text-sm font-medium text-[#1B1D24] mb-1">
                 Web Form URL
               </label>
               <input
@@ -124,11 +124,11 @@ export default function FillPage() {
                 onChange={(e) => setWebUrl(e.target.value)}
                 placeholder="https://example.com/application-form"
                 required
-                className="w-full px-3 py-2 text-sm rounded-lg border border-[#E5E5EA] focus:outline-none focus:border-[#5856D6] focus:ring-1 focus:ring-[#5856D6]"
+                className="w-full px-3 py-2 text-sm rounded-lg border border-[#E2E4EA] focus:outline-none focus:border-[#5856D6] focus:ring-1 focus:ring-[#5856D6]"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-[#1D1D1F] mb-1">
+              <label className="block text-sm font-medium text-[#1B1D24] mb-1">
                 Instructions
               </label>
               <textarea
@@ -137,7 +137,7 @@ export default function FillPage() {
                 placeholder="Fill in the application form with: Name: John Doe, Email: john@example.com..."
                 required
                 rows={4}
-                className="w-full px-3 py-2 text-sm rounded-lg border border-[#E5E5EA] focus:outline-none focus:border-[#5856D6] focus:ring-1 focus:ring-[#5856D6] resize-none"
+                className="w-full px-3 py-2 text-sm rounded-lg border border-[#E2E4EA] focus:outline-none focus:border-[#5856D6] focus:ring-1 focus:ring-[#5856D6] resize-none"
               />
             </div>
             <button
@@ -149,7 +149,7 @@ export default function FillPage() {
             </button>
           </div>
           <div className="text-center">
-            <p className="text-xs text-[#AEAEB2]">
+            <p className="text-xs text-[#A2A6B0]">
               Powered by Skyvern — AI browser automation.
               <br />
               The AI will navigate to the URL and fill the form for you.

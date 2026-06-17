@@ -1,11 +1,29 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Space_Grotesk, IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 
-const inter = Inter({
+// Display / headings / UI chrome — geometric, characterful, not Inter.
+const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
-  variable: "--font-inter",
+  variable: "--font-space-grotesk",
   display: "swap",
+  weight: ["400", "500", "600", "700"],
+});
+
+// Body / dense UI — warm, engineered, reads well at small sizes.
+const plexSans = IBM_Plex_Sans({
+  subsets: ["latin"],
+  variable: "--font-plex-sans",
+  display: "swap",
+  weight: ["400", "500", "600", "700"],
+});
+
+// Monospace — values, results, technical chrome.
+const plexMono = IBM_Plex_Mono({
+  subsets: ["latin"],
+  variable: "--font-plex-mono",
+  display: "swap",
+  weight: ["400", "500"],
 });
 
 export const metadata: Metadata = {
@@ -25,8 +43,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={inter.variable}>
-      <body className="antialiased bg-white text-[#1D1D1F]">
+    <html lang="en" className={`${spaceGrotesk.variable} ${plexSans.variable} ${plexMono.variable}`}>
+      <body className="antialiased bg-white text-[#1B1D24]">
         {children}
       </body>
     </html>

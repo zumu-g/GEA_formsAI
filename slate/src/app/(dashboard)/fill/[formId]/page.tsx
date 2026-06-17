@@ -198,11 +198,11 @@ export default function FillWorkspacePage() {
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)]">
       {/* Toolbar */}
-      <div className="flex items-center justify-between px-6 py-3 border-b border-[#E5E5EA]">
+      <div className="flex items-center justify-between px-6 py-3 border-b border-[#E2E4EA]">
         <div>
-          <h1 className="text-lg font-semibold text-[#1D1D1F]">{formName || 'Form Workspace'}</h1>
+          <h1 className="text-lg font-semibold text-[#1B1D24]">{formName || 'Form Workspace'}</h1>
           {!isDetecting && (
-            <p className="text-xs text-[#86868B]">
+            <p className="text-xs text-[#767A85]">
               {fields.length > 0 ? `${fields.length} fields detected` : 'No fields detected'}
             </p>
           )}
@@ -219,14 +219,14 @@ export default function FillWorkspacePage() {
           )}
           <button
             onClick={handleReset}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-[#86868B] bg-[#F5F5F7] rounded-lg hover:bg-[#E5E5EA] transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-[#767A85] bg-[#F2F4F7] rounded-lg hover:bg-[#E2E4EA] transition-colors"
           >
             <RotateCcw className="w-4 h-4" />
             Reset
           </button>
           <Link
             href="/fill/history"
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-[#86868B] bg-[#F5F5F7] rounded-lg hover:bg-[#E5E5EA] transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-[#767A85] bg-[#F2F4F7] rounded-lg hover:bg-[#E2E4EA] transition-colors"
             title="Fill history"
           >
             <Clock className="w-4 h-4" />
@@ -282,15 +282,15 @@ export default function FillWorkspacePage() {
             className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 className="text-base font-semibold text-[#1D1D1F]">Reset this session?</h2>
-            <p className="mt-1.5 text-sm text-[#86868B]">
+            <h2 className="text-base font-semibold text-[#1B1D24]">Reset this session?</h2>
+            <p className="mt-1.5 text-sm text-[#767A85]">
               This clears the AI conversation and any filled PDF for this form. Field values you entered
               will remain. This can&apos;t be undone.
             </p>
             <div className="mt-4 flex justify-end gap-2">
               <button
                 onClick={() => setConfirmingReset(false)}
-                className="px-3 py-1.5 text-sm font-medium text-[#86868B] bg-[#F5F5F7] rounded-lg hover:bg-[#E5E5EA] transition-colors"
+                className="px-3 py-1.5 text-sm font-medium text-[#767A85] bg-[#F2F4F7] rounded-lg hover:bg-[#E2E4EA] transition-colors"
               >
                 Cancel
               </button>

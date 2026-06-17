@@ -51,7 +51,7 @@ export function PDFUploader({ onUpload, isUploading = false }: PDFUploaderProps)
           transition-all duration-200 cursor-pointer
           ${isDragActive
             ? 'border-[#5856D6] bg-[#5856D6]/5'
-            : 'border-[#E5E5EA] bg-[#F5F5F7]/30 hover:border-[#C7C7CC] hover:bg-[#F5F5F7]/60'
+            : 'border-[#E2E4EA] bg-[#F2F4F7]/30 hover:border-[#C4C8D1] hover:bg-[#F2F4F7]/60'
           }
           ${isUploading ? 'opacity-60 cursor-not-allowed' : ''}
         `}
@@ -74,8 +74,8 @@ export function PDFUploader({ onUpload, isUploading = false }: PDFUploaderProps)
                 </svg>
               </div>
               <div className="text-center">
-                <p className="text-sm font-medium text-[#1D1D1F]">Uploading your PDF...</p>
-                <p className="text-xs text-[#86868B] mt-1">This will only take a moment</p>
+                <p className="text-sm font-medium text-[#1B1D24]">Uploading your PDF...</p>
+                <p className="text-xs text-[#767A85] mt-1">This will only take a moment</p>
               </div>
             </motion.div>
           ) : isDragActive ? (
@@ -99,14 +99,14 @@ export function PDFUploader({ onUpload, isUploading = false }: PDFUploaderProps)
               exit={{ opacity: 0, y: -5 }}
               className="flex flex-col items-center gap-4"
             >
-              <div className="w-12 h-12 rounded-2xl bg-[#F5F5F7] flex items-center justify-center">
-                <Upload size={24} className="text-[#86868B]" />
+              <div className="w-12 h-12 rounded-2xl bg-[#F2F4F7] flex items-center justify-center">
+                <Upload size={24} className="text-[#767A85]" />
               </div>
               <div className="text-center">
-                <p className="text-sm font-medium text-[#1D1D1F]">
+                <p className="text-sm font-medium text-[#1B1D24]">
                   Drop your PDF here, or <span className="text-[#5856D6]">browse</span>
                 </p>
-                <p className="text-xs text-[#AEAEB2] mt-1">PDF up to 25MB</p>
+                <p className="text-xs text-[#A2A6B0] mt-1">PDF up to 25MB</p>
               </div>
             </motion.div>
           )}

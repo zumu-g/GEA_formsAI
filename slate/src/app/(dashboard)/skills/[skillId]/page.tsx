@@ -72,12 +72,12 @@ export default function SkillExecutionPage() {
             href="/skills"
             onClick={() => reset()}
             aria-label="Back to Skills"
-            className="flex items-center justify-center w-9 h-9 rounded-xl border border-[#E5E5EA] text-[#86868B] hover:text-[#1D1D1F] hover:border-[#C7C7CC] transition-all duration-150"
+            className="flex items-center justify-center w-9 h-9 rounded-xl border border-[#E2E4EA] text-[#767A85] hover:text-[#1B1D24] hover:border-[#C4C8D1] transition-all duration-150"
           >
             <ArrowLeft size={16} />
           </Link>
           <div>
-            <h1 className="text-xl font-bold text-[#1D1D1F]">{skill.name}</h1>
+            <h1 className="text-xl font-bold text-[#1B1D24]">{skill.name}</h1>
             {skill.jurisdiction && (
               <span className="text-xs font-medium text-[#5856D6]">
                 {skill.jurisdiction}
@@ -89,7 +89,7 @@ export default function SkillExecutionPage() {
         {session && session.status !== 'upload' && (
           showStartOverConfirm ? (
             <div className="flex items-center gap-2">
-              <span className="text-xs text-[#86868B]">Discard all progress?</span>
+              <span className="text-xs text-[#767A85]">Discard all progress?</span>
               <button
                 onClick={() => {
                   setShowStartOverConfirm(false);
@@ -103,7 +103,7 @@ export default function SkillExecutionPage() {
               </button>
               <button
                 onClick={() => setShowStartOverConfirm(false)}
-                className="text-xs text-[#86868B] hover:text-[#1D1D1F] cursor-pointer"
+                className="text-xs text-[#767A85] hover:text-[#1B1D24] cursor-pointer"
               >
                 Cancel
               </button>
@@ -111,7 +111,7 @@ export default function SkillExecutionPage() {
           ) : (
             <button
               onClick={() => setShowStartOverConfirm(true)}
-              className="text-xs text-[#86868B] hover:text-[#1D1D1F] transition-colors cursor-pointer"
+              className="text-xs text-[#767A85] hover:text-[#1B1D24] transition-colors cursor-pointer"
             >
               Start over
             </button>

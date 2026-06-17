@@ -50,17 +50,17 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
               transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
               className={`
                 w-full ${sizes[size]} bg-white rounded-2xl shadow-xl
-                border border-[#E5E5EA] overflow-hidden
+                border border-[#E2E4EA] overflow-hidden
               `}
             >
               {title && (
-                <div className="flex items-center justify-between px-6 py-4 border-b border-[#E5E5EA]">
-                  <h2 className="text-lg font-semibold text-[#1D1D1F]">{title}</h2>
+                <div className="flex items-center justify-between px-6 py-4 border-b border-[#E2E4EA]">
+                  <h2 className="text-lg font-semibold text-[#1B1D24]">{title}</h2>
                   <button
                     onClick={onClose}
-                    className="p-1.5 rounded-lg hover:bg-[#F5F5F7] transition-colors cursor-pointer"
+                    className="p-1.5 rounded-lg hover:bg-[#F2F4F7] transition-colors cursor-pointer"
                   >
-                    <X size={18} className="text-[#86868B]" />
+                    <X size={18} className="text-[#767A85]" />
                   </button>
                 </div>
               )}

@@ -55,11 +55,11 @@ export function StreamingFillChat({ events, status, error, onSend, onContextFile
   const hasFiles = attachedFiles.length > 0;
 
   return (
-    <div className="flex flex-col h-full rounded-xl border border-[#E5E5EA] overflow-hidden">
+    <div className="flex flex-col h-full rounded-xl border border-[#E2E4EA] overflow-hidden">
       {/* Header */}
-      <div className="px-4 py-3 bg-[#F5F5F7] border-b border-[#E5E5EA] flex items-center gap-2">
+      <div className="px-4 py-3 bg-[#F2F4F7] border-b border-[#E2E4EA] flex items-center gap-2">
         <Bot className="w-4 h-4 text-[#5856D6]" />
-        <span className="text-sm font-medium text-[#1D1D1F]">AI Form Filler</span>
+        <span className="text-sm font-medium text-[#1B1D24]">AI Form Filler</span>
         {status === 'streaming' && (
           <span className="ml-auto flex items-center gap-1 text-xs text-[#5856D6]">
             <Loader2 className="w-3 h-3 animate-spin" />
@@ -78,11 +78,11 @@ export function StreamingFillChat({ events, status, error, onSend, onContextFile
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-3">
         {events.length === 0 && status === 'idle' && (
           <div className="text-center py-8">
-            <Bot className="w-10 h-10 text-[#AEAEB2] mx-auto mb-3" />
-            <p className="text-sm text-[#86868B]">
+            <Bot className="w-10 h-10 text-[#A2A6B0] mx-auto mb-3" />
+            <p className="text-sm text-[#767A85]">
               Tell me how to fill out this form.
             </p>
-            <p className="text-xs text-[#AEAEB2] mt-1">
+            <p className="text-xs text-[#A2A6B0] mt-1">
               e.g. &quot;Fill in John Doe, 123 Main St, phone 555-1234&quot;
             </p>
           </div>
@@ -101,20 +101,20 @@ export function StreamingFillChat({ events, status, error, onSend, onContextFile
       </div>
 
       {/* Input */}
-      <form onSubmit={handleSubmit} className="p-3 border-t border-[#E5E5EA] bg-white">
+      <form onSubmit={handleSubmit} className="p-3 border-t border-[#E2E4EA] bg-white">
         {/* Attached file chips */}
         {hasFiles && (
           <div className="flex flex-wrap gap-1.5 mb-2">
             {attachedFiles.map((file, i) => (
               <span
                 key={i}
-                className="bg-[#F5F5F7] border border-[#E5E5EA] text-xs px-2 py-0.5 rounded-full flex items-center gap-1"
+                className="bg-[#F2F4F7] border border-[#E2E4EA] text-xs px-2 py-0.5 rounded-full flex items-center gap-1"
               >
-                <span className="text-[#1D1D1F] max-w-[140px] truncate">{file.name}</span>
+                <span className="text-[#1B1D24] max-w-[140px] truncate">{file.name}</span>
                 <button
                   type="button"
                   onClick={() => removeFile(i)}
-                  className="text-[#AEAEB2] hover:text-[#FF3B30] transition-colors"
+                  className="text-[#A2A6B0] hover:text-[#FF3B30] transition-colors"
                   aria-label={`Remove ${file.name}`}
                 >
                   <X className="w-3 h-3" />
@@ -146,7 +146,7 @@ export function StreamingFillChat({ events, status, error, onSend, onContextFile
               `relative px-3 py-2 rounded-lg border transition-colors disabled:opacity-50 disabled:cursor-not-allowed ` +
               (hasFiles
                 ? 'bg-[#5856D6]/10 border-[#5856D6]/30 text-[#5856D6]'
-                : 'bg-[#F5F5F7] border-[#E5E5EA] text-[#86868B] hover:bg-[#E5E5EA]')
+                : 'bg-[#F2F4F7] border-[#E2E4EA] text-[#767A85] hover:bg-[#E2E4EA]')
             }
           >
             <Paperclip className="w-4 h-4" />
@@ -163,7 +163,7 @@ export function StreamingFillChat({ events, status, error, onSend, onContextFile
             onChange={(e) => setInput(e.target.value)}
             placeholder={status === 'complete' ? 'Send follow-up instructions...' : 'Type your instructions...'}
             disabled={disabled || status === 'streaming'}
-            className="flex-1 px-3 py-2 text-sm rounded-lg border border-[#E5E5EA] focus:outline-none focus:border-[#5856D6] focus:ring-1 focus:ring-[#5856D6] disabled:opacity-50 disabled:bg-[#F5F5F7]"
+            className="flex-1 px-3 py-2 text-sm rounded-lg border border-[#E2E4EA] focus:outline-none focus:border-[#5856D6] focus:ring-1 focus:ring-[#5856D6] disabled:opacity-50 disabled:bg-[#F2F4F7]"
           />
           <button
             type="submit"
@@ -202,7 +202,7 @@ function EventBubble({ event }: { event: StreamEvent }) {
     return (
       <div className="flex items-start gap-2">
         <Bot className="w-4 h-4 text-[#5856D6] mt-0.5 shrink-0" />
-        <p className="text-sm text-[#1D1D1F] whitespace-pre-wrap">{text}</p>
+        <p className="text-sm text-[#1B1D24] whitespace-pre-wrap">{text}</p>
       </div>
     );
   }
@@ -210,7 +210,7 @@ function EventBubble({ event }: { event: StreamEvent }) {
   if (type === 'tool_start') {
     const name = friendlyToolName((data.tool_name as string) || (data.name as string) || 'tool');
     return (
-      <div className="flex items-center gap-2 text-xs text-[#86868B]">
+      <div className="flex items-center gap-2 text-xs text-[#767A85]">
         <Wrench className="w-3 h-3" />
         <span>{name}…</span>
       </div>
@@ -221,9 +221,9 @@ function EventBubble({ event }: { event: StreamEvent }) {
     const name = friendlyToolName((data.tool_name as string) || (data.name as string) || 'tool');
     const result = (data.result as string) || '';
     return (
-      <div className="ml-5 p-2 bg-[#F5F5F7] rounded-lg">
-        <p className="text-xs font-medium text-[#86868B] mb-1">{name}</p>
-        {result && <p className="text-xs text-[#1D1D1F] font-mono whitespace-pre-wrap line-clamp-4">{result}</p>}
+      <div className="ml-5 p-2 bg-[#F2F4F7] rounded-lg">
+        <p className="text-xs font-medium text-[#767A85] mb-1">{name}</p>
+        {result && <p className="text-xs text-[#1B1D24] font-mono whitespace-pre-wrap line-clamp-4">{result}</p>}
       </div>
     );
   }
@@ -233,7 +233,7 @@ function EventBubble({ event }: { event: StreamEvent }) {
     return (
       <div className="flex items-start gap-2 p-3 bg-green-50 rounded-lg">
         <CheckCircle className="w-4 h-4 text-[#34C759] mt-0.5 shrink-0" />
-        <p className="text-sm text-[#1D1D1F]">{summary}</p>
+        <p className="text-sm text-[#1B1D24]">{summary}</p>
       </div>
     );
   }

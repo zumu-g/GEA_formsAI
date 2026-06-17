@@ -5,7 +5,7 @@ import { Star, X, GripVertical, ChevronDown, ChevronRight } from 'lucide-react';
 import type { FavouriteField } from '@/lib/favouriteFields';
 
 const TYPE_COLOURS: Record<FavouriteField['fieldType'], string> = {
-  text: 'bg-[#F5F5F7] text-[#86868B]',
+  text: 'bg-[#F2F4F7] text-[#767A85]',
   checkbox: 'bg-blue-50 text-blue-600',
   date: 'bg-purple-50 text-purple-600',
   dropdown: 'bg-orange-50 text-orange-600',
@@ -28,15 +28,15 @@ export function FavouritesPanel({ favourites, onRemove }: FavouritesPanelProps) 
   };
 
   return (
-    <div className="rounded-xl border border-[#E5E5EA] bg-white flex flex-col overflow-hidden">
+    <div className="rounded-xl border border-[#E2E4EA] bg-white flex flex-col overflow-hidden">
       {/* Header */}
       <button
         onClick={() => setCollapsed((v) => !v)}
-        className="flex items-center justify-between px-3 py-2.5 border-b border-[#F5F5F7] w-full text-left hover:bg-[#FAFAFA] transition-colors"
+        className="flex items-center justify-between px-3 py-2.5 border-b border-[#F2F4F7] w-full text-left hover:bg-[#F8F9FB] transition-colors"
       >
         <div className="flex items-center gap-2">
           <Star size={13} className="text-amber-400 fill-amber-400" />
-          <span className="text-xs font-semibold text-[#1D1D1F]">Favourites</span>
+          <span className="text-xs font-semibold text-[#1B1D24]">Favourites</span>
           {favourites.length > 0 && (
             <span className="text-[10px] font-medium bg-amber-100 text-amber-600 px-1.5 py-0.5 rounded-full">
               {favourites.length}
@@ -44,9 +44,9 @@ export function FavouritesPanel({ favourites, onRemove }: FavouritesPanelProps) 
           )}
         </div>
         {collapsed ? (
-          <ChevronRight size={13} className="text-[#AEAEB2]" />
+          <ChevronRight size={13} className="text-[#A2A6B0]" />
         ) : (
-          <ChevronDown size={13} className="text-[#AEAEB2]" />
+          <ChevronDown size={13} className="text-[#A2A6B0]" />
         )}
       </button>
 
@@ -54,8 +54,8 @@ export function FavouritesPanel({ favourites, onRemove }: FavouritesPanelProps) 
         <div className="max-h-48 overflow-y-auto">
           {favourites.length === 0 ? (
             <div className="py-4 px-3 text-center">
-              <p className="text-xs text-[#86868B]">No favourites yet.</p>
-              <p className="mt-0.5 text-[11px] text-[#AEAEB2]">
+              <p className="text-xs text-[#767A85]">No favourites yet.</p>
+              <p className="mt-0.5 text-[11px] text-[#A2A6B0]">
                 Star a field below to save it here.
               </p>
             </div>
@@ -66,12 +66,12 @@ export function FavouritesPanel({ favourites, onRemove }: FavouritesPanelProps) 
                   key={fav.id}
                   draggable
                   onDragStart={(e) => handleDragStart(e, fav)}
-                  className="group flex items-center gap-1.5 py-1.5 px-1 rounded-lg hover:bg-[#F5F5F7] cursor-grab active:cursor-grabbing transition-colors"
+                  className="group flex items-center gap-1.5 py-1.5 px-1 rounded-lg hover:bg-[#F2F4F7] cursor-grab active:cursor-grabbing transition-colors"
                 >
-                  <GripVertical size={12} className="text-[#C7C7CC] shrink-0" />
+                  <GripVertical size={12} className="text-[#C4C8D1] shrink-0" />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5">
-                      <span className="text-xs font-medium text-[#1D1D1F] truncate">
+                      <span className="text-xs font-medium text-[#1B1D24] truncate">
                         {fav.fieldName}
                       </span>
                       <span
@@ -81,12 +81,12 @@ export function FavouritesPanel({ favourites, onRemove }: FavouritesPanelProps) 
                       </span>
                     </div>
                     {fav.value && (
-                      <p className="text-[11px] text-[#86868B] truncate mt-0.5">{fav.value}</p>
+                      <p className="text-[11px] text-[#767A85] truncate mt-0.5">{fav.value}</p>
                     )}
                   </div>
                   <button
                     onClick={() => onRemove(fav.id)}
-                    className="p-0.5 rounded text-[#C7C7CC] hover:text-red-500 hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100 shrink-0"
+                    className="p-0.5 rounded text-[#C4C8D1] hover:text-red-500 hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100 shrink-0"
                     aria-label={`Remove ${fav.fieldName} from favourites`}
                   >
                     <X size={11} />
@@ -96,7 +96,7 @@ export function FavouritesPanel({ favourites, onRemove }: FavouritesPanelProps) 
             </div>
           )}
           {favourites.length > 0 && (
-            <p className="px-3 pb-2 text-[10px] text-[#AEAEB2] text-center">
+            <p className="px-3 pb-2 text-[10px] text-[#A2A6B0] text-center">
               Drag a favourite onto the fields list to add it
             </p>
           )}

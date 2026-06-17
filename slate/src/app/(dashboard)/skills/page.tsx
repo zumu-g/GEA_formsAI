@@ -15,8 +15,8 @@ export default function SkillsPage() {
           <Wand2 size={20} className="text-[#5856D6]" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-[#1D1D1F]">Form Filling Skills</h1>
-          <p className="text-sm text-[#86868B]">
+          <h1 className="text-2xl font-bold text-[#1B1D24]">Form Filling Skills</h1>
+          <p className="text-sm text-[#767A85]">
             Guided wizards for common legal documents. Fill via text or voice.
           </p>
         </div>

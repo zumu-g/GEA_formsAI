@@ -45,17 +45,17 @@ export default function LandingPage() {
           <motion.h1
             {...fadeUp}
             transition={{ ...fadeUp.transition, delay: 0.1 }}
-            className="mt-6 text-5xl md:text-7xl font-bold tracking-tight text-[#1D1D1F] leading-[1.05]"
+            className="mt-6 text-5xl md:text-7xl font-bold tracking-tight text-[#1B1D24] leading-[1.05]"
           >
             Fill forms.
             <br />
-            <span className="text-[#86868B]">Not your calendar.</span>
+            <span className="text-[#767A85]">Not your calendar.</span>
           </motion.h1>
 
           <motion.p
             {...fadeUp}
             transition={{ ...fadeUp.transition, delay: 0.2 }}
-            className="mt-6 text-lg md:text-xl text-[#86868B] max-w-2xl mx-auto leading-relaxed"
+            className="mt-6 text-lg md:text-xl text-[#767A85] max-w-2xl mx-auto leading-relaxed"
           >
             Upload a PDF. AI detects the fields. Drag and drop your data.
             Download the filled form. Pay only when you fill — starting at $0.20 per fill.
@@ -82,7 +82,7 @@ export default function LandingPage() {
           <motion.p
             {...fadeUp}
             transition={{ ...fadeUp.transition, delay: 0.4 }}
-            className="mt-4 text-sm text-[#AEAEB2]"
+            className="mt-4 text-sm text-[#A2A6B0]"
           >
             5 free credits. No credit card required.
           </motion.p>
@@ -95,15 +95,15 @@ export default function LandingPage() {
           transition={{ duration: 0.7, delay: 0.4, ease: "easeOut" }}
           className="max-w-5xl mx-auto mt-16"
         >
-          <div className="relative rounded-2xl border border-[#E5E5EA] bg-[#F5F5F7] p-8 shadow-xl">
+          <div className="relative rounded-2xl border border-[#E2E4EA] bg-[#F2F4F7] p-8 shadow-xl">
             <div className="flex gap-6">
               {/* Left panel mockup */}
               <div className="w-56 flex-shrink-0 space-y-3">
-                <div className="text-xs font-semibold text-[#86868B] uppercase tracking-wider">Fields Detected</div>
+                <div className="text-xs font-semibold text-[#767A85] uppercase tracking-wider">Fields Detected</div>
                 {['Full Name', 'Email Address', 'Company', 'Phone Number', 'Address'].map((field, i) => (
                   <div
                     key={field}
-                    className="flex items-center gap-2 p-2.5 rounded-xl bg-white border border-[#E5E5EA] text-sm text-[#1D1D1F] cursor-grab"
+                    className="flex items-center gap-2 p-2.5 rounded-xl bg-white border border-[#E2E4EA] text-sm text-[#1B1D24] cursor-grab"
                   >
                     <div className="w-1.5 h-1.5 rounded-full bg-[#5856D6]" />
                     {field}
@@ -114,13 +114,13 @@ export default function LandingPage() {
                 ))}
               </div>
               {/* PDF preview mockup */}
-              <div className="flex-1 rounded-xl bg-white border border-[#E5E5EA] p-6 min-h-[300px] flex items-center justify-center">
+              <div className="flex-1 rounded-xl bg-white border border-[#E2E4EA] p-6 min-h-[300px] flex items-center justify-center">
                 <div className="w-full max-w-sm space-y-6 opacity-60">
-                  <div className="h-4 bg-[#E5E5EA] rounded w-3/4" />
+                  <div className="h-4 bg-[#E2E4EA] rounded w-3/4" />
                   <div className="space-y-3">
-                    <div className="h-3 bg-[#E5E5EA] rounded w-full" />
-                    <div className="h-3 bg-[#E5E5EA] rounded w-5/6" />
-                    <div className="h-3 bg-[#E5E5EA] rounded w-4/6" />
+                    <div className="h-3 bg-[#E2E4EA] rounded w-full" />
+                    <div className="h-3 bg-[#E2E4EA] rounded w-5/6" />
+                    <div className="h-3 bg-[#E2E4EA] rounded w-4/6" />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="h-8 border-2 border-dashed border-[#5856D6]/30 rounded-lg bg-[#5856D6]/5 flex items-center px-2">
@@ -131,10 +131,10 @@ export default function LandingPage() {
                     </div>
                   </div>
                   <div className="space-y-3">
-                    <div className="h-3 bg-[#E5E5EA] rounded w-full" />
-                    <div className="h-3 bg-[#E5E5EA] rounded w-3/4" />
+                    <div className="h-3 bg-[#E2E4EA] rounded w-full" />
+                    <div className="h-3 bg-[#E2E4EA] rounded w-3/4" />
                   </div>
-                  <div className="h-8 border-2 border-dashed border-[#E5E5EA] rounded-lg" />
+                  <div className="h-8 border-2 border-dashed border-[#E2E4EA] rounded-lg" />
                 </div>
               </div>
             </div>
@@ -143,13 +143,13 @@ export default function LandingPage() {
       </section>
 
       {/* How It Works */}
-      <section id="how-it-works" className="py-24 px-6 bg-[#F5F5F7]/50">
+      <section id="how-it-works" className="py-24 px-6 bg-[#F2F4F7]/50">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-[#1D1D1F]">
+            <h2 className="text-3xl md:text-4xl font-bold text-[#1B1D24]">
               Three steps. Under sixty seconds.
             </h2>
-            <p className="mt-4 text-lg text-[#86868B]">
+            <p className="mt-4 text-lg text-[#767A85]">
               No learning curve. No setup. No subscription.
             </p>
           </div>
@@ -176,12 +176,12 @@ export default function LandingPage() {
               },
             ].map((item) => (
               <Card key={item.step} padding="lg" className="text-center border-0 bg-white shadow-sm">
-                <div className="w-14 h-14 rounded-2xl bg-[#F5F5F7] flex items-center justify-center mx-auto">
-                  <item.icon size={24} className="text-[#1D1D1F]" />
+                <div className="w-14 h-14 rounded-2xl bg-[#F2F4F7] flex items-center justify-center mx-auto">
+                  <item.icon size={24} className="text-[#1B1D24]" />
                 </div>
                 <p className="text-xs font-bold text-[#5856D6] mt-5 tracking-wider">{item.step}</p>
-                <h3 className="text-lg font-semibold text-[#1D1D1F] mt-2">{item.title}</h3>
-                <p className="text-sm text-[#86868B] mt-2 leading-relaxed">{item.description}</p>
+                <h3 className="text-lg font-semibold text-[#1B1D24] mt-2">{item.title}</h3>
+                <p className="text-sm text-[#767A85] mt-2 leading-relaxed">{item.description}</p>
               </Card>
             ))}
           </div>
@@ -192,10 +192,10 @@ export default function LandingPage() {
       <section id="features" className="py-24 px-6">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-[#1D1D1F]">
+            <h2 className="text-3xl md:text-4xl font-bold text-[#1B1D24]">
               Everything you need.
               <br />
-              <span className="text-[#86868B]">Nothing you don&apos;t.</span>
+              <span className="text-[#767A85]">Nothing you don&apos;t.</span>
             </h2>
           </div>
 
@@ -233,11 +233,11 @@ export default function LandingPage() {
               },
             ].map((feature) => (
               <Card key={feature.title} hover padding="lg">
-                <div className="w-10 h-10 rounded-xl bg-[#F5F5F7] flex items-center justify-center">
-                  <feature.icon size={20} className="text-[#1D1D1F]" />
+                <div className="w-10 h-10 rounded-xl bg-[#F2F4F7] flex items-center justify-center">
+                  <feature.icon size={20} className="text-[#1B1D24]" />
                 </div>
-                <h3 className="text-base font-semibold text-[#1D1D1F] mt-4">{feature.title}</h3>
-                <p className="text-sm text-[#86868B] mt-2 leading-relaxed">{feature.description}</p>
+                <h3 className="text-base font-semibold text-[#1B1D24] mt-4">{feature.title}</h3>
+                <p className="text-sm text-[#767A85] mt-2 leading-relaxed">{feature.description}</p>
               </Card>
             ))}
           </div>
@@ -245,13 +245,13 @@ export default function LandingPage() {
       </section>
 
       {/* Pricing */}
-      <section id="pricing" className="py-24 px-6 bg-[#F5F5F7]/50">
+      <section id="pricing" className="py-24 px-6 bg-[#F2F4F7]/50">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-[#1D1D1F]">
+            <h2 className="text-3xl md:text-4xl font-bold text-[#1B1D24]">
               Pay for what you use.
             </h2>
-            <p className="mt-4 text-lg text-[#86868B]">
+            <p className="mt-4 text-lg text-[#767A85]">
               No subscriptions. No commitments. Credits never expire.
             </p>
           </div>
@@ -271,22 +271,22 @@ export default function LandingPage() {
                     <Badge variant="accent">Most Popular</Badge>
                   </div>
                 )}
-                <h3 className="text-base font-semibold text-[#1D1D1F]">{pack.name}</h3>
+                <h3 className="text-base font-semibold text-[#1B1D24]">{pack.name}</h3>
                 <div className="mt-4">
-                  <span className="text-4xl font-bold text-[#1D1D1F]">${pack.price.toFixed(2)}</span>
+                  <span className="text-4xl font-bold text-[#1B1D24]">${pack.price.toFixed(2)}</span>
                 </div>
-                <p className="text-sm text-[#86868B] mt-1">{pack.credits} credits</p>
+                <p className="text-sm text-[#767A85] mt-1">{pack.credits} credits</p>
 
                 <ul className="mt-6 space-y-2.5 flex-1">
-                  <li className="flex items-center gap-2 text-sm text-[#86868B]">
+                  <li className="flex items-center gap-2 text-sm text-[#767A85]">
                     <Check size={14} className="text-[#34C759] flex-shrink-0" />
                     ${pack.pricePerCredit.toFixed(2)} per fill
                   </li>
-                  <li className="flex items-center gap-2 text-sm text-[#86868B]">
+                  <li className="flex items-center gap-2 text-sm text-[#767A85]">
                     <Check size={14} className="text-[#34C759] flex-shrink-0" />
                     Save {pack.savings}%
                   </li>
-                  <li className="flex items-center gap-2 text-sm text-[#86868B]">
+                  <li className="flex items-center gap-2 text-sm text-[#767A85]">
                     <Check size={14} className="text-[#34C759] flex-shrink-0" />
                     Never expires
                   </li>
@@ -304,7 +304,7 @@ export default function LandingPage() {
             ))}
           </div>
 
-          <p className="text-center text-sm text-[#AEAEB2] mt-8">
+          <p className="text-center text-sm text-[#A2A6B0] mt-8">
             Start with 5 free credits. No credit card required.
           </p>
         </div>
@@ -320,8 +320,8 @@ export default function LandingPage() {
               { stat: '99.2%', label: 'AI field detection accuracy' },
             ].map((item) => (
               <div key={item.label}>
-                <p className="text-4xl md:text-5xl font-bold text-[#1D1D1F]">{item.stat}</p>
-                <p className="text-sm text-[#86868B] mt-2">{item.label}</p>
+                <p className="text-4xl md:text-5xl font-bold text-[#1B1D24]">{item.stat}</p>
+                <p className="text-sm text-[#767A85] mt-2">{item.label}</p>
               </div>
             ))}
           </div>
@@ -331,10 +331,10 @@ export default function LandingPage() {
       {/* CTA */}
       <section className="py-24 px-6">
         <div className="max-w-3xl mx-auto text-center">
-          <h2 className="text-3xl md:text-4xl font-bold text-[#1D1D1F]">
+          <h2 className="text-3xl md:text-4xl font-bold text-[#1B1D24]">
             Stop filling forms manually.
           </h2>
-          <p className="mt-4 text-lg text-[#86868B]">
+          <p className="mt-4 text-lg text-[#767A85]">
             Join thousands of businesses that save hours every week with Slate.
           </p>
           <div className="mt-8">
@@ -345,7 +345,7 @@ export default function LandingPage() {
               </Button>
             </Link>
           </div>
-          <p className="mt-3 text-sm text-[#AEAEB2]">
+          <p className="mt-3 text-sm text-[#A2A6B0]">
             5 free credits. No credit card. No subscription.
           </p>
         </div>

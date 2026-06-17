@@ -16,8 +16,8 @@ export function Card({ children, hover = false, padding = 'md', className = '', 
   return (
     <div
       className={`
-        bg-white rounded-2xl border border-[#E5E5EA]
-        ${hover ? 'transition-all duration-200 hover:shadow-lg hover:border-[#C7C7CC] hover:-translate-y-0.5' : ''}
+        bg-white rounded-2xl border border-[#E2E4EA]
+        ${hover ? 'transition-all duration-200 hover:shadow-lg hover:border-[#C4C8D1] hover:-translate-y-0.5' : ''}
         ${paddings[padding]}
         ${className}
       `}

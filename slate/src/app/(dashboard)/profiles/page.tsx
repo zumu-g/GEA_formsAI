@@ -68,13 +68,13 @@ interface FieldInputProps {
 function FieldInput({ label, fieldKey, value, onChange, placeholder, type = 'text' }: FieldInputProps) {
   return (
     <div className="flex flex-col gap-1.5">
-      <label className="text-sm font-medium text-[#1D1D1F]">{label}</label>
+      <label className="text-sm font-medium text-[#1B1D24]">{label}</label>
       <input
         type={type}
         value={value}
         onChange={(e) => onChange(fieldKey, e.target.value)}
         placeholder={placeholder ?? `Enter ${label.toLowerCase()}`}
-        className="h-10 px-3 rounded-xl border border-[#E5E5EA] bg-white text-sm text-[#1D1D1F] placeholder:text-[#AEAEB2] transition-all duration-200 hover:border-[#C7C7CC] focus:outline-none focus:ring-2 focus:ring-[#5856D6]/20 focus:border-[#5856D6]"
+        className="h-10 px-3 rounded-xl border border-[#E2E4EA] bg-white text-sm text-[#1B1D24] placeholder:text-[#A2A6B0] transition-all duration-200 hover:border-[#C4C8D1] focus:outline-none focus:ring-2 focus:ring-[#5856D6]/20 focus:border-[#5856D6]"
       />
     </div>
   );
@@ -92,13 +92,13 @@ interface FieldTextareaProps {
 function FieldTextarea({ label, fieldKey, value, onChange, placeholder, rows = 4 }: FieldTextareaProps) {
   return (
     <div className="flex flex-col gap-1.5 col-span-2">
-      <label className="text-sm font-medium text-[#1D1D1F]">{label}</label>
+      <label className="text-sm font-medium text-[#1B1D24]">{label}</label>
       <textarea
         rows={rows}
         value={value}
         onChange={(e) => onChange(fieldKey, e.target.value)}
         placeholder={placeholder ?? `Enter ${label.toLowerCase()}`}
-        className="px-3 py-2.5 rounded-xl border border-[#E5E5EA] bg-white text-sm text-[#1D1D1F] placeholder:text-[#AEAEB2] transition-all duration-200 hover:border-[#C7C7CC] focus:outline-none focus:ring-2 focus:ring-[#5856D6]/20 focus:border-[#5856D6] resize-none"
+        className="px-3 py-2.5 rounded-xl border border-[#E2E4EA] bg-white text-sm text-[#1B1D24] placeholder:text-[#A2A6B0] transition-all duration-200 hover:border-[#C4C8D1] focus:outline-none focus:ring-2 focus:ring-[#5856D6]/20 focus:border-[#5856D6] resize-none"
       />
     </div>
   );
@@ -110,7 +110,7 @@ function FieldTextarea({ label, fieldKey, value, onChange, placeholder, rows = 4
 
 function SectionHeading({ children }: { children: React.ReactNode }) {
   return (
-    <p className="text-xs font-medium text-[#86868B] uppercase tracking-wide mb-3">
+    <p className="text-xs font-medium text-[#767A85] uppercase tracking-wide mb-3">
       {children}
     </p>
   );
@@ -247,7 +247,7 @@ function ProfileForm({ values, onChange }: ProfileFormProps) {
   return (
     <div>
       {/* Tab bar */}
-      <div className="flex gap-1 p-1 bg-[#F5F5F7] rounded-xl mb-5">
+      <div className="flex gap-1 p-1 bg-[#F2F4F7] rounded-xl mb-5">
         {TABS.map((tab) => (
           <button
             key={tab.id}
@@ -256,8 +256,8 @@ function ProfileForm({ values, onChange }: ProfileFormProps) {
             className={`
               flex-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-150 cursor-pointer
               ${activeTab === tab.id
-                ? 'bg-white shadow-sm border border-[#E5E5EA]/60 text-[#1D1D1F]'
-                : 'text-[#86868B] hover:text-[#1D1D1F]'
+                ? 'bg-white shadow-sm border border-[#E2E4EA]/60 text-[#1B1D24]'
+                : 'text-[#767A85] hover:text-[#1B1D24]'
               }
             `}
           >
@@ -459,8 +459,8 @@ export default function ProfilesPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-[#1D1D1F]">Data Profiles</h1>
-          <p className="text-sm text-[#86868B] mt-1">
+          <h1 className="text-2xl font-bold text-[#1B1D24]">Data Profiles</h1>
+          <p className="text-sm text-[#767A85] mt-1">
             Save your information to auto-fill forms faster.
           </p>
         </div>
@@ -473,7 +473,7 @@ export default function ProfilesPage() {
       {/* Loading State */}
       {loading && (
         <div className="flex items-center justify-center py-20">
-          <Loader2 size={28} className="animate-spin text-[#86868B]" />
+          <Loader2 size={28} className="animate-spin text-[#767A85]" />
         </div>
       )}
 
@@ -485,11 +485,11 @@ export default function ProfilesPage() {
           transition={{ duration: 0.4, ease: 'easeOut' }}
         >
           <Card className="py-16 text-center">
-            <div className="w-14 h-14 rounded-2xl bg-[#F5F5F7] flex items-center justify-center mx-auto">
-              <User size={28} className="text-[#AEAEB2]" />
+            <div className="w-14 h-14 rounded-2xl bg-[#F2F4F7] flex items-center justify-center mx-auto">
+              <User size={28} className="text-[#A2A6B0]" />
             </div>
-            <h3 className="text-base font-semibold text-[#1D1D1F] mt-5">No profiles yet</h3>
-            <p className="text-sm text-[#86868B] mt-2 max-w-sm mx-auto">
+            <h3 className="text-base font-semibold text-[#1B1D24] mt-5">No profiles yet</h3>
+            <p className="text-sm text-[#767A85] mt-2 max-w-sm mx-auto">
               Create a data profile to auto-fill your details into any form.
             </p>
             <Button variant="secondary" size="sm" className="mt-5" onClick={openCreateModal}>
@@ -511,19 +511,19 @@ export default function ProfilesPage() {
             <motion.div key={profile.id} variants={itemVariants}>
               <Card hover className="flex items-center gap-4 cursor-pointer group" onClick={() => openEditModal(profile)}>
                 {/* Icon */}
-                <div className="w-10 h-10 rounded-xl bg-[#F5F5F7] flex items-center justify-center shrink-0 group-hover:bg-[#5856D6]/10 transition-colors duration-200">
-                  <User size={18} className="text-[#86868B] group-hover:text-[#5856D6] transition-colors duration-200" />
+                <div className="w-10 h-10 rounded-xl bg-[#F2F4F7] flex items-center justify-center shrink-0 group-hover:bg-[#5856D6]/10 transition-colors duration-200">
+                  <User size={18} className="text-[#767A85] group-hover:text-[#5856D6] transition-colors duration-200" />
                 </div>
 
                 {/* Info */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-semibold text-[#1D1D1F] truncate">
+                    <span className="text-sm font-semibold text-[#1B1D24] truncate">
                       {profile.name}
                     </span>
                     {profile.isDefault && <Badge variant="accent">Default</Badge>}
                   </div>
-                  <p className="text-xs text-[#86868B] mt-0.5">
+                  <p className="text-xs text-[#767A85] mt-0.5">
                     {filledFieldCount(profile.data)} fields filled
                     <span className="mx-1.5">&middot;</span>
                     Created {formatDate(profile.createdAt)}
@@ -534,27 +534,27 @@ export default function ProfilesPage() {
                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200" onClick={(e) => e.stopPropagation()}>
                   <button
                     onClick={() => handleToggleDefault(profile)}
-                    className="p-2 rounded-lg hover:bg-[#F5F5F7] transition-colors cursor-pointer"
+                    className="p-2 rounded-lg hover:bg-[#F2F4F7] transition-colors cursor-pointer"
                     title={profile.isDefault ? 'Remove default' : 'Set as default'}
                   >
                     <Star
                       size={16}
-                      className={profile.isDefault ? 'text-[#FF9F0A] fill-[#FF9F0A]' : 'text-[#86868B]'}
+                      className={profile.isDefault ? 'text-[#FF9F0A] fill-[#FF9F0A]' : 'text-[#767A85]'}
                     />
                   </button>
                   <button
                     onClick={() => openEditModal(profile)}
-                    className="p-2 rounded-lg hover:bg-[#F5F5F7] transition-colors cursor-pointer"
+                    className="p-2 rounded-lg hover:bg-[#F2F4F7] transition-colors cursor-pointer"
                     title="Edit profile"
                   >
-                    <Pencil size={16} className="text-[#86868B]" />
+                    <Pencil size={16} className="text-[#767A85]" />
                   </button>
                   <button
                     onClick={() => setDeleteConfirmId(profile.id)}
                     className="p-2 rounded-lg hover:bg-[#FF3B30]/10 transition-colors cursor-pointer"
                     title="Delete profile"
                   >
-                    <Trash2 size={16} className="text-[#86868B] hover:text-[#FF3B30]" />
+                    <Trash2 size={16} className="text-[#767A85] hover:text-[#FF3B30]" />
                   </button>
                 </div>
               </Card>
@@ -574,31 +574,31 @@ export default function ProfilesPage() {
           {/* Profile name + default toggle */}
           <div className="flex gap-3 items-end">
             <div className="flex-1 flex flex-col gap-1.5">
-              <label className="text-sm font-medium text-[#1D1D1F]">Profile Name</label>
+              <label className="text-sm font-medium text-[#1B1D24]">Profile Name</label>
               <input
                 type="text"
                 value={profileName}
                 onChange={(e) => setProfileName(e.target.value)}
                 placeholder='e.g. "Personal", "Business", "Client — Acme"'
-                className="h-10 px-3 rounded-xl border border-[#E5E5EA] bg-white text-sm text-[#1D1D1F] placeholder:text-[#AEAEB2] transition-all duration-200 hover:border-[#C7C7CC] focus:outline-none focus:ring-2 focus:ring-[#5856D6]/20 focus:border-[#5856D6]"
+                className="h-10 px-3 rounded-xl border border-[#E2E4EA] bg-white text-sm text-[#1B1D24] placeholder:text-[#A2A6B0] transition-all duration-200 hover:border-[#C4C8D1] focus:outline-none focus:ring-2 focus:ring-[#5856D6]/20 focus:border-[#5856D6]"
               />
             </div>
             <div className="flex items-center gap-2 pb-0.5">
               <button
                 type="button"
                 onClick={() => setIsDefault(!isDefault)}
-                className={`relative w-10 h-6 rounded-full transition-colors duration-200 cursor-pointer ${isDefault ? 'bg-[#5856D6]' : 'bg-[#E5E5EA]'}`}
+                className={`relative w-10 h-6 rounded-full transition-colors duration-200 cursor-pointer ${isDefault ? 'bg-[#5856D6]' : 'bg-[#E2E4EA]'}`}
               >
                 <span
                   className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-sm transition-transform duration-200 ${isDefault ? 'translate-x-4' : 'translate-x-0'}`}
                 />
               </button>
-              <span className="text-sm text-[#1D1D1F] whitespace-nowrap">Set as default</span>
+              <span className="text-sm text-[#1B1D24] whitespace-nowrap">Set as default</span>
             </div>
           </div>
 
           {/* Tabbed fields */}
-          <div className="border-t border-[#E5E5EA] pt-4 mt-2">
+          <div className="border-t border-[#E2E4EA] pt-4 mt-2">
             <ProfileForm values={fieldValues} onChange={handleFieldChange} />
           </div>
 
@@ -607,7 +607,7 @@ export default function ProfilesPage() {
           )}
         </div>
 
-        <div className="flex justify-end gap-3 pt-4 border-t border-[#E5E5EA] mt-4">
+        <div className="flex justify-end gap-3 pt-4 border-t border-[#E2E4EA] mt-4">
           <Button variant="ghost" onClick={closeModal}>
             Cancel
           </Button>
@@ -630,10 +630,10 @@ export default function ProfilesPage() {
         title="Delete Profile"
         size="sm"
       >
-        <p className="text-sm text-[#86868B]">
+        <p className="text-sm text-[#767A85]">
           Are you sure you want to delete this profile? This action cannot be undone.
         </p>
-        <div className="flex justify-end gap-3 pt-4 mt-4 border-t border-[#E5E5EA]">
+        <div className="flex justify-end gap-3 pt-4 mt-4 border-t border-[#E2E4EA]">
           <Button variant="ghost" onClick={() => setDeleteConfirmId(null)}>
             Cancel
           </Button>

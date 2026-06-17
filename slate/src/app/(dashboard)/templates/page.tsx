@@ -30,13 +30,13 @@ const fadeUp = prefersReducedMotion
 
 function SkeletonCard() {
   return (
-    <div className="bg-white rounded-2xl border border-[#E5E5EA] p-6 animate-pulse">
-      <div className="h-5 bg-[#F5F5F7] rounded-lg w-2/3 mb-3" />
-      <div className="h-4 bg-[#F5F5F7] rounded-lg w-full mb-2" />
-      <div className="h-4 bg-[#F5F5F7] rounded-lg w-1/2 mb-5" />
+    <div className="bg-white rounded-2xl border border-[#E2E4EA] p-6 animate-pulse">
+      <div className="h-5 bg-[#F2F4F7] rounded-lg w-2/3 mb-3" />
+      <div className="h-4 bg-[#F2F4F7] rounded-lg w-full mb-2" />
+      <div className="h-4 bg-[#F2F4F7] rounded-lg w-1/2 mb-5" />
       <div className="flex gap-2">
-        <div className="h-6 bg-[#F5F5F7] rounded-full w-16" />
-        <div className="h-6 bg-[#F5F5F7] rounded-full w-20" />
+        <div className="h-6 bg-[#F2F4F7] rounded-full w-16" />
+        <div className="h-6 bg-[#F2F4F7] rounded-full w-20" />
       </div>
     </div>
   );
@@ -119,8 +119,8 @@ export default function TemplatesPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-[#1D1D1F]">Templates</h1>
-          <p className="text-sm text-[#86868B] mt-1">
+          <h1 className="text-2xl font-bold text-[#1B1D24]">Templates</h1>
+          <p className="text-sm text-[#767A85] mt-1">
             Save time with reusable form templates.
           </p>
         </div>
@@ -136,7 +136,7 @@ export default function TemplatesPage() {
       <div className="relative mb-6">
         <Search
           size={16}
-          className="absolute left-3 top-1/2 -translate-y-1/2 text-[#AEAEB2]"
+          className="absolute left-3 top-1/2 -translate-y-1/2 text-[#A2A6B0]"
         />
         <Input
           placeholder="Search templates..."
@@ -162,13 +162,13 @@ export default function TemplatesPage() {
           transition={{ duration: 0.4, ease: 'easeOut' }}
         >
           <Card className="py-16 text-center">
-            <div className="w-14 h-14 rounded-2xl bg-[#F5F5F7] flex items-center justify-center mx-auto">
-              <BookTemplate size={28} className="text-[#AEAEB2]" />
+            <div className="w-14 h-14 rounded-2xl bg-[#F2F4F7] flex items-center justify-center mx-auto">
+              <BookTemplate size={28} className="text-[#A2A6B0]" />
             </div>
-            <h3 className="text-base font-semibold text-[#1D1D1F] mt-5">
+            <h3 className="text-base font-semibold text-[#1B1D24] mt-5">
               {debouncedQuery ? 'No templates match your search' : 'No templates yet'}
             </h3>
-            <p className="text-sm text-[#86868B] mt-2 max-w-sm mx-auto">
+            <p className="text-sm text-[#767A85] mt-2 max-w-sm mx-auto">
               {debouncedQuery
                 ? 'Try a different search term or create a new template.'
                 : 'Fill a form and save it as a template to reuse it with one click.'}
@@ -225,13 +225,13 @@ export default function TemplatesPage() {
                     className="flex flex-col flex-1"
                   >
                     {/* Name */}
-                    <h3 className="text-sm font-semibold text-[#1D1D1F] pr-8 line-clamp-1">
+                    <h3 className="text-sm font-semibold text-[#1B1D24] pr-8 line-clamp-1">
                       {template.name}
                     </h3>
 
                     {/* Description */}
                     {template.description && (
-                      <p className="text-xs text-[#86868B] mt-1.5 line-clamp-2 leading-relaxed">
+                      <p className="text-xs text-[#767A85] mt-1.5 line-clamp-2 leading-relaxed">
                         {template.description}
                       </p>
                     )}
@@ -266,7 +266,7 @@ export default function TemplatesPage() {
                     </div>
 
                     {/* Date */}
-                    <p className="text-[11px] text-[#AEAEB2] mt-3">
+                    <p className="text-[11px] text-[#A2A6B0] mt-3">
                       Updated {formatDate(template.updatedAt)}
                     </p>
                   </Link>
@@ -284,9 +284,9 @@ export default function TemplatesPage() {
         title="Delete Template"
         size="sm"
       >
-        <p className="text-sm text-[#86868B]">
+        <p className="text-sm text-[#767A85]">
           Are you sure you want to delete{' '}
-          <span className="font-medium text-[#1D1D1F]">
+          <span className="font-medium text-[#1B1D24]">
             {deleteTarget?.name}
           </span>
           ? This action cannot be undone.

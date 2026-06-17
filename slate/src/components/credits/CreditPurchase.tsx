@@ -29,26 +29,26 @@ export function CreditPurchase({ onPurchase, loading }: CreditPurchaseProps) {
           )}
 
           <div className="flex-1">
-            <h3 className="text-base font-semibold text-[#1D1D1F]">{pack.name}</h3>
+            <h3 className="text-base font-semibold text-[#1B1D24]">{pack.name}</h3>
             <div className="mt-3">
-              <span className="text-3xl font-bold text-[#1D1D1F]">
+              <span className="text-3xl font-bold text-[#1B1D24]">
                 ${pack.price.toFixed(2)}
               </span>
             </div>
-            <p className="text-sm text-[#86868B] mt-1">
+            <p className="text-sm text-[#767A85] mt-1">
               {pack.credits} credits
             </p>
 
             <ul className="mt-4 space-y-2">
-              <li className="flex items-center gap-2 text-sm text-[#86868B]">
+              <li className="flex items-center gap-2 text-sm text-[#767A85]">
                 <Check size={14} className="text-[#34C759]" />
                 ${pack.pricePerCredit.toFixed(2)} per credit
               </li>
-              <li className="flex items-center gap-2 text-sm text-[#86868B]">
+              <li className="flex items-center gap-2 text-sm text-[#767A85]">
                 <Check size={14} className="text-[#34C759]" />
                 {pack.savings}% savings
               </li>
-              <li className="flex items-center gap-2 text-sm text-[#86868B]">
+              <li className="flex items-center gap-2 text-sm text-[#767A85]">
                 <Check size={14} className="text-[#34C759]" />
                 Never expires
               </li>
