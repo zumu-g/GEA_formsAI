@@ -21,3 +21,11 @@ class TenancyNotFoundError(FormsFillError):
 
 class RenderError(FormsFillError):
     """Document or PDF rendering failed."""
+
+
+class UpstreamError(FormsFillError):
+    """A data provider's upstream service failed (e.g. 5xx after retries)."""
+
+
+class ProviderContractError(FormsFillError):
+    """A provider response was missing a key the contract guarantees."""

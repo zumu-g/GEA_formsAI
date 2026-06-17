@@ -60,6 +60,9 @@ class BundleMeta(_Strict):
     lot_id: str = ""
     source: str = ""
     as_at: str = ""
+    # Optional data-quality flag. GEA CRM may set this (e.g. >1 active lease, or a
+    # missing owner link); other providers omit it. Non-null = surface to the PM.
+    note: str | None = None
 
 
 class TenancyBundle(_Strict):

@@ -1,0 +1,41 @@
+{
+  "premises": {
+    "address_line": "8 Acacia Avenue, Brunswick",
+    "suburb": "Brunswick",
+    "state": "VIC",
+    "postcode": "3056"
+  },
+  "renters": [
+    {
+      "full_name": "Maria Garcia",
+      "address_for_service": null,
+      "service_postcode": "",
+      "phone_business_hours": "03 9555 1234",
+      "phone_after_hours": "",
+      "email": "maria@example.com"
+    },
+    {
+      "full_name": "Tom Nguyen",
+      "address_for_service": null,
+      "service_postcode": "",
+      "phone_business_hours": "0411 222 333",
+      "phone_after_hours": "",
+      "email": ""
+    }
+  ],
+  "rental_provider": {
+    "full_name": "Helen Brooks",
+    "service_address": "3 Owner Court, Carlton VIC 3053",
+    "service_postcode": "3053",
+    "phone_business_hours": "03 9444 5678",
+    "phone_after_hours": "",
+    "email": "helen.brooks@example.com"
+  },
+  "meta": {
+    "tenancy_id": "lease_abc123",
+    "lot_id": "mp_xyz789",
+    "source": "gea_crm",
+    "as_at": "2026-06-17T02:30:00Z",
+    "note": null
+  }
+}

@@ -114,14 +114,21 @@ The fill core depends on a `PropertyDataProvider` returning a `TenancyBundle`
 (see `../docs/integrations/crm-data-contract-prompt.md` — that JSON shape *is*
 the interface). Select with `FORMS_DATA_PROVIDER`:
 
-| value | provider | when |
-|-------|----------|------|
-| `fixture` (default) | reads `fixtures/sample_tenancy.json` | dev/test, demos |
-| `propertyme` | PropertyMe API v2 (`PROPERTYME_API_KEY`, `PROPERTYME_BASE_URL`) | production now |
-| _(later)_ `gea_crm` | additive adapter against the same contract | once the CRM exposes the bundle endpoint |
+| value | provider | env | when |
+|-------|----------|-----|------|
+| `fixture` (default) | reads `fixtures/sample_tenancy.json` | `FORMS_FIXTURE_PATH` | dev/test, demos |
+| `propertyme` | PropertyMe API v2 | `PROPERTYME_API_KEY`, `PROPERTYME_BASE_URL` | production now |
+| `gea_crm` | GEA CRM `GET /api/forms/tenancy-bundle` | `GEA_CRM_BASE_URL`, `GEA_CRM_SYNC_SECRET` | flip the default here later |
 
 Swapping providers changes **nothing** in the fill core — only which adapter is
-selected.
+selected (`FORMS_DATA_PROVIDER`).
+
+**GEA CRM notes:** `rental_provider.full_name` is always the property **owner**
+(guaranteed upstream); `*.phone_after_hours` is always blank (single phone
+stored); `renters[].address_for_service` is `null` when it equals the premises;
+and `meta.note` (optional) carries a data-quality flag (e.g. >1 active lease) —
+when present it's logged as a warning for the PM. A missing contract key fails
+loudly (`ProviderContractError`).
 
 ---
 
