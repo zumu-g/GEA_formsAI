@@ -1,0 +1,44 @@
+"""The single fill core (U5, KTD5).
+
+``fill_form`` is the one function the CLI and ``POST /fill`` both call. It owns
+all orchestration: resolve the form, fetch the bundle, build the render context
+(caller fields verbatim — no statutory logic, R4), render DOCX+PDF, and assemble
+the result with blank/filled accounting.
+"""
+
+from __future__ import annotations
+
+from .models import FillFiles, FillRequest, FillResult
+from .providers.base import PropertyDataProvider, select_provider
+from .registry import get_form_spec
+from .render import compute_blank_fields, render
+
+
+def fill_form(
+    request: FillRequest,
+    provider: PropertyDataProvider | None = None,
+) -> FillResult:
+    spec = get_form_spec(request.form)
+    provider = provider or select_provider()
+
+    bundle = provider.fetch_bundle(request.identifiers)
+    context = spec.build_context(bundle, request.fields)
+
+    blank_fields = compute_blank_fields(spec, context)
+    selectors = set(spec.selector_fields)
+    declared_text = [f for f in spec.declared_fields if f not in selectors]
+    filled_fields = len(declared_text) - len(blank_fields)
+
+    docx_path, pdf_path, warnings = render(spec, context, request.out_dir)
+
+    return FillResult(
+        ok=True,
+        form=request.form,
+        files=FillFiles(
+            docx=str(docx_path),
+            pdf=str(pdf_path) if pdf_path else None,
+        ),
+        filled_fields=filled_fields,
+        blank_fields=blank_fields,
+        warnings=warnings,
+    )
