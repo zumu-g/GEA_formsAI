@@ -8,7 +8,7 @@ PKG_ROOT = Path(__file__).resolve().parents[1]
 
 def _run(args, stdin=None):
     return subprocess.run(
-        [sys.executable, "-m", "forms_fill.cli", *args],
+        [sys.executable, "-m", "forms_fill.cli", "fill", *args],
         cwd=PKG_ROOT,
         input=stdin,
         capture_output=True,

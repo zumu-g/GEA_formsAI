@@ -18,6 +18,13 @@ from .models import build_request
 app = typer.Typer(add_completion=False, help="GEA forms-fill tool.")
 
 
+@app.callback()
+def _root() -> None:
+    # Keeps `fill` as a named subcommand (`forms fill ...`) — Typer collapses
+    # a single-command app onto the root otherwise, breaking the documented CLI.
+    pass
+
+
 @app.command()
 def fill(
     form: str = typer.Option(None, "--form", help="Form key, e.g. cav_rent_increase_notice"),
