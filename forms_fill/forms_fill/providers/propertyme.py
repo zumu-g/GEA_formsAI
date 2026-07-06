@@ -35,7 +35,12 @@ from typing import Any
 
 import httpx
 
-from ..errors import ProviderConfigError, TenancyNotFoundError, UpstreamError
+from ..errors import (
+    ProviderConfigError,
+    ProviderContractError,
+    TenancyNotFoundError,
+    UpstreamError,
+)
 from ..models import (
     BundleMeta,
     Premises,
@@ -116,6 +121,10 @@ class PropertyMeProvider(PropertyDataProvider):
                 "check client credentials / refresh token"
             )
         tok = resp.json()
+        if not tok.get("access_token"):
+            raise ProviderConfigError(
+                "propertyme token endpoint returned 200 without an access_token"
+            )
         self._access_token = tok["access_token"]
         self._expires_at = time.time() + tok.get("expires_in", 3600) - 60
         # Rotation-safe: PMe doesn't rotate refresh tokens today, but if a new one
@@ -127,7 +136,7 @@ class PropertyMeProvider(PropertyDataProvider):
                 try:
                     path = Path(self.token_file)
                     data = json.loads(path.read_text()) if path.exists() else {}
-                    data.update(tok)
+                    data["refresh_token"] = new_refresh  # persist the secret only
                     path.write_text(json.dumps(data, indent=2))
                 except OSError:
                     # ponytail: best-effort persist; env-supplied tokens can't be written back
@@ -180,7 +189,10 @@ class PropertyMeProvider(PropertyDataProvider):
             )
 
         tenancy, note = self._resolve_tenancy(lot_id, tenancy_id)
-        lot_detail = self._get(f"/v1/lots/{tenancy['LotId']}/detail")
+        tenancy_lot = _s(tenancy.get("LotId"))
+        if not tenancy_lot:
+            raise ProviderContractError("propertyme: tenancy record missing LotId")
+        lot_detail = self._get(f"/v1/lots/{tenancy_lot}/detail")
         renters = self._renters(tenancy)
         provider = self._owner(lot_detail)
 
@@ -208,9 +220,11 @@ class PropertyMeProvider(PropertyDataProvider):
         if not isinstance(rows, list):
             rows = rows.get("Data") or rows.get("Items") or []
         if tenancy_id:
+            # ponytail: /v1/tenancies has no Id filter; at GEA's scale (~300 active)
+            # the list is a single page. Always pass lot_id where possible.
             rows = [t for t in rows if _s(t.get("Id")) == tenancy_id]
-        active = [t for t in rows if t.get("IsActive") and not t.get("IsClosed")]
-        pool = active or rows
+        # ACTIVE only — a vacated-but-unclosed tenancy must never receive a notice
+        pool = [t for t in rows if t.get("IsActive") and not t.get("IsClosed")]
         if not pool:
             raise TenancyNotFoundError(
                 f"propertyme: no current tenancy for lot_id={lot_id!r} "
@@ -296,7 +310,10 @@ def _parse_address(text: str) -> Premises:
     if not m:
         return Premises(address_line=text or "")
     return Premises(
-        address_line=f"{m.group('line').rstrip(', ')}, {m.group('suburb')}".strip(", "),
+        address_line=(
+            f"{m.group('line').rstrip(', ')}, {m.group('suburb')} "
+            f"{m.group('state').upper()}"
+        ).strip(", "),
         suburb=m.group("suburb"),
         state=m.group("state").upper(),
         postcode=m.group("postcode"),

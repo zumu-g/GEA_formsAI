@@ -182,3 +182,10 @@ def test_parse_address_splits_state_postcode():
     unparsed = _parse_address("weird address")
     assert unparsed.address_line == "weird address"
     assert unparsed.postcode == ""
+
+
+def test_propertyme_inactive_only_tenancy_is_not_found(monkeypatch):
+    vacated = {**TENANCY, "IsActive": False}
+    _patch_get(monkeypatch, _routes([], tenancies=[vacated]))
+    with pytest.raises(TenancyNotFoundError):
+        _provider().fetch_bundle({"lot_id": "L1"})

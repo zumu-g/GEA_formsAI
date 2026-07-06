@@ -56,8 +56,13 @@ def _fail_closed() -> None:
 
 def _require_auth(authorization: str) -> None:
     token = os.environ.get("FORMS_API_TOKEN") or ""
-    supplied = authorization.removeprefix("Bearer ").strip()
-    if not token or not hmac.compare_digest(supplied, token):
+    scheme, _, supplied = authorization.partition(" ")
+    supplied = supplied.strip()
+    if (
+        scheme != "Bearer"
+        or not token
+        or not hmac.compare_digest(supplied.encode(), token.encode())
+    ):
         raise HTTPException(
             status_code=401,
             detail={"error": "unauthorized", "message": "missing or invalid bearer token"},
