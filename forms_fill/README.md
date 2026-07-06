@@ -72,7 +72,7 @@ with a clear **stderr** message on failure:
   "ok": true,
   "form": "cav_rent_increase_notice",
   "files": { "docx": "out/cav_rent_increase_notice.docx", "pdf": "out/cav_rent_increase_notice.pdf" },
-  "filled_fields": 19,
+  "filled_fields": ["premises_address", "renter1_name", "current_rent", "new_rent", "start_date"],
   "blank_fields": ["renter3_name", "renter4_name", "provider_after_hours"],
   "warnings": []
 }
@@ -86,24 +86,39 @@ email) so the calling system can warn the PM.
 
 ---
 
-## HTTP API
+## Programmatic API (HTTP)
+
+The engine contract the rent-review system is built against.
+
+- **Auth:** every route (except `GET /health`) requires `Authorization: Bearer
+  $FORMS_API_TOKEN`; missing/wrong → `401 {"ok":false,"error":"unauthorized"}`.
+- **Fail-closed startup:** the app refuses to start unless `FORMS_API_TOKEN`
+  **and** `PUBLIC_BASE_URL` are set (local dev:
+  `PUBLIC_BASE_URL=http://localhost:8080`). Optional `FORMS_OUTPUT_DIR`
+  overrides the `./out` output root.
+- **Form key:** `cav_rent_increase_notice`.
+- **File delivery:** `files.pdf` / `files.docx` are **absolute, token-protected
+  URLs** built from `PUBLIC_BASE_URL` — fetch with the same bearer token.
+  Files live on the instance's disk (ephemeral across redeploys) — callers
+  should fetch promptly after the fill.
+- **Error codes** (`{"ok":false,"error":<code>,"message":...}`):
+  `unauthorized` (401), `invalid_request` (400), `no_current_tenancy` (404),
+  `fetch_failed` (502 upstream / 500 provider config), `template_error` (500).
 
 ```bash
 uvicorn forms_fill.api:app --host 0.0.0.0 --port 8080
-```
 
-`POST /fill` takes the **same** JSON payload and returns the same result plus
-fetch URLs:
-
-```bash
-curl -s localhost:8080/fill -H 'content-type: application/json' -d '{
+curl -s https://<host>/fill \
+  -H "Authorization: Bearer $FORMS_API_TOKEN" -H 'content-type: application/json' -d '{
   "form": "cav_rent_increase_notice",
-  "identifiers": {"lot_id": "L-2002"},
-  "fields": {"current_rent":615,"new_rent":650,"increase":35,"rent_period":"week","start_date":"2026-09-15","method_basis":"CPI"}
+  "identifiers": {"lot_id": "<LOT_ID>", "tenancy_id": "<TENANCY_ID>"},
+  "fields": {"current_rent":615,"new_rent":650,"increase":35,"rent_period":"week","start_date":"15/10/2026","method_basis":"market comparison (rental CMA)"}
 }'
-# → { ..., "request_id": "...", "fetch": { "pdf": "/files/<id>/pdf", "docx": "/files/<id>/docx" } }
+# → { "ok": true, "request_id": "...", "filled_fields": [...], "blank_fields": [...],
+#     "warnings": [...], "files": { "pdf": "https://<host>/files/<id>/pdf",
+#                                    "docx": "https://<host>/files/<id>/docx" } }
 
-curl -s localhost:8080/files/<id>/pdf -o notice.pdf
+curl -s -H "Authorization: Bearer $FORMS_API_TOKEN" https://<host>/files/<id>/pdf -o notice.pdf
 ```
 
 ---
@@ -117,11 +132,21 @@ the interface). Select with `FORMS_DATA_PROVIDER`:
 | value | provider | env | when |
 |-------|----------|-----|------|
 | `fixture` (default) | reads `fixtures/sample_tenancy.json` | `FORMS_FIXTURE_PATH` | dev/test, demos |
-| `propertyme` | PropertyMe API v2 | `PROPERTYME_API_KEY`, `PROPERTYME_BASE_URL` | production now |
+| `propertyme` | PropertyMe API (OAuth2, confirmed live) | `PME_CLIENT_ID`, `PME_CLIENT_SECRET`, `PME_REFRESH_TOKEN` or `PME_TOKEN_FILE` (optional `PME_TOKEN_URL`, `PME_API_BASE`) | production now |
 | `gea_crm` | GEA CRM `GET /api/forms/tenancy-bundle` | `GEA_CRM_BASE_URL`, `GEA_CRM_SYNC_SECRET` | flip the default here later |
 
 Swapping providers changes **nothing** in the fill core — only which adapter is
 selected (`FORMS_DATA_PROVIDER`).
+
+**PropertyMe OAuth bootstrap (one-time, already done for GEA):** the refresh
+token comes from an Authorization Code flow against
+`https://login.propertyme.com/connect/authorize` (scope includes
+`property:read contact:read offline_access`). Confirmed live 2026-07-06:
+PropertyMe does **not** rotate refresh tokens on use, so the token is a stable
+secret; the provider still persists a rotated token to `PME_TOKEN_FILE` if one
+ever arrives. GEA's working credentials live in the rent-review repo at
+`secrets/propertyme.env` + `secrets/propertyme-tokens.json`. Note: PropertyMe's
+edge 403s default library user agents — the provider sends its own UA.
 
 **GEA CRM notes:** `rental_provider.full_name` is always the property **owner**
 (guaranteed upstream); `*.phone_after_hours` is always blank (single phone

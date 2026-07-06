@@ -91,7 +91,9 @@ class FillResult(_Strict):
     ok: bool
     form: str
     files: FillFiles = Field(default_factory=FillFiles)
-    filled_fields: int = 0
+    # Names of the declared fields that were filled (engine contract: a list,
+    # so the caller can show the PM exactly what came through).
+    filled_fields: list[str] = Field(default_factory=list)
     blank_fields: list[str] = Field(default_factory=list)
     # Non-fatal notes (e.g. "PDF skipped — LibreOffice unavailable").
     warnings: list[str] = Field(default_factory=list)

@@ -26,10 +26,15 @@ def fill_form(
 
     blank_fields = compute_blank_fields(spec, context)
     selectors = set(spec.selector_fields)
-    declared_text = [f for f in spec.declared_fields if f not in selectors]
-    filled_fields = len(declared_text) - len(blank_fields)
+    blanks = set(blank_fields)
+    filled_fields = [
+        f for f in spec.declared_fields if f not in selectors and f not in blanks
+    ]
 
     docx_path, pdf_path, warnings = render(spec, context, request.out_dir)
+    if bundle.meta.note:
+        # provider data-quality flag (e.g. >1 active tenancy) — the PM must see it
+        warnings = [*warnings, bundle.meta.note]
 
     return FillResult(
         ok=True,

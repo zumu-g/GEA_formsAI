@@ -25,7 +25,7 @@ def test_fill_form_happy_path(tmp_path, caller_fields):
     result = fill_form(req, provider=FixtureProvider())
     assert result.ok
     assert result.files.docx is not None
-    assert result.filled_fields > 0
+    assert len(result.filled_fields) > 0
     assert isinstance(result.blank_fields, list)
 
 
