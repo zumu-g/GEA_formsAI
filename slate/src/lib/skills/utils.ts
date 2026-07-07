@@ -24,10 +24,38 @@ export function applyComputedFields(
       const b = parseFloat(values[computed.operands[1]]?.replace(/[^0-9.]/g, '') || '0');
       const val = a - b;
       result[computed.skillFieldId] = val > 0 ? val.toFixed(2) : '0.00';
+    } else if (computed.formula === 'add_days' && computed.operands.length === 1) {
+      const offset = addDaysToAuDate(values[computed.operands[0]], computed.days ?? 0);
+      if (offset !== undefined) {
+        result[computed.skillFieldId] = offset;
+      }
     }
   }
 
   return result;
+}
+
+/**
+ * Adds a day offset to a dd/mm/yyyy date string, returning dd/mm/yyyy.
+ * Returns undefined (leaves the computed field blank) when the source date
+ * is missing or not a valid dd/mm/yyyy string, rather than throwing.
+ */
+export function addDaysToAuDate(auDate: string | undefined, days: number): string | undefined {
+  if (!auDate) return undefined;
+
+  const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(auDate);
+  if (!match) return undefined;
+
+  const [, dd, mm, yyyy] = match;
+  const date = new Date(Number(yyyy), Number(mm) - 1, Number(dd));
+  if (Number.isNaN(date.getTime())) return undefined;
+
+  date.setDate(date.getDate() + days);
+
+  const outDd = String(date.getDate()).padStart(2, '0');
+  const outMm = String(date.getMonth() + 1).padStart(2, '0');
+  const outYyyy = date.getFullYear();
+  return `${outDd}/${outMm}/${outYyyy}`;
 }
 
 function applyTransform(value: string, transform?: string): string {
