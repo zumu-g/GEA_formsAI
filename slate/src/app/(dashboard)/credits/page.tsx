@@ -112,8 +112,8 @@ export default function CreditsPage() {
       </AnimatePresence>
 
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-[#1D1D1F]">Credits</h1>
-        <p className="text-sm text-[#86868B] mt-1">
+        <h1 className="text-2xl font-bold text-[#1B1D24]">Credits</h1>
+        <p className="text-sm text-[#767A85] mt-1">
           Buy credits to fill forms. Credits never expire.
         </p>
       </div>
@@ -121,13 +121,13 @@ export default function CreditsPage() {
       <CreditBalance buyHref="#pricing" />
 
       <div id="pricing" className="mt-10">
-        <h2 className="text-lg font-semibold text-[#1D1D1F] mb-4">Buy Credits</h2>
+        <h2 className="text-lg font-semibold text-[#1B1D24] mb-4">Buy Credits</h2>
         <CreditPurchase onPurchase={handlePurchase} loading={loading} />
       </div>
 
       {/* Credit costs reference */}
       <div className="mt-10">
-        <h2 className="text-lg font-semibold text-[#1D1D1F] mb-4">How Credits Work</h2>
+        <h2 className="text-lg font-semibold text-[#1B1D24] mb-4">How Credits Work</h2>
         <Card>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             {[
@@ -139,7 +139,7 @@ export default function CreditsPage() {
               { action: 'API call (per fill)', cost: '1 credit' },
             ].map((item) => (
               <div key={item.action} className="flex items-center justify-between">
-                <span className="text-sm text-[#86868B]">{item.action}</span>
+                <span className="text-sm text-[#767A85]">{item.action}</span>
                 <Badge variant="accent">{item.cost}</Badge>
               </div>
             ))}
@@ -149,9 +149,9 @@ export default function CreditsPage() {
 
       {/* Transaction History */}
       <div className="mt-10">
-        <h2 className="text-lg font-semibold text-[#1D1D1F] mb-4">Transaction History</h2>
+        <h2 className="text-lg font-semibold text-[#1B1D24] mb-4">Transaction History</h2>
         <Card className="text-center py-10">
-          <p className="text-sm text-[#86868B]">No transactions yet</p>
+          <p className="text-sm text-[#767A85]">No transactions yet</p>
         </Card>
       </div>
     </div>

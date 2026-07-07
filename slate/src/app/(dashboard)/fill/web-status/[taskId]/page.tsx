@@ -43,7 +43,7 @@ function statusColor(status: SkyvernTaskStatus) {
     case 'running':
       return { bg: 'bg-amber-50', text: 'text-amber-600', border: 'border-amber-200', dot: 'bg-amber-500' };
     default:
-      return { bg: 'bg-[#F5F5F7]', text: 'text-[#86868B]', border: 'border-[#E5E5EA]', dot: 'bg-[#86868B]' };
+      return { bg: 'bg-[#F2F4F7]', text: 'text-[#767A85]', border: 'border-[#E2E4EA]', dot: 'bg-[#767A85]' };
   }
 }
 
@@ -57,7 +57,7 @@ function StatusIcon({ status }: { status: SkyvernTaskStatus }) {
     case 'running':
       return <Loader2 className="w-6 h-6 text-amber-500 animate-spin" />;
     default:
-      return <Clock className="w-6 h-6 text-[#86868B]" />;
+      return <Clock className="w-6 h-6 text-[#767A85]" />;
   }
 }
 
@@ -139,7 +139,7 @@ export default function WebFillStatusPage() {
       <motion.div {...fadeUp} transition={{ duration: 0.3 }}>
         <Link
           href="/fill"
-          className="inline-flex items-center gap-1.5 text-sm text-[#86868B] hover:text-[#1D1D1F] transition-colors duration-200 mb-8"
+          className="inline-flex items-center gap-1.5 text-sm text-[#767A85] hover:text-[#1B1D24] transition-colors duration-200 mb-8"
         >
           <ArrowLeft className="w-4 h-4" />
           Back to Fill
@@ -152,9 +152,9 @@ export default function WebFillStatusPage() {
         transition={{ duration: 0.4, delay: 0.05 }}
         className="text-center mb-10"
       >
-        <h1 className="text-2xl font-bold text-[#1D1D1F]">Web Form Fill</h1>
-        <p className="text-sm text-[#86868B] mt-2">
-          Task <span className="font-mono text-xs bg-[#F5F5F7] px-2 py-0.5 rounded">{taskId}</span>
+        <h1 className="text-2xl font-bold text-[#1B1D24]">Web Form Fill</h1>
+        <p className="text-sm text-[#767A85] mt-2">
+          Task <span className="font-mono text-xs bg-[#F2F4F7] px-2 py-0.5 rounded">{taskId}</span>
         </p>
       </motion.div>
 
@@ -191,13 +191,13 @@ export default function WebFillStatusPage() {
                     ? 'Task Failed'
                     : 'Filling Form...'}
                 </p>
-                <p className="text-xs text-[#86868B] mt-0.5">
+                <p className="text-xs text-[#767A85] mt-0.5">
                   Elapsed: {elapsed}
                 </p>
               </div>
             </div>
             {!isTerminal && (
-              <div className="flex items-center gap-1.5 text-xs text-[#86868B]">
+              <div className="flex items-center gap-1.5 text-xs text-[#767A85]">
                 <span className="relative flex h-2 w-2">
                   <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${colors.dot} opacity-75`} />
                   <span className={`relative inline-flex rounded-full h-2 w-2 ${colors.dot}`} />
@@ -214,12 +214,12 @@ export default function WebFillStatusPage() {
         <motion.div
           {...fadeUp}
           transition={{ duration: 0.4, delay: 0.15 }}
-          className="p-6 rounded-xl border border-[#E5E5EA] bg-white mb-6"
+          className="p-6 rounded-xl border border-[#E2E4EA] bg-white mb-6"
         >
-          <p className="text-sm font-medium text-[#1D1D1F] mb-5">Progress</p>
+          <p className="text-sm font-medium text-[#1B1D24] mb-5">Progress</p>
           <div className="relative flex items-start justify-between">
             {/* Connecting line (background) */}
-            <div className="absolute top-3 left-3 right-3 h-0.5 bg-[#E5E5EA]" />
+            <div className="absolute top-3 left-3 right-3 h-0.5 bg-[#E2E4EA]" />
             {/* Connecting line (filled) */}
             <motion.div
               className="absolute top-3 left-3 h-0.5 bg-[#5856D6]"
@@ -236,7 +236,7 @@ export default function WebFillStatusPage() {
               const isDone = i < currentStepIndex || (i === currentStepIndex && task.status === 'completed');
               const isFailed = (task.status === 'failed' || task.status === 'terminated') && i === currentStepIndex;
 
-              let dotClasses = 'bg-[#E5E5EA] border-[#E5E5EA]';
+              let dotClasses = 'bg-[#E2E4EA] border-[#E2E4EA]';
               if (isDone) dotClasses = 'bg-[#5856D6] border-[#5856D6]';
               else if (isFailed) dotClasses = 'bg-red-500 border-red-500';
               else if (isActive) dotClasses = 'bg-amber-400 border-amber-400';
@@ -262,7 +262,7 @@ export default function WebFillStatusPage() {
                   </div>
                   <span
                     className={`text-xs mt-2 text-center ${
-                      isDone || isActive ? 'text-[#1D1D1F] font-medium' : 'text-[#AEAEB2]'
+                      isDone || isActive ? 'text-[#1B1D24] font-medium' : 'text-[#A2A6B0]'
                     }`}
                   >
                     {STEP_LABELS[step]}
@@ -279,13 +279,13 @@ export default function WebFillStatusPage() {
         <motion.div
           {...fadeUp}
           transition={{ duration: 0.4, delay: 0.2 }}
-          className="p-6 rounded-xl border border-[#E5E5EA] bg-white mb-6 space-y-4"
+          className="p-6 rounded-xl border border-[#E2E4EA] bg-white mb-6 space-y-4"
         >
-          <p className="text-sm font-medium text-[#1D1D1F]">Details</p>
+          <p className="text-sm font-medium text-[#1B1D24]">Details</p>
 
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
-              <p className="text-xs text-[#86868B] mb-0.5">Target URL</p>
+              <p className="text-xs text-[#767A85] mb-0.5">Target URL</p>
               <a
                 href={task.url}
                 target="_blank"
@@ -298,22 +298,22 @@ export default function WebFillStatusPage() {
               </a>
             </div>
             <div>
-              <p className="text-xs text-[#86868B] mb-0.5">Status</p>
+              <p className="text-xs text-[#767A85] mb-0.5">Status</p>
               <span className={`inline-flex items-center gap-1.5 text-sm font-medium ${colors.text}`}>
                 <span className={`w-1.5 h-1.5 rounded-full ${colors.dot}`} />
                 {task.status.charAt(0).toUpperCase() + task.status.slice(1)}
               </span>
             </div>
             <div>
-              <p className="text-xs text-[#86868B] mb-0.5">Created</p>
-              <p className="text-[#1D1D1F]">
+              <p className="text-xs text-[#767A85] mb-0.5">Created</p>
+              <p className="text-[#1B1D24]">
                 {new Date(task.created_at).toLocaleString()}
               </p>
             </div>
             {task.completed_at && (
               <div>
-                <p className="text-xs text-[#86868B] mb-0.5">Completed</p>
-                <p className="text-[#1D1D1F]">
+                <p className="text-xs text-[#767A85] mb-0.5">Completed</p>
+                <p className="text-[#1B1D24]">
                   {new Date(task.completed_at).toLocaleString()}
                 </p>
               </div>
@@ -322,8 +322,8 @@ export default function WebFillStatusPage() {
 
           {task.navigation_goal && (
             <div>
-              <p className="text-xs text-[#86868B] mb-1">Instructions</p>
-              <p className="text-sm text-[#1D1D1F] bg-[#F5F5F7] rounded-lg px-3 py-2">
+              <p className="text-xs text-[#767A85] mb-1">Instructions</p>
+              <p className="text-sm text-[#1B1D24] bg-[#F2F4F7] rounded-lg px-3 py-2">
                 {task.navigation_goal}
               </p>
             </div>
@@ -344,10 +344,10 @@ export default function WebFillStatusPage() {
         <motion.div
           {...fadeUp}
           transition={{ duration: 0.4, delay: 0.25 }}
-          className="p-6 rounded-xl border border-[#E5E5EA] bg-white mb-6"
+          className="p-6 rounded-xl border border-[#E2E4EA] bg-white mb-6"
         >
-          <p className="text-sm font-medium text-[#1D1D1F] mb-3">Extracted Information</p>
-          <pre className="text-xs text-[#1D1D1F] bg-[#F5F5F7] rounded-lg p-4 overflow-x-auto font-mono">
+          <p className="text-sm font-medium text-[#1B1D24] mb-3">Extracted Information</p>
+          <pre className="text-xs text-[#1B1D24] bg-[#F2F4F7] rounded-lg p-4 overflow-x-auto font-mono">
             {JSON.stringify(task.extracted_information, null, 2)}
           </pre>
         </motion.div>
@@ -361,7 +361,7 @@ export default function WebFillStatusPage() {
       >
         <Link
           href="/fill"
-          className="px-5 py-2.5 text-sm font-medium text-[#1D1D1F] bg-[#F5F5F7] rounded-lg hover:bg-[#E5E5EA] transition-colors duration-200"
+          className="px-5 py-2.5 text-sm font-medium text-[#1B1D24] bg-[#F2F4F7] rounded-lg hover:bg-[#E2E4EA] transition-colors duration-200"
         >
           Fill Another Form
         </Link>

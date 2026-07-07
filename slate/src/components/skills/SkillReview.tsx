@@ -31,8 +31,8 @@ export function SkillReview({
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-semibold text-[#1D1D1F]">Review & Generate</h2>
-        <p className="mt-1 text-sm text-[#86868B]">
+        <h2 className="text-xl font-semibold text-[#1B1D24]">Review & Generate</h2>
+        <p className="mt-1 text-sm text-[#767A85]">
           Review your entries below, then generate the filled PDF.
         </p>
       </div>
@@ -47,10 +47,10 @@ export function SkillReview({
           return (
             <div
               key={section.id}
-              className="bg-white border border-[#E5E5EA] rounded-xl p-4"
+              className="bg-white border border-[#E2E4EA] rounded-xl p-4"
             >
               <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-semibold text-[#1D1D1F]">
+                <h3 className="text-sm font-semibold text-[#1B1D24]">
                   {section.title}
                 </h3>
                 <button
@@ -64,15 +64,15 @@ export function SkillReview({
               </div>
 
               {filledFields.length === 0 ? (
-                <p className="text-xs text-[#C7C7CC] italic">No fields filled</p>
+                <p className="text-xs text-[#C4C8D1] italic">No fields filled</p>
               ) : (
                 <div className="space-y-2">
                   {filledFields.map((field) => (
                     <div key={field.id} className="flex items-start gap-2">
                       <Check size={14} className="text-green-500 mt-0.5 shrink-0" />
                       <div className="min-w-0">
-                        <span className="text-xs text-[#86868B]">{field.label}: </span>
-                        <span className="text-sm text-[#1D1D1F]">
+                        <span className="text-xs text-[#767A85]">{field.label}: </span>
+                        <span className="text-sm text-[#1B1D24]">
                           {field.type === 'checkbox'
                             ? values[field.id] === 'true'
                               ? 'Yes'

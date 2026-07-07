@@ -1,8 +1,8 @@
 # Slate — Development Progress
 
-**Last updated:** 12 May 2026
+**Last updated:** 15 May 2026
 **Current phase:** Phase 2 (Field Detection + Fill Pipeline)
-**Status:** Field detection pipeline repaired and extended with Docling. Both servers running locally. Fill stream working. Next: Supabase Storage wiring + end-to-end test.
+**Status:** Field detection pipeline extended with pdfplumber + CommonForms. Favourite Fields feature shipped. Design critique complete (16/40 — action plan ready). Next: /harden P0 bugs → /layout restructure → /typeset + /colorize identity pass.
 
 ---
 
@@ -69,6 +69,38 @@
 - Signature drawing canvas
 - AI auto-fill button with inline PDF preview after generation
 
+### COMPLETED — Favourite Fields Feature (14 May 2026)
+
+**Persistent favourites with drag-and-drop across sessions:**
+- `slate/src/lib/favouriteFields.ts` — localStorage CRUD (key: `slate_favourite_fields`). Upserts by normalised field name. Functions: `getFavourites`, `saveFavourite`, `removeFavourite`, `isFavourite`
+- `slate/src/components/fill/FavouritesPanel.tsx` — collapsible panel above FieldsPanel. Each favourite is native HTML5 draggable (`application/slate-favourite` data type), shows name + type badge + value preview, hover-reveal delete
+- `FieldsPanel.tsx` modified — star icon on each field row (outlined/filled gold), drag-over drop zone with dashed purple border highlight
+- `fill/[formId]/page.tsx` modified — loads favourites on mount, star toggles save/remove, drop appends field with saved value (skips duplicates)
+- No new npm dependencies — uses native HTML5 drag-drop
+
+### COMPLETED — Field Detection Extended + Port Fix (14–15 May 2026)
+
+**Port bug fixed:**
+- `detect-smart/route.ts` default URL was `http://localhost:8000` — changed to `http://localhost:8001` to match the running backend. This caused page image loading to silently fail, forcing Vision into raw-PDF single-page fallback mode.
+
+**Two new detection steps added (pipeline is now 7 steps):**
+
+Detection order:
+1. AcroForm (PyMuPDF) — instant, digital PDFs
+2. **pdfplumber** (NEW) — finds drawn rectangles as form fields in vector PDFs; infers nearby label text. `pip install pdfplumber` ✓
+3. **CommonForms v0.2.1** (NEW) — ML object-detection model (ONNX/rfdetr/ultralytics), purpose-built for blank field detection in ANY PDF including scanned. `pip install commonforms` ✓. Python 3.14 compatible.
+4. Google Document AI — cloud, not configured
+5. Docling — structured layout extraction
+6. Zerox OCR — requires graphicsmagick, package not installed
+7. Claude Vision — raw PDF or per-page images
+
+**New files:**
+- `pdf_processor.py`: `detect_fields_pdfplumber()`, `detect_fields_commonforms()`, `_find_nearby_label()` helper
+- `main.py`: `POST /detect-fields-pdfplumber`, `POST /detect-fields-commonforms` endpoints
+- `formFillingBackend.ts`: `detectFieldsPdfplumber()`, `detectFieldsCommonForms()` service functions
+- `smartFill.ts`: `DetectionMethod` extended with `'pdfplumber' | 'commonforms'`
+- `FieldsPanel.tsx`: METHOD_LABELS updated with pdfplumber + CommonForms badges
+
 ### COMPLETED — Field Detection Pipeline Repair (12 May 2026)
 
 **Root causes fixed:**
@@ -98,19 +130,45 @@
 
 ## RESUME HERE — Next Steps
 
-### Immediate
-1. **End-to-end test** — upload flat PDF → verify Docling detects fields → AI fill stream completes → download
-2. **Wire Supabase Storage** — replace in-memory `pdfStore` with real storage (PDFs lost on server restart)
-3. **Run Supabase SQL migration** — schema exists, never applied
+### Immediate (Design — from critique, 16/40 score)
+These are ordered. Do them in sequence:
+
+1. **`/harden` — Fix P0 data-loss bugs**
+   - Add confirmation dialog to Reset button (currently destroys session silently)
+   - Allow removal of AI-detected fields (currently only `manual: true` fields have × button)
+   - Replace raw tool names in chat transcript (`fill_pdf_form` → "Writing to form…", `extract_field_values` → "Reading field values…")
+
+2. **`/layout` — Restructure right column**
+   - Current order: FavouritesPanel → FieldsPanel → StreamingFillChat (WRONG)
+   - Target order: FieldsPanel (primary) → StreamingFillChat (assistant) → FavouritesPanel (collapsible, default closed when empty)
+
+3. **`/typeset` — Replace Inter**
+   - Inter is the single biggest "AI made this" signal. Replace with a type pairing with personality.
+   - Design context in `.impeccable.md` at project root (created 14 May)
+
+4. **`/colorize` — Shift palette off Apple HIG**
+   - Every neutral in `globals.css` is a verbatim Apple HIG token. Keep `#5856D6` accent.
+   - Add subtle hue tint to neutrals to make them Slate's own.
+
+5. **`/polish` — Final pass**
+   - `formName` hardcodes `'Uploaded Form'` until detection resolves
+   - FavouritesPanel should default to collapsed when `favourites.length === 0`
+   - Sparkles icon at 9px is illegible — bump to 11–12px
+   - Extract shared `TYPE_COLOURS` constant from FieldsPanel + FavouritesPanel
+   - Add user-facing labels for detection method badge (hide "pdfplumber"/"Docling" from non-technical users)
+
+### Next (Infrastructure)
+6. **End-to-end test** — upload flat PDF → verify pdfplumber/CommonForms detects fields → AI fill stream completes → download
+7. **Wire Supabase Storage** — replace in-memory `pdfStore` (PDFs lost on server restart)
+8. **Run Supabase SQL migration** — schema exists, never applied
 
 ### Short Term
-4. **Connect Stripe** — credit purchases (no keys yet)
-5. **Calibrate pdfme coordinates** — use `POST /docling/extract` with real PDFs to get mm positions for pdfme templates
+9. **Connect Stripe** — credit purchases (no keys yet)
+10. **Improve PDF viewer** — replace bare `<iframe>` with `react-pdf`/`pdfjs-dist` for zoom, page nav, field highlighting
 
 ### Medium Term
-6. **Deploy** — Vercel for Next.js app (Zerox/GraphicsMagick needs self-hosted — use Vision fallback on Vercel)
-7. **pdfme Designer UI** — `@pdfme/ui` for visual template creation
-8. **More skills** — Power of Attorney, Lease Agreement
+11. **Deploy** — Vercel for Next.js (Zerox/GraphicsMagick needs self-hosted — use Vision fallback on Vercel)
+12. **More skills** — Power of Attorney, Lease Agreement
 
 ---
 

@@ -83,9 +83,9 @@ export function SkillSectionForm({
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-semibold text-[#1D1D1F]">{section.title}</h2>
+        <h2 className="text-xl font-semibold text-[#1B1D24]">{section.title}</h2>
         {section.description && (
-          <p className="mt-1 text-sm text-[#86868B]">{section.description}</p>
+          <p className="mt-1 text-sm text-[#767A85]">{section.description}</p>
         )}
       </div>
 
@@ -99,7 +99,7 @@ export function SkillSectionForm({
       <div className="space-y-4">
         {/* FIX 4 — Required field legend (once, before first field) */}
         {hasRequiredFields && (
-          <p className="text-xs text-[#86868B] mb-4">
+          <p className="text-xs text-[#767A85] mb-4">
             Fields marked <span className="text-red-500 font-medium">*</span> are required
           </p>
         )}
@@ -125,12 +125,12 @@ export function SkillSectionForm({
                 <div className="flex-1">
                   <label
                     htmlFor={field.id}
-                    className="text-sm font-medium text-[#1D1D1F] hover:text-[#5856D6] transition-colors cursor-pointer"
+                    className="text-sm font-medium text-[#1B1D24] hover:text-[#5856D6] transition-colors cursor-pointer"
                   >
                     {field.label}
                   </label>
                   {field.helpText && (
-                    <p className="text-xs text-[#86868B] mt-0.5">{field.helpText}</p>
+                    <p className="text-xs text-[#767A85] mt-0.5">{field.helpText}</p>
                   )}
                 </div>
               </div>
@@ -148,12 +148,12 @@ export function SkillSectionForm({
               {/* FIX 2 — label connected via htmlFor */}
               <label
                 htmlFor={field.id}
-                className="block text-sm font-medium text-[#1D1D1F] mb-1.5"
+                className="block text-sm font-medium text-[#1B1D24] mb-1.5"
               >
                 {field.label}
                 {field.required && <span className="text-red-500 ml-0.5">*</span>}
                 {isComputed && (
-                  <span className="ml-2 text-xs font-normal text-[#86868B] bg-[#F5F5F7] px-2 py-0.5 rounded-full">
+                  <span className="ml-2 text-xs font-normal text-[#767A85] bg-[#F2F4F7] px-2 py-0.5 rounded-full">
                     Auto-calculated
                   </span>
                 )}
@@ -161,8 +161,8 @@ export function SkillSectionForm({
 
               {/* FIX 3 — Computed fields rendered as static display, not an input */}
               {isComputed ? (
-                <div className="px-3 py-2 rounded-xl bg-[#F5F5F7] border border-[#E5E5EA] text-sm text-[#1D1D1F]">
-                  {formattedComputedValue || <span className="text-[#C7C7CC]">—</span>}
+                <div className="px-3 py-2 rounded-xl bg-[#F2F4F7] border border-[#E2E4EA] text-sm text-[#1B1D24]">
+                  {formattedComputedValue || <span className="text-[#C4C8D1]">—</span>}
                 </div>
               ) : (
                 <div className="flex gap-2">
@@ -174,16 +174,16 @@ export function SkillSectionForm({
                       placeholder={field.placeholder}
                       rows={4}
                       className={`
-                        flex-1 rounded-lg border px-3 py-2 text-sm text-[#1D1D1F]
-                        placeholder:text-[#C7C7CC] transition-all duration-200
+                        flex-1 rounded-lg border px-3 py-2 text-sm text-[#1B1D24]
+                        placeholder:text-[#C4C8D1] transition-all duration-200
                         focus:outline-none focus:ring-2 focus:ring-[#5856D6]/30 focus:border-[#5856D6]
-                        ${error ? 'border-red-300 bg-red-50/50' : 'border-[#E5E5EA] bg-white'}
+                        ${error ? 'border-red-300 bg-red-50/50' : 'border-[#E2E4EA] bg-white'}
                       `}
                     />
                   ) : (
                     <div className="flex-1 relative">
                       {field.type === 'currency' && (
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-[#86868B]">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-[#767A85]">
                           $
                         </span>
                       )}
@@ -203,11 +203,11 @@ export function SkillSectionForm({
                         }}
                         placeholder={field.placeholder}
                         className={`
-                          w-full rounded-lg border px-3 py-2.5 text-sm text-[#1D1D1F]
-                          placeholder:text-[#C7C7CC] transition-all duration-200
+                          w-full rounded-lg border px-3 py-2.5 text-sm text-[#1B1D24]
+                          placeholder:text-[#C4C8D1] transition-all duration-200
                           focus:outline-none focus:ring-2 focus:ring-[#5856D6]/30 focus:border-[#5856D6]
                           ${field.type === 'currency' ? 'pl-7' : ''}
-                          ${error ? 'border-red-300 bg-red-50/50' : 'border-[#E5E5EA] bg-white'}
+                          ${error ? 'border-red-300 bg-red-50/50' : 'border-[#E2E4EA] bg-white'}
                         `}
                       />
                     </div>
@@ -218,7 +218,7 @@ export function SkillSectionForm({
               )}
 
               {field.helpText && !error && (
-                <p className="mt-1 text-xs text-[#86868B]">{field.helpText}</p>
+                <p className="mt-1 text-xs text-[#767A85]">{field.helpText}</p>
               )}
               {error && (
                 <p className="mt-1 text-xs text-red-600">{error}</p>

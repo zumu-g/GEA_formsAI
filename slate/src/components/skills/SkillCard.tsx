@@ -25,7 +25,7 @@ export function SkillCard({ skill }: SkillCardProps) {
   return (
     <Link
       href={`/skills/${skill.id}`}
-      className="group block bg-white border border-[#E5E5EA] rounded-2xl p-6 hover:shadow-md hover:border-[#D1D1D6] transition-all duration-200 hover:-translate-y-0.5"
+      className="group block bg-white border border-[#E2E4EA] rounded-2xl p-6 hover:shadow-md hover:border-[#D1D1D6] transition-all duration-200 hover:-translate-y-0.5"
     >
       <div className="flex items-start gap-4">
         <div className="w-11 h-11 rounded-xl bg-[#5856D6]/10 flex items-center justify-center shrink-0 group-hover:bg-[#5856D6]/15 transition-colors">
@@ -33,7 +33,7 @@ export function SkillCard({ skill }: SkillCardProps) {
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <h3 className="text-base font-semibold text-[#1D1D1F] truncate">
+            <h3 className="text-base font-semibold text-[#1B1D24] truncate">
               {skill.name}
             </h3>
             {isDraft && (
@@ -42,7 +42,7 @@ export function SkillCard({ skill }: SkillCardProps) {
               </span>
             )}
           </div>
-          <p className="text-sm text-[#86868B] mt-1 line-clamp-2">{skill.description}</p>
+          <p className="text-sm text-[#767A85] mt-1 line-clamp-2">{skill.description}</p>
 
           {skill.formTemplateUrl && (
             <button
@@ -65,10 +65,10 @@ export function SkillCard({ skill }: SkillCardProps) {
                 {skill.jurisdiction}
               </span>
             )}
-            <span className="text-xs text-[#86868B]">
+            <span className="text-xs text-[#767A85]">
               {skill.sections.length} sections
             </span>
-            <span className="text-xs text-[#86868B]">{totalFields} fields</span>
+            <span className="text-xs text-[#767A85]">{totalFields} fields</span>
           </div>
         </div>
       </div>

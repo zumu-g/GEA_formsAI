@@ -99,9 +99,9 @@ export function SkillPdfUpload({ skillName, onUploaded }: SkillPdfUploadProps) {
         <div className="w-14 h-14 rounded-2xl bg-[#5856D6]/10 flex items-center justify-center mx-auto mb-4">
           <FileText size={28} className="text-[#5856D6]" />
         </div>
-        <h2 className="text-xl font-semibold text-[#1D1D1F]">Upload Your PDF</h2>
-        <p className="text-sm text-[#86868B] mt-1">
-          Upload the <span className="font-medium text-[#1D1D1F]">{skillName}</span> document
+        <h2 className="text-xl font-semibold text-[#1B1D24]">Upload Your PDF</h2>
+        <p className="text-sm text-[#767A85] mt-1">
+          Upload the <span className="font-medium text-[#1B1D24]">{skillName}</span> document
           to begin filling.
         </p>
       </div>
@@ -126,31 +126,31 @@ export function SkillPdfUpload({ skillName, onUploaded }: SkillPdfUploadProps) {
         className={`
           border-2 border-dashed rounded-2xl p-10 text-center
           transition-all duration-200 cursor-pointer
-          ${isDragging ? 'border-[#5856D6] bg-[#5856D6]/5' : 'border-[#E5E5EA] hover:border-[#C7C7CC] bg-[#FAFAFA]'}
+          ${isDragging ? 'border-[#5856D6] bg-[#5856D6]/5' : 'border-[#E2E4EA] hover:border-[#C4C8D1] bg-[#F8F9FB]'}
         `}
       >
         {isUploading ? (
           <div className="flex flex-col items-center gap-3">
             <Loader2 size={32} className="text-[#5856D6] animate-spin" />
-            <p className="text-sm text-[#86868B]">
-              Uploading <span className="font-medium text-[#1D1D1F]">{fileName}</span>…
+            <p className="text-sm text-[#767A85]">
+              Uploading <span className="font-medium text-[#1B1D24]">{fileName}</span>…
             </p>
           </div>
         ) : isSuccess ? (
           <div className="flex flex-col items-center gap-3">
             <CheckCircle2 size={32} className="text-green-500" />
-            <p className="text-sm text-[#86868B]">
-              <span className="font-medium text-[#1D1D1F]">{fileName}</span> ready
+            <p className="text-sm text-[#767A85]">
+              <span className="font-medium text-[#1B1D24]">{fileName}</span> ready
             </p>
           </div>
         ) : (
           <div className="flex flex-col items-center gap-3">
-            <Upload size={32} className="text-[#C7C7CC]" />
+            <Upload size={32} className="text-[#C4C8D1]" />
             <div>
-              <p className="text-sm font-medium text-[#1D1D1F]">
+              <p className="text-sm font-medium text-[#1B1D24]">
                 Drop your PDF here or click to browse
               </p>
-              <p className="text-xs text-[#86868B] mt-1">PDF only, max 25MB</p>
+              <p className="text-xs text-[#767A85] mt-1">PDF only, max 25MB</p>
             </div>
           </div>
         )}

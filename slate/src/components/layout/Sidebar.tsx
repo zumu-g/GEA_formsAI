@@ -43,13 +43,13 @@ export function Sidebar() {
   };
 
   return (
-    <aside className="w-60 h-screen bg-[#F5F5F7]/50 border-r border-[#E5E5EA] flex flex-col fixed left-0 top-0">
-      <div className="h-14 flex items-center px-5 border-b border-[#E5E5EA]/60">
+    <aside className="w-60 h-screen bg-[#F2F4F7]/50 border-r border-[#E2E4EA] flex flex-col fixed left-0 top-0">
+      <div className="h-14 flex items-center px-5 border-b border-[#E2E4EA]/60">
         <Link href="/dashboard" className="flex items-center gap-2">
-          <div className="w-7 h-7 bg-[#1D1D1F] rounded-lg flex items-center justify-center">
+          <div className="w-7 h-7 bg-[#1B1D24] rounded-lg flex items-center justify-center">
             <Zap size={14} className="text-white" />
           </div>
-          <span className="text-lg font-semibold tracking-tight text-[#1D1D1F]">
+          <span className="text-lg font-semibold tracking-tight text-[#1B1D24]">
             Slate
           </span>
         </Link>
@@ -77,8 +77,8 @@ export function Sidebar() {
                     flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium
                     transition-all duration-150
                     ${isActive
-                      ? 'bg-white text-[#1D1D1F] shadow-sm border border-[#E5E5EA]/60'
-                      : 'text-[#86868B] hover:bg-white/60 hover:text-[#1D1D1F]'
+                      ? 'bg-white text-[#1B1D24] shadow-sm border border-[#E2E4EA]/60'
+                      : 'text-[#767A85] hover:bg-white/60 hover:text-[#1B1D24]'
                     }
                   `}
                 >
@@ -96,10 +96,10 @@ export function Sidebar() {
         </ul>
       </nav>
 
-      <div className="p-3 border-t border-[#E5E5EA]/60">
+      <div className="p-3 border-t border-[#E2E4EA]/60">
         <button
           onClick={handleSignOut}
-          className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-[#86868B] hover:bg-white/60 hover:text-[#1D1D1F] transition-all duration-150 w-full cursor-pointer"
+          className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-[#767A85] hover:bg-white/60 hover:text-[#1B1D24] transition-all duration-150 w-full cursor-pointer"
         >
           <LogOut size={18} strokeWidth={1.5} />
           Sign Out

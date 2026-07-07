@@ -28,7 +28,7 @@ export interface VisionDetectResult {
   error?: string;
 }
 
-export type DetectionMethod = 'acroform' | 'docai' | 'docling' | 'vision' | 'zerox' | 'empty';
+export type DetectionMethod = 'acroform' | 'pdfplumber' | 'commonforms' | 'docai' | 'docling' | 'vision' | 'zerox' | 'empty';
 
 export interface SmartDetectResult {
   fields: DetectedField[];

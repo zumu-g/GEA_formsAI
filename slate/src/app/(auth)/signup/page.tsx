@@ -75,9 +75,9 @@ export default function SignupPage() {
               <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <h1 className="text-xl font-bold text-[#1D1D1F] mt-5">Check your email</h1>
-          <p className="text-sm text-[#86868B] mt-2 leading-relaxed">
-            We&apos;ve sent a confirmation link to <strong className="text-[#1D1D1F]">{email}</strong>.
+          <h1 className="text-xl font-bold text-[#1B1D24] mt-5">Check your email</h1>
+          <p className="text-sm text-[#767A85] mt-2 leading-relaxed">
+            We&apos;ve sent a confirmation link to <strong className="text-[#1B1D24]">{email}</strong>.
             Click it to activate your account.
           </p>
           <Link href="/login" className="inline-block mt-6">
@@ -91,8 +91,8 @@ export default function SignupPage() {
   return (
     <Card className="w-full max-w-sm" padding="lg">
       <div className="text-center mb-6">
-        <h1 className="text-xl font-bold text-[#1D1D1F]">Create your account</h1>
-        <p className="text-sm text-[#86868B] mt-1">Start with 5 free credits</p>
+        <h1 className="text-xl font-bold text-[#1B1D24]">Create your account</h1>
+        <p className="text-sm text-[#767A85] mt-1">Start with 5 free credits</p>
       </div>
 
       <form className="space-y-4" onSubmit={handleSignup}>
@@ -138,10 +138,10 @@ export default function SignupPage() {
       <div className="mt-6">
         <div className="relative">
           <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-[#E5E5EA]" />
+            <div className="w-full border-t border-[#E2E4EA]" />
           </div>
           <div className="relative flex justify-center text-xs">
-            <span className="px-2 bg-white text-[#AEAEB2]">or</span>
+            <span className="px-2 bg-white text-[#A2A6B0]">or</span>
           </div>
         </div>
 
@@ -156,7 +156,7 @@ export default function SignupPage() {
         </Button>
       </div>
 
-      <p className="text-center text-xs text-[#AEAEB2] mt-6">
+      <p className="text-center text-xs text-[#A2A6B0] mt-6">
         By signing up, you agree to our{' '}
         <Link href="/terms" className="text-[#5856D6] hover:underline">Terms</Link>
         {' '}and{' '}
@@ -175,7 +175,7 @@ export default function SignupPage() {
         </div>
       )}
 
-      <p className="text-center text-sm text-[#86868B] mt-4">
+      <p className="text-center text-sm text-[#767A85] mt-4">
         Already have an account?{' '}
         <Link href="/login" className="text-[#5856D6] font-medium hover:underline">
           Sign in

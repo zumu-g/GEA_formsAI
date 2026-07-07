@@ -7,8 +7,16 @@ import { Download, RotateCcw, Clock } from 'lucide-react';
 import { PDFViewer } from '@/components/fill/PDFViewer';
 import { StreamingFillChat } from '@/components/fill/StreamingFillChat';
 import { FieldsPanel, type FieldEntry } from '@/components/fill/FieldsPanel';
+import { FavouritesPanel } from '@/components/fill/FavouritesPanel';
 import { useStreamingFill } from '@/hooks/useStreamingFill';
 import { addFillEntry } from '@/lib/fillHistory';
+import {
+  getFavourites,
+  saveFavourite,
+  removeFavourite,
+  isFavourite,
+  type FavouriteField,
+} from '@/lib/favouriteFields';
 
 export default function FillWorkspacePage() {
   const params = useParams();
@@ -20,9 +28,15 @@ export default function FillWorkspacePage() {
   const [isDetecting, setIsDetecting] = useState(true);
   const [detectionMethod, setDetectionMethod] = useState<import('@/types/smartFill').DetectionMethod | undefined>(undefined);
   const [contextFiles, setContextFiles] = useState<File[]>([]);
+  const [favourites, setFavourites] = useState<FavouriteField[]>([]);
+  const [confirmingReset, setConfirmingReset] = useState(false);
 
   const lastInstructionsRef = useRef<string>('');
   const historyRecordedRef = useRef<boolean>(false);
+
+  useEffect(() => {
+    setFavourites(getFavourites());
+  }, []);
 
   const { events, status, filledPdfUrl, sessionId, error, startFill, reset } = useStreamingFill();
 
@@ -120,22 +134,75 @@ export default function FillWorkspacePage() {
     a.click();
   }, [filledPdfUrl, formName]);
 
-  const handleReset = useCallback(() => {
+  const performReset = useCallback(() => {
     historyRecordedRef.current = false;
     lastInstructionsRef.current = '';
     reset();
+    setConfirmingReset(false);
   }, [reset]);
+
+  // Only worth confirming if the user has work that reset would destroy.
+  const hasWorkToLose =
+    events.length > 0 ||
+    !!filledPdfUrl ||
+    status === 'streaming' ||
+    fields.some((f) => f.value.trim());
+
+  const handleReset = useCallback(() => {
+    if (hasWorkToLose) {
+      setConfirmingReset(true);
+    } else {
+      performReset();
+    }
+  }, [hasWorkToLose, performReset]);
+
+  const handleAddToFavourite = useCallback((field: FieldEntry) => {
+    if (isFavourite(field.fieldName)) {
+      const current = getFavourites();
+      const match = current.find(
+        (f) => f.fieldName.trim().toLowerCase() === field.fieldName.trim().toLowerCase()
+      );
+      if (match) removeFavourite(match.id);
+    } else {
+      saveFavourite(field);
+    }
+    setFavourites(getFavourites());
+  }, []);
+
+  const handleRemoveFavourite = useCallback((id: string) => {
+    removeFavourite(id);
+    setFavourites(getFavourites());
+  }, []);
+
+  const handleDropFavourite = useCallback((fav: FavouriteField) => {
+    setFields((prev) => {
+      const alreadyExists = prev.some(
+        (f) => f.fieldName.trim().toLowerCase() === fav.fieldName.trim().toLowerCase()
+      );
+      if (alreadyExists) return prev;
+      return [
+        ...prev,
+        {
+          id: `fav_${Date.now()}`,
+          fieldName: fav.fieldName,
+          fieldType: fav.fieldType,
+          value: fav.value,
+          manual: true,
+        },
+      ];
+    });
+  }, []);
 
   const displayPdfUrl = filledPdfUrl || originalPdfUrl;
 
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)]">
       {/* Toolbar */}
-      <div className="flex items-center justify-between px-6 py-3 border-b border-[#E5E5EA]">
+      <div className="flex items-center justify-between px-6 py-3 border-b border-[#E2E4EA]">
         <div>
-          <h1 className="text-lg font-semibold text-[#1D1D1F]">{formName || 'Form Workspace'}</h1>
+          <h1 className="text-lg font-semibold text-[#1B1D24]">{formName || 'Form Workspace'}</h1>
           {!isDetecting && (
-            <p className="text-xs text-[#86868B]">
+            <p className="text-xs text-[#767A85]">
               {fields.length > 0 ? `${fields.length} fields detected` : 'No fields detected'}
             </p>
           )}
@@ -152,14 +219,14 @@ export default function FillWorkspacePage() {
           )}
           <button
             onClick={handleReset}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-[#86868B] bg-[#F5F5F7] rounded-lg hover:bg-[#E5E5EA] transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-[#767A85] bg-[#F2F4F7] rounded-lg hover:bg-[#E2E4EA] transition-colors"
           >
             <RotateCcw className="w-4 h-4" />
             Reset
           </button>
           <Link
             href="/fill/history"
-            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-[#86868B] bg-[#F5F5F7] rounded-lg hover:bg-[#E5E5EA] transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-[#767A85] bg-[#F2F4F7] rounded-lg hover:bg-[#E2E4EA] transition-colors"
             title="Fill history"
           >
             <Clock className="w-4 h-4" />
@@ -185,6 +252,9 @@ export default function FillWorkspacePage() {
             isDetecting={isDetecting}
             detectionMethod={detectionMethod}
             onChange={setFields}
+            onAddToFavourite={handleAddToFavourite}
+            isFavourite={isFavourite}
+            onDropFavourite={handleDropFavourite}
           />
 
           <StreamingFillChat
@@ -194,8 +264,46 @@ export default function FillWorkspacePage() {
             onSend={handleSend}
             onContextFilesChange={setContextFiles}
           />
+
+          <FavouritesPanel
+            favourites={favourites}
+            onRemove={handleRemoveFavourite}
+          />
         </div>
       </div>
+
+      {/* Reset confirmation */}
+      {confirmingReset && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4"
+          onClick={() => setConfirmingReset(false)}
+        >
+          <div
+            className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="text-base font-semibold text-[#1B1D24]">Reset this session?</h2>
+            <p className="mt-1.5 text-sm text-[#767A85]">
+              This clears the AI conversation and any filled PDF for this form. Field values you entered
+              will remain. This can&apos;t be undone.
+            </p>
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                onClick={() => setConfirmingReset(false)}
+                className="px-3 py-1.5 text-sm font-medium text-[#767A85] bg-[#F2F4F7] rounded-lg hover:bg-[#E2E4EA] transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={performReset}
+                className="px-3 py-1.5 text-sm font-medium text-white bg-[#FF3B30] rounded-lg hover:bg-[#E0352B] transition-colors"
+              >
+                Reset
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

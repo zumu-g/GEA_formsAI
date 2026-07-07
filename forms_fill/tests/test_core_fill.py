@@ -1,0 +1,74 @@
+import docx
+
+from forms_fill.core import fill_form
+from forms_fill.models import FillRequest
+from forms_fill.providers.fixture import FixtureProvider
+
+
+def _all_text(path) -> str:
+    document = docx.Document(str(path))
+    return " ".join(
+        cell.text
+        for table in document.tables
+        for row in table.rows
+        for cell in row.cells
+    )
+
+
+def test_fill_form_happy_path(tmp_path, caller_fields):
+    req = FillRequest(
+        form="cav_rent_increase_notice",
+        identifiers={"lot_id": "L-2002", "tenancy_id": "T-1001"},
+        fields=caller_fields,
+        out_dir=str(tmp_path),
+    )
+    result = fill_form(req, provider=FixtureProvider())
+    assert result.ok
+    assert result.files.docx is not None
+    assert len(result.filled_fields) > 0
+    assert isinstance(result.blank_fields, list)
+
+
+def test_caller_values_verbatim_in_output(tmp_path, caller_fields):
+    req = FillRequest(
+        form="cav_rent_increase_notice",
+        identifiers={},
+        fields=caller_fields,
+        out_dir=str(tmp_path),
+    )
+    result = fill_form(req, provider=FixtureProvider())
+    text = _all_text(result.files.docx)
+    assert "615" in text and "650" in text
+    assert "2026-09-15" in text  # start date not reformatted
+
+
+def test_blank_fields_listed_for_missing_value(tmp_path, caller_fields, monkeypatch):
+    # Provider whose primary renter has no email.
+    import json
+
+    from forms_fill.models import TenancyBundle
+
+    class NoEmailProvider(FixtureProvider):
+        def fetch_bundle(self, identifiers):
+            data = json.loads(self.path.read_text())
+            data["renters"][0]["email"] = ""
+            return TenancyBundle.model_validate(data)
+
+    req = FillRequest(
+        form="cav_rent_increase_notice",
+        identifiers={},
+        fields=caller_fields,
+        out_dir=str(tmp_path),
+    )
+    result = fill_form(req, provider=NoEmailProvider())
+    assert "renter_email" in result.blank_fields
+
+
+def test_unknown_form_raises(tmp_path, caller_fields):
+    import pytest
+
+    from forms_fill.errors import UnknownFormError
+
+    req = FillRequest(form="nope", identifiers={}, fields=caller_fields, out_dir=str(tmp_path))
+    with pytest.raises(UnknownFormError):
+        fill_form(req, provider=FixtureProvider())

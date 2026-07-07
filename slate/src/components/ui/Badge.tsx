@@ -8,7 +8,7 @@ interface BadgeProps {
 }
 
 const variants: Record<BadgeVariant, string> = {
-  default: 'bg-[#F5F5F7] text-[#86868B]',
+  default: 'bg-[#F2F4F7] text-[#767A85]',
   accent: 'bg-[#5856D6]/10 text-[#5856D6]',
   success: 'bg-[#34C759]/10 text-[#34C759]',
   warning: 'bg-[#FF9F0A]/10 text-[#FF9F0A]',

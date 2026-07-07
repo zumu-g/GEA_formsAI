@@ -1,0 +1,40 @@
+{
+  "premises": {
+    "address_line": "12 Example Street, Richmond",
+    "suburb": "Richmond",
+    "state": "VIC",
+    "postcode": "3121"
+  },
+  "renters": [
+    {
+      "full_name": "Jane Alice Smith",
+      "address_for_service": "PO Box 5, Richmond VIC 3121",
+      "service_postcode": "3121",
+      "phone_business_hours": "03 9000 0000",
+      "phone_after_hours": "0400 000 000",
+      "email": "jane@example.com"
+    },
+    {
+      "full_name": "John Peter Smith",
+      "address_for_service": "",
+      "service_postcode": "",
+      "phone_business_hours": "",
+      "phone_after_hours": "",
+      "email": ""
+    }
+  ],
+  "rental_provider": {
+    "full_name": "Robert James Owner",
+    "service_address": "Level 2, 100 Agency Road, Melbourne VIC 3000",
+    "service_postcode": "3000",
+    "phone_business_hours": "03 9111 1111",
+    "phone_after_hours": "",
+    "email": "pm@agency.com"
+  },
+  "meta": {
+    "tenancy_id": "T-1001",
+    "lot_id": "L-2002",
+    "source": "fixture",
+    "as_at": "2026-06-17T00:00:00Z"
+  }
+}

@@ -40,7 +40,7 @@ export function VoiceInputButton({ onResult, disabled }: VoiceInputButtonProps) 
           ${
             isListening
               ? 'bg-red-50 border-red-300 text-red-600 animate-pulse'
-              : 'bg-white border-[#E5E5EA] text-[#86868B] hover:text-[#1D1D1F] hover:border-[#C7C7CC]'
+              : 'bg-white border-[#E2E4EA] text-[#767A85] hover:text-[#1B1D24] hover:border-[#C4C8D1]'
           }
           ${disabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}
         `}
@@ -50,7 +50,7 @@ export function VoiceInputButton({ onResult, disabled }: VoiceInputButtonProps) 
 
       {/* Live transcript preview while recording */}
       {isListening && transcript && (
-        <div className="absolute right-0 top-full mt-1 z-10 w-48 px-2.5 py-1.5 rounded-lg bg-[#1D1D1F] text-white text-xs shadow-lg leading-relaxed">
+        <div className="absolute right-0 top-full mt-1 z-10 w-48 px-2.5 py-1.5 rounded-lg bg-[#1B1D24] text-white text-xs shadow-lg leading-relaxed">
           {transcript}
         </div>
       )}

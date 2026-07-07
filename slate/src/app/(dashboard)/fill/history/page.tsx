@@ -57,14 +57,14 @@ export default function FillHistoryPage() {
         <div className="flex items-center gap-3">
           <Link
             href="/fill"
-            className="flex items-center justify-center w-8 h-8 rounded-lg bg-[#F5F5F7] hover:bg-[#E5E5EA] text-[#86868B] transition-colors"
+            className="flex items-center justify-center w-8 h-8 rounded-lg bg-[#F2F4F7] hover:bg-[#E2E4EA] text-[#767A85] transition-colors"
             title="Back to Fill"
           >
             <ArrowLeft className="w-4 h-4" />
           </Link>
           <div>
-            <h1 className="text-xl font-semibold text-[#1D1D1F]">Recent Fills</h1>
-            <p className="text-xs text-[#86868B] mt-0.5">
+            <h1 className="text-xl font-semibold text-[#1B1D24]">Recent Fills</h1>
+            <p className="text-xs text-[#767A85] mt-0.5">
               {history.length > 0
                 ? `${history.length} fill${history.length === 1 ? '' : 's'} recorded`
                 : 'No fills recorded yet'}
@@ -82,7 +82,7 @@ export default function FillHistoryPage() {
             {confirmClear && (
               <button
                 onClick={handleClearCancel}
-                className="px-3 py-1.5 text-xs font-medium text-[#86868B] bg-[#F5F5F7] rounded-lg hover:bg-[#E5E5EA] transition-colors"
+                className="px-3 py-1.5 text-xs font-medium text-[#767A85] bg-[#F2F4F7] rounded-lg hover:bg-[#E2E4EA] transition-colors"
               >
                 Cancel
               </button>
@@ -105,14 +105,14 @@ export default function FillHistoryPage() {
       {/* Empty state */}
       {history.length === 0 && (
         <div className="flex flex-col items-center justify-center py-24 text-center">
-          <div className="w-14 h-14 rounded-2xl bg-[#F5F5F7] flex items-center justify-center mb-4">
-            <FileText className="w-7 h-7 text-[#C7C7CC]" />
+          <div className="w-14 h-14 rounded-2xl bg-[#F2F4F7] flex items-center justify-center mb-4">
+            <FileText className="w-7 h-7 text-[#C4C8D1]" />
           </div>
-          <p className="text-[#1D1D1F] font-medium mb-1">No fills yet</p>
-          <p className="text-sm text-[#86868B] mb-6">Upload a PDF to get started.</p>
+          <p className="text-[#1B1D24] font-medium mb-1">No fills yet</p>
+          <p className="text-sm text-[#767A85] mb-6">Upload a PDF to get started.</p>
           <Link
             href="/fill"
-            className="px-4 py-2 text-sm font-medium text-white bg-[#1D1D1F] rounded-lg hover:bg-[#3A3A3C] transition-colors"
+            className="px-4 py-2 text-sm font-medium text-white bg-[#1B1D24] rounded-lg hover:bg-[#3A3A3C] transition-colors"
           >
             Fill a form
           </Link>
@@ -137,7 +137,7 @@ function HistoryCard({ entry }: { entry: FillHistoryEntry }) {
   const isComplete = entry.status === 'complete';
 
   return (
-    <div className="bg-white border border-[#E5E5EA] rounded-xl p-4 flex items-start gap-3">
+    <div className="bg-white border border-[#E2E4EA] rounded-xl p-4 flex items-start gap-3">
       {/* Status icon */}
       <div className="mt-0.5 shrink-0">
         {isComplete ? (
@@ -149,16 +149,16 @@ function HistoryCard({ entry }: { entry: FillHistoryEntry }) {
 
       {/* Content */}
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-[#1D1D1F] truncate">{entry.formName}</p>
-        <p className="text-xs text-[#86868B] mt-0.5 line-clamp-1">
+        <p className="text-sm font-medium text-[#1B1D24] truncate">{entry.formName}</p>
+        <p className="text-xs text-[#767A85] mt-0.5 line-clamp-1">
           &ldquo;{entry.instructions}{entry.instructions.length === 120 ? '…' : ''}&rdquo;
         </p>
         <div className="flex items-center gap-2 mt-1.5">
-          <span className="text-xs text-[#AEAEB2]">{formatRelativeDate(entry.timestamp)}</span>
+          <span className="text-xs text-[#A2A6B0]">{formatRelativeDate(entry.timestamp)}</span>
           {isComplete && typeof entry.fieldsFilled === 'number' && (
             <>
               <span className="text-xs text-[#D1D1D6]">·</span>
-              <span className="text-xs text-[#AEAEB2]">{entry.fieldsFilled} field{entry.fieldsFilled === 1 ? '' : 's'} filled</span>
+              <span className="text-xs text-[#A2A6B0]">{entry.fieldsFilled} field{entry.fieldsFilled === 1 ? '' : 's'} filled</span>
             </>
           )}
           {!isComplete && (
