@@ -1,4 +1,29 @@
 import type { SkillDefinition, SkillSection, PdfmeFieldMapping } from '@/types/skill';
+
+export interface DraftBadge {
+  show: boolean;
+  label: 'Draft' | 'Unverified draft' | null;
+  title: string | undefined;
+}
+
+/**
+ * Decides whether a skill card should show a draft badge, and its label/tooltip.
+ * Extracted as a pure function so the logic is unit-testable without rendering React.
+ */
+export function getDraftBadge(skill: Pick<SkillDefinition, 'version' | 'draftStatus'>): DraftBadge {
+  const isUnverified = skill.draftStatus === 'unverified';
+  const isDraft = skill.version.includes('draft') || isUnverified;
+
+  if (!isDraft) return { show: false, label: null, title: undefined };
+
+  return {
+    show: true,
+    label: isUnverified ? 'Unverified draft' : 'Draft',
+    title: isUnverified
+      ? 'Field content is researched, not yet confirmed against a real signed form or verified statutory figures.'
+      : undefined,
+  };
+}
 import type { DataProfile } from '@/types/profile';
 import { PROFILE_RESUME_KEYS } from '@/types/profile';
 
@@ -47,8 +72,18 @@ export function addDaysToAuDate(auDate: string | undefined, days: number): strin
   if (!match) return undefined;
 
   const [, dd, mm, yyyy] = match;
-  const date = new Date(Number(yyyy), Number(mm) - 1, Number(dd));
-  if (Number.isNaN(date.getTime())) return undefined;
+  const dayNum = Number(dd);
+  const monthNum = Number(mm);
+  const date = new Date(Number(yyyy), monthNum - 1, dayNum);
+  // Date silently rolls invalid day/month combos over (e.g. 31/02 -> 3 March)
+  // instead of throwing, so Number.isNaN alone won't catch a bad calendar date.
+  if (
+    Number.isNaN(date.getTime()) ||
+    date.getDate() !== dayNum ||
+    date.getMonth() !== monthNum - 1
+  ) {
+    return undefined;
+  }
 
   date.setDate(date.getDate() + days);
 

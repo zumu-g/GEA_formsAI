@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { applyComputedFields, addDaysToAuDate } from '@/lib/skills/utils';
+import { applyComputedFields, addDaysToAuDate, getDraftBadge } from '@/lib/skills/utils';
 import type { SkillDefinition } from '@/types/skill';
 
 function baseSkill(overrides: Partial<SkillDefinition> = {}): SkillDefinition {
@@ -27,6 +27,15 @@ describe('addDaysToAuDate', () => {
 
   it('returns undefined for an invalid date string', () => {
     expect(addDaysToAuDate('not-a-date', 30)).toBeUndefined();
+  });
+
+  it('returns undefined for a calendar-invalid date instead of rolling over', () => {
+    // JS Date silently normalizes 31/02 to 3 March — must be rejected, not rolled over.
+    expect(addDaysToAuDate('31/02/2026', 30)).toBeUndefined();
+  });
+
+  it('crosses a year boundary correctly', () => {
+    expect(addDaysToAuDate('20/12/2026', 30)).toBe('19/01/2027');
   });
 });
 
@@ -86,5 +95,26 @@ describe('SkillDefinition.draftStatus', () => {
   it('is optional and does not break an existing skill with no draftStatus set', () => {
     const skill = baseSkill();
     expect(skill.draftStatus).toBeUndefined();
+  });
+});
+
+describe('getDraftBadge', () => {
+  it('shows "Unverified draft" with a tooltip when draftStatus is unverified', () => {
+    const badge = getDraftBadge({ version: '0.1.0', draftStatus: 'unverified' });
+    expect(badge).toEqual({
+      show: true,
+      label: 'Unverified draft',
+      title: expect.stringContaining('not yet confirmed'),
+    });
+  });
+
+  it('shows plain "Draft" (no tooltip) when only the version string signals draft', () => {
+    const badge = getDraftBadge({ version: '0.1.0-draft' });
+    expect(badge).toEqual({ show: true, label: 'Draft', title: undefined });
+  });
+
+  it('shows no badge for a shipped, verified skill', () => {
+    const badge = getDraftBadge({ version: '1.0' });
+    expect(badge).toEqual({ show: false, label: null, title: undefined });
   });
 });
