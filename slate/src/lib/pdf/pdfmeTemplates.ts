@@ -1120,3 +1120,59 @@ export const TRANSFER_OF_LAND_PDFME_MAPPINGS: PdfmeFieldMapping[] = [
     fontSize: 10,
   },
 ];
+
+/**
+ * PLACEHOLDER coordinates for the Auction Authority (R5/KTD3 — researched
+ * field content, no verbatim signed form uploaded yet). All fields on
+ * page 0, evenly spaced. Recalibrate positions once a real signed PDF is
+ * uploaded — field ids/names should not need to change (KTD3).
+ */
+export const AUCTION_AUTHORITY_PDFME_MAPPINGS: PdfmeFieldMapping[] = [
+  { skillFieldId: 'vendor_name', schemaName: 'Vendor Name', page: 0, position: { x: 70, y: 22 }, width: 120, height: 8, type: 'text', fontSize: 10 },
+  { skillFieldId: 'vendor_address', schemaName: 'Vendor Address', page: 0, position: { x: 70, y: 34 }, width: 120, height: 8, type: 'text', fontSize: 10 },
+  { skillFieldId: 'vendor_phone', schemaName: 'Vendor Telephone', page: 0, position: { x: 70, y: 46 }, width: 120, height: 8, type: 'text', fontSize: 10 },
+  { skillFieldId: 'property_address', schemaName: 'Property Address', page: 0, position: { x: 70, y: 58 }, width: 120, height: 8, type: 'text', fontSize: 10 },
+  { skillFieldId: 'chattels_included', schemaName: 'Chattels Included', page: 0, position: { x: 70, y: 70 }, width: 120, height: 16, type: 'text', fontSize: 9 },
+  { skillFieldId: 'auctionDate', schemaName: 'Auction Date', page: 0, position: { x: 70, y: 90 }, width: 60, height: 8, type: 'text', fontSize: 10, transform: 'date_au' },
+  { skillFieldId: 'auction_time', schemaName: 'Auction Time', page: 0, position: { x: 140, y: 90 }, width: 50, height: 8, type: 'text', fontSize: 10 },
+  { skillFieldId: 'auction_venue', schemaName: 'Auction Venue', page: 0, position: { x: 70, y: 102 }, width: 120, height: 8, type: 'text', fontSize: 10 },
+  { skillFieldId: 'reserve_price', schemaName: 'Reserve Price', page: 0, position: { x: 70, y: 114 }, width: 60, height: 8, type: 'text', fontSize: 10, transform: 'currency_au' },
+  { skillFieldId: 'vendor_bid_disclosure', schemaName: 'Vendor Bid Disclosure Checkbox', page: 0, position: { x: 140, y: 114 }, width: 8, height: 8, type: 'checkbox' },
+  { skillFieldId: 'commission_amount', schemaName: 'Commission Amount', page: 0, position: { x: 70, y: 126 }, width: 60, height: 8, type: 'text', fontSize: 10 },
+  { skillFieldId: 'marketing_expenses', schemaName: 'Marketing Expenses', page: 0, position: { x: 70, y: 138 }, width: 120, height: 16, type: 'text', fontSize: 9 },
+  { skillFieldId: 'authorityEndDate', schemaName: 'Authority End Date', page: 0, position: { x: 70, y: 158 }, width: 60, height: 8, type: 'text', fontSize: 10, transform: 'date_au' },
+];
+
+/**
+ * PLACEHOLDER coordinates for the Exclusive Sale Authority (R5/KTD3).
+ * Recalibrate positions once a real signed PDF is uploaded.
+ */
+export const EXCLUSIVE_SALE_AUTHORITY_PDFME_MAPPINGS: PdfmeFieldMapping[] = [
+  { skillFieldId: 'vendor_name', schemaName: 'Vendor Name', page: 0, position: { x: 70, y: 22 }, width: 120, height: 8, type: 'text', fontSize: 10 },
+  { skillFieldId: 'vendor_address', schemaName: 'Vendor Address', page: 0, position: { x: 70, y: 34 }, width: 120, height: 8, type: 'text', fontSize: 10 },
+  { skillFieldId: 'vendor_phone', schemaName: 'Vendor Telephone', page: 0, position: { x: 70, y: 46 }, width: 120, height: 8, type: 'text', fontSize: 10 },
+  { skillFieldId: 'property_address', schemaName: 'Property Address', page: 0, position: { x: 70, y: 58 }, width: 120, height: 8, type: 'text', fontSize: 10 },
+  { skillFieldId: 'chattels_included', schemaName: 'Chattels Included', page: 0, position: { x: 70, y: 70 }, width: 120, height: 16, type: 'text', fontSize: 9 },
+  { skillFieldId: 'startDate', schemaName: 'Authority Start Date', page: 0, position: { x: 70, y: 90 }, width: 60, height: 8, type: 'text', fontSize: 10, transform: 'date_au' },
+  { skillFieldId: 'soleAgencyClause', schemaName: 'Sole Agency Clause Checkbox', page: 0, position: { x: 140, y: 90 }, width: 8, height: 8, type: 'checkbox' },
+  { skillFieldId: 'tail_clause_days', schemaName: 'Tail Clause Days', page: 0, position: { x: 70, y: 102 }, width: 30, height: 8, type: 'text', fontSize: 10 },
+  { skillFieldId: 'commission_amount', schemaName: 'Commission Amount', page: 0, position: { x: 70, y: 114 }, width: 60, height: 8, type: 'text', fontSize: 10 },
+  { skillFieldId: 'marketing_expenses', schemaName: 'Marketing Expenses', page: 0, position: { x: 70, y: 126 }, width: 120, height: 16, type: 'text', fontSize: 9 },
+  { skillFieldId: 'authorityEndDate', schemaName: 'Authority End Date', page: 0, position: { x: 70, y: 146 }, width: 60, height: 8, type: 'text', fontSize: 10, transform: 'date_au' },
+];
+
+/**
+ * PLACEHOLDER coordinates for the General (Non-Exclusive) Authority
+ * (R5/KTD3). Recalibrate positions once a real signed PDF is uploaded.
+ */
+export const GENERAL_AUTHORITY_PDFME_MAPPINGS: PdfmeFieldMapping[] = [
+  { skillFieldId: 'vendor_name', schemaName: 'Vendor Name', page: 0, position: { x: 70, y: 22 }, width: 120, height: 8, type: 'text', fontSize: 10 },
+  { skillFieldId: 'vendor_address', schemaName: 'Vendor Address', page: 0, position: { x: 70, y: 34 }, width: 120, height: 8, type: 'text', fontSize: 10 },
+  { skillFieldId: 'vendor_phone', schemaName: 'Vendor Telephone', page: 0, position: { x: 70, y: 46 }, width: 120, height: 8, type: 'text', fontSize: 10 },
+  { skillFieldId: 'property_address', schemaName: 'Property Address', page: 0, position: { x: 70, y: 58 }, width: 120, height: 8, type: 'text', fontSize: 10 },
+  { skillFieldId: 'chattels_included', schemaName: 'Chattels Included', page: 0, position: { x: 70, y: 70 }, width: 120, height: 16, type: 'text', fontSize: 9 },
+  { skillFieldId: 'startDate', schemaName: 'Authority Start Date', page: 0, position: { x: 70, y: 90 }, width: 60, height: 8, type: 'text', fontSize: 10, transform: 'date_au' },
+  { skillFieldId: 'non_exclusivity_clause', schemaName: 'Non-Exclusivity Clause Checkbox', page: 0, position: { x: 140, y: 90 }, width: 8, height: 8, type: 'checkbox' },
+  { skillFieldId: 'commission_amount', schemaName: 'Commission Amount', page: 0, position: { x: 70, y: 102 }, width: 60, height: 8, type: 'text', fontSize: 10 },
+  { skillFieldId: 'marketing_expenses', schemaName: 'Marketing Expenses', page: 0, position: { x: 70, y: 114 }, width: 120, height: 16, type: 'text', fontSize: 9 },
+];
