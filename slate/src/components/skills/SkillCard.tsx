@@ -1,8 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { FileSignature, Scale, FileText, Calculator, ArrowRightLeft, BookOpen, FileDown } from 'lucide-react';
+import { FileSignature, Scale, FileText, Calculator, ArrowRightLeft, BookOpen, FileDown, Gavel } from 'lucide-react';
 import type { SkillDefinition } from '@/types/skill';
+import { getDraftBadge } from '@/lib/skills/utils';
 
 const ICON_MAP: Record<string, React.ComponentType<{ size?: number; className?: string }>> = {
   FileSignature,
@@ -11,6 +12,7 @@ const ICON_MAP: Record<string, React.ComponentType<{ size?: number; className?: 
   Calculator,
   ArrowRightLeft,
   BookOpen,
+  Gavel,
 };
 
 interface SkillCardProps {
@@ -20,7 +22,7 @@ interface SkillCardProps {
 export function SkillCard({ skill }: SkillCardProps) {
   const Icon = ICON_MAP[skill.icon] ?? FileText;
   const totalFields = skill.sections.reduce((sum, s) => sum + s.fields.length, 0);
-  const isDraft = skill.version.includes('draft');
+  const draftBadge = getDraftBadge(skill);
 
   return (
     <Link
@@ -36,9 +38,12 @@ export function SkillCard({ skill }: SkillCardProps) {
             <h3 className="text-base font-semibold text-[#1B1D24] truncate">
               {skill.name}
             </h3>
-            {isDraft && (
-              <span className="text-[10px] font-medium text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full shrink-0">
-                Draft
+            {draftBadge.show && (
+              <span
+                className="text-[10px] font-medium text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-full shrink-0"
+                title={draftBadge.title}
+              >
+                {draftBadge.label}
               </span>
             )}
           </div>

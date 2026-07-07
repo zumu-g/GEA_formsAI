@@ -31,9 +31,11 @@ export interface SkillFieldMapping {
 
 export interface SkillComputedField {
   skillFieldId: string;
-  formula: 'subtract';
+  formula: 'subtract' | 'add_days';
   operands: string[];
   pdfFieldName: string;
+  /** Day offset used by the 'add_days' formula (operands[0] is the source date field). */
+  days?: number;
 }
 
 export interface PdfmeFieldMapping {
@@ -62,6 +64,8 @@ export interface SkillDefinition {
   fieldMappings: SkillFieldMapping[];
   computedFields?: SkillComputedField[];
   pdfmeFieldMappings?: PdfmeFieldMapping[];
+  /** Unverified skills are researched-not-verbatim: field content isn't confirmed against a real signed form. Absent means verified (existing skills). */
+  draftStatus?: 'unverified' | 'verified';
 }
 
 export interface SkillSession {

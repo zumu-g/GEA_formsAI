@@ -1,4 +1,29 @@
 import type { SkillDefinition, SkillSection, PdfmeFieldMapping } from '@/types/skill';
+
+export interface DraftBadge {
+  show: boolean;
+  label: 'Draft' | 'Unverified draft' | null;
+  title: string | undefined;
+}
+
+/**
+ * Decides whether a skill card should show a draft badge, and its label/tooltip.
+ * Extracted as a pure function so the logic is unit-testable without rendering React.
+ */
+export function getDraftBadge(skill: Pick<SkillDefinition, 'version' | 'draftStatus'>): DraftBadge {
+  const isUnverified = skill.draftStatus === 'unverified';
+  const isDraft = skill.version.includes('draft') || isUnverified;
+
+  if (!isDraft) return { show: false, label: null, title: undefined };
+
+  return {
+    show: true,
+    label: isUnverified ? 'Unverified draft' : 'Draft',
+    title: isUnverified
+      ? 'Field content is researched, not yet confirmed against a real signed form or verified statutory figures.'
+      : undefined,
+  };
+}
 import type { DataProfile } from '@/types/profile';
 import { PROFILE_RESUME_KEYS } from '@/types/profile';
 
@@ -24,10 +49,48 @@ export function applyComputedFields(
       const b = parseFloat(values[computed.operands[1]]?.replace(/[^0-9.]/g, '') || '0');
       const val = a - b;
       result[computed.skillFieldId] = val > 0 ? val.toFixed(2) : '0.00';
+    } else if (computed.formula === 'add_days' && computed.operands.length === 1) {
+      const offset = addDaysToAuDate(values[computed.operands[0]], computed.days ?? 0);
+      if (offset !== undefined) {
+        result[computed.skillFieldId] = offset;
+      }
     }
   }
 
   return result;
+}
+
+/**
+ * Adds a day offset to a dd/mm/yyyy date string, returning dd/mm/yyyy.
+ * Returns undefined (leaves the computed field blank) when the source date
+ * is missing or not a valid dd/mm/yyyy string, rather than throwing.
+ */
+export function addDaysToAuDate(auDate: string | undefined, days: number): string | undefined {
+  if (!auDate) return undefined;
+
+  const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(auDate);
+  if (!match) return undefined;
+
+  const [, dd, mm, yyyy] = match;
+  const dayNum = Number(dd);
+  const monthNum = Number(mm);
+  const date = new Date(Number(yyyy), monthNum - 1, dayNum);
+  // Date silently rolls invalid day/month combos over (e.g. 31/02 -> 3 March)
+  // instead of throwing, so Number.isNaN alone won't catch a bad calendar date.
+  if (
+    Number.isNaN(date.getTime()) ||
+    date.getDate() !== dayNum ||
+    date.getMonth() !== monthNum - 1
+  ) {
+    return undefined;
+  }
+
+  date.setDate(date.getDate() + days);
+
+  const outDd = String(date.getDate()).padStart(2, '0');
+  const outMm = String(date.getMonth() + 1).padStart(2, '0');
+  const outYyyy = date.getFullYear();
+  return `${outDd}/${outMm}/${outYyyy}`;
 }
 
 function applyTransform(value: string, transform?: string): string {

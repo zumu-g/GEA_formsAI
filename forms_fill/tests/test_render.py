@@ -63,3 +63,23 @@ def test_filled_and_blank_counts_consistent(tmp_path, sample_bundle_dict, caller
     # every declared text field is either filled or blank, no overlap
     filled = [f for f in declared_text if f not in blanks]
     assert len(filled) + len(blanks) == len(declared_text)
+
+
+def test_filled_cells_allow_wrap_and_growth(tmp_path, sample_bundle_dict, caller_fields):
+    # CAV's own templates format every fillable cell single-line (w:noWrap) inside
+    # a fixed-height row (hRule="exact") -- sized for a short answer. A longer
+    # engine-computed value (e.g. a two-line address) must not render cropped.
+    ctx = _ctx(sample_bundle_dict, caller_fields)
+    docx_path, _pdf, _warn = render(SPEC, ctx, tmp_path)
+    document = docx.Document(str(docx_path))
+    # table 1 cell 0 = premises_address; table 10 cell 0 = provider_name -- both
+    # get real text written into them by build_context/TEXT_OPS.
+    for table_index in (1, 10):
+        cell = document.tables[table_index].rows[0].cells[0]
+        tcPr = cell._tc.find(qn("w:tcPr"))
+        assert tcPr.find(qn("w:noWrap")) is None, f"table {table_index} cell still noWrap"
+        trPr = document.tables[table_index].rows[0]._tr.find(qn("w:trPr"))
+        tr_height = trPr.find(qn("w:trHeight"))
+        assert tr_height.get(qn("w:hRule")) == "atLeast", (
+            f"table {table_index} row still fixed-height (would clip a long value)"
+        )

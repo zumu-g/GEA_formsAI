@@ -95,6 +95,32 @@ def _set_cell_text(cell, value: str) -> None:
             extra.text = ""
     else:
         para.add_run(value)
+    _allow_cell_to_grow(cell)
+
+
+def _allow_cell_to_grow(cell) -> None:
+    """Let a filled cell wrap and its row grow, instead of clipping long values.
+
+    CAV's own templates format every fillable cell as single-line (``w:noWrap``)
+    inside a fixed-height row (``w:trHeight hRule="exact"``) — sized for a short
+    answer. An engine-computed value that runs longer (an address, a full legal
+    reason string) gets visually cropped rather than wrapping. Since the form is
+    still being filled, the row has no visible content yet to reflow around, so
+    switching the row to ``atLeast`` (a minimum, not a cap) only ever grows it.
+    """
+
+    tc = cell._tc
+    tcPr = tc.find(qn("w:tcPr"))
+    if tcPr is not None:
+        no_wrap = tcPr.find(qn("w:noWrap"))
+        if no_wrap is not None:
+            tcPr.remove(no_wrap)
+
+    tr = tc.getparent()
+    trPr = tr.find(qn("w:trPr"))
+    tr_height = trPr.find(qn("w:trHeight")) if trPr is not None else None
+    if tr_height is not None and tr_height.get(qn("w:hRule")) == "exact":
+        tr_height.set(qn("w:hRule"), "atLeast")
 
 
 def _apply_checkbox_ops(spec: FormSpec, document, context: dict[str, str]) -> None:

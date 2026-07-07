@@ -2,6 +2,9 @@ import { vicContractOfSaleOffer } from './vic-contract-of-sale-offer';
 import { section32Offer } from './section-32-offer';
 import { reconciliationReport } from './reconciliation-report';
 import { vicTransferOfLand } from './vic-transfer-of-land';
+import { auctionAuthority } from './auction-authority';
+import { exclusiveSaleAuthority } from './exclusive-sale-authority';
+import { generalAuthority } from './general-authority';
 import type { SkillDefinition } from '@/types/skill';
 
 export const SKILLS: SkillDefinition[] = [
@@ -9,6 +12,9 @@ export const SKILLS: SkillDefinition[] = [
   section32Offer,
   reconciliationReport,
   vicTransferOfLand,
+  auctionAuthority,
+  exclusiveSaleAuthority,
+  generalAuthority,
 ];
 
 export function getSkillById(id: string): SkillDefinition | undefined {
