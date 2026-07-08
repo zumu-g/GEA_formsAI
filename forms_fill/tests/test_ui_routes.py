@@ -66,3 +66,11 @@ def test_ui_page_prefills_rent_fields_from_preview(client):
     assert "RENT_PREFILL_FIELDS" in text
     assert "lastPreviewBundle" in text
     assert "prefillRentFields" in text
+
+
+def test_ui_page_contains_cma_button(client):
+    text = client.get("/ui/").text
+    assert 'id="cma-btn"' in text
+    assert "geastcma-production.up.railway.app" in text
+    assert "reportType" in text
+    assert "rent-increase" in text

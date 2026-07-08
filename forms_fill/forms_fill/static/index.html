@@ -141,6 +141,8 @@
       </div>
 
       <div id="preview"></div>
+      <button type="button" id="cma-btn" class="secondary" disabled>Request comparables report</button>
+      <p class="hint">Opens GEA St CMA in a new tab — you must already be logged in there, or it'll bounce to its login page.</p>
     </fieldset>
 
     <fieldset id="caller-fields">
@@ -273,6 +275,28 @@
   const previewBtn = document.getElementById('preview-btn');
   const lotInput = document.getElementById('lot-id');
   const tenancyInput = document.getElementById('tenancy-id');
+  const cmaBtn = document.getElementById('cma-btn');
+
+  // GEA St CMA — deep link into its rent-increase report flow (U4). Session-
+  // gated on their side: the PM must already be logged in there, or the tab
+  // lands on their login page instead (no auth handoff supported here).
+  const CMA_BASE_URL = 'https://geastcma-production.up.railway.app/reports/new';
+
+  function buildCmaUrl(bundle) {
+    const params = new URLSearchParams({
+      reportType: 'rent-increase',
+      address: bundle.premises.address_line || '',
+    });
+    if (bundle.premises.suburb) params.set('suburb', bundle.premises.suburb);
+    if (bundle.premises.state) params.set('state', bundle.premises.state);
+    if (bundle.premises.postcode) params.set('postcode', bundle.premises.postcode);
+    return CMA_BASE_URL + '?' + params.toString();
+  }
+
+  cmaBtn.addEventListener('click', () => {
+    if (!lastPreviewBundle) return;
+    window.open(buildCmaUrl(lastPreviewBundle), '_blank', 'noopener');
+  });
 
   function esc(s) {
     const d = document.createElement('div');
@@ -301,6 +325,7 @@
       (note ? '<div class="warn">' + esc(note) + '</div>' : '');
     previewBox.classList.add('show');
     lastPreviewBundle = bundle;
+    cmaBtn.disabled = !bundle.premises.address_line;
     prefillRentFields();
   }
 
@@ -376,6 +401,8 @@
   providerSelect.addEventListener('change', () => {
     resultsList.innerHTML = '';
     previewBox.classList.remove('show');
+    lastPreviewBundle = null;
+    cmaBtn.disabled = true;
   });
 
   tokenInput.addEventListener('change', () => {
