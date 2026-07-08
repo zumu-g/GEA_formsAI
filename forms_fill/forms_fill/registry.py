@@ -9,12 +9,14 @@ from __future__ import annotations
 
 from .errors import UnknownFormError
 from .formspec import FormSpec
+from .forms.breach_of_duty_notice.spec import SPEC as BREACH_SPEC
 from .forms.cav_rent_increase_notice.spec import SPEC as CAV_SPEC
 from .forms.notice_to_vacate.spec import SPEC as NTV_SPEC
 
 FORM_REGISTRY: dict[str, FormSpec] = {
     CAV_SPEC.key: CAV_SPEC,
     NTV_SPEC.key: NTV_SPEC,
+    BREACH_SPEC.key: BREACH_SPEC,
 }
 
 
