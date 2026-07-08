@@ -13,7 +13,7 @@ from pathlib import Path
 
 from ..errors import TenancyNotFoundError
 from ..models import TenancyBundle
-from .base import PropertyDataProvider
+from .base import LotMatch, PropertyDataProvider
 
 _DEFAULT_FIXTURE = Path(__file__).resolve().parents[2] / "fixtures" / "sample_tenancy.json"
 
@@ -36,3 +36,36 @@ class FixtureProvider(PropertyDataProvider):
         if "tenancy_id" in identifiers:
             meta["tenancy_id"] = str(identifiers["tenancy_id"])
         return TenancyBundle.model_validate(data)
+
+    def search_lots(self, query: str) -> list[LotMatch]:
+        """Case-insensitive substring match against the fixture's address."""
+
+        q = (query or "").strip().lower()
+        if not q:
+            raise ValueError("search query must not be empty")
+        if not self.path.exists():
+            return []
+        data = json.loads(self.path.read_text(encoding="utf-8"))
+        premises = data.get("premises") or {}
+        label = ", ".join(
+            part
+            for part in (
+                premises.get("address_line", ""),
+                " ".join(
+                    p
+                    for p in (premises.get("state", ""), premises.get("postcode", ""))
+                    if p
+                ),
+            )
+            if part
+        )
+        meta = data.get("meta") or {}
+        if q in label.lower():
+            return [
+                LotMatch(
+                    lot_id=str(meta.get("lot_id", "")),
+                    address_label=label,
+                    tenancy_id=str(meta.get("tenancy_id", "")),
+                )
+            ]
+        return []

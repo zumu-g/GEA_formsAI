@@ -11,8 +11,19 @@ from __future__ import annotations
 import os
 from abc import ABC, abstractmethod
 
-from ..errors import ProviderConfigError
+from dataclasses import dataclass
+
+from ..errors import ProviderConfigError, SearchUnsupportedError
 from ..models import TenancyBundle
+
+
+@dataclass(frozen=True)
+class LotMatch:
+    """One address-search result: enough to identify and preview a tenancy."""
+
+    lot_id: str
+    address_label: str
+    tenancy_id: str = ""
 
 
 class PropertyDataProvider(ABC):
@@ -21,6 +32,15 @@ class PropertyDataProvider(ABC):
     @abstractmethod
     def fetch_bundle(self, identifiers: dict) -> TenancyBundle:
         """Return the tenancy bundle for the given identifiers (lot_id/tenancy_id)."""
+
+    def search_lots(self, query: str) -> list[LotMatch]:
+        """Address search. Providers opt in; the default is a typed refusal so
+        the API/UI can degrade to manual ID entry rather than erroring."""
+
+        raise SearchUnsupportedError(
+            f"provider '{self.name}' does not support address search — "
+            "enter Lot ID / Tenancy ID directly"
+        )
 
 
 def select_provider(name: str | None = None) -> PropertyDataProvider:

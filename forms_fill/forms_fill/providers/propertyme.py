@@ -48,13 +48,14 @@ from ..models import (
     Renter,
     TenancyBundle,
 )
-from .base import PropertyDataProvider
+from .base import LotMatch, PropertyDataProvider
 
 _DEFAULT_API_BASE = "https://app.propertyme.com/api"
 _DEFAULT_TOKEN_URL = "https://login.propertyme.com/connect/token"
 # PropertyMe's edge blocks default library user agents (403) — identify honestly.
 _USER_AGENT = "gea-forms-fill/0.1"
 _MAX_RENTERS = 4
+_MAX_SEARCH_RESULTS = 10
 
 
 class PropertyMeProvider(PropertyDataProvider):
@@ -235,6 +236,37 @@ class PropertyMeProvider(PropertyDataProvider):
             pool = sorted(pool, key=lambda t: _s(t.get("TenancyStart")), reverse=True)
             note = f"{len(pool)} active tenancies matched — most-recent used"
         return pool[0], note
+
+    def search_lots(self, query: str) -> list[LotMatch]:
+        """Address search over the active-tenancy list.
+
+        /v1/tenancies rows carry LotAddress, so one GET covers search (same
+        single-page assumption as _resolve_tenancy — ~300 active at GEA's
+        scale). Filter is a case-insensitive substring on the address.
+        """
+
+        q = (query or "").strip().lower()
+        if not q:
+            raise ValueError("search query must not be empty")
+        rows = self._get("/v1/tenancies", {"IncludeClosed": "false"})
+        if not isinstance(rows, list):
+            rows = rows.get("Data") or rows.get("Items") or []
+        matches = []
+        for t in rows:
+            if not t.get("IsActive") or t.get("IsClosed"):
+                continue
+            address = _s(t.get("LotAddress"))
+            if q in address.lower():
+                matches.append(
+                    LotMatch(
+                        lot_id=_s(t.get("LotId")),
+                        address_label=address,
+                        tenancy_id=_s(t.get("Id")),
+                    )
+                )
+            if len(matches) >= _MAX_SEARCH_RESULTS:
+                break
+        return matches
 
     def _renters(self, tenancy: dict[str, Any]) -> list[Renter]:
         persons: list[dict[str, Any]] = []
