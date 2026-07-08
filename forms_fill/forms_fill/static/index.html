@@ -249,6 +249,14 @@
     }
   });
 
+  // Accept ?token=... so a dev/deploy link can open pre-authenticated; strip
+  // it from the address bar immediately so the token isn't left in history.
+  const urlToken = new URLSearchParams(location.search).get('token');
+  if (urlToken) {
+    setToken(urlToken.trim());
+    history.replaceState(null, '', location.pathname);
+  }
+
   tokenInput.value = getToken();
   loadForms();
 })();
