@@ -172,6 +172,10 @@ class GeaCrmProvider(PropertyDataProvider):
             renters=renters,
             rental_provider=provider,
             meta=meta,
+            # Optional — not (yet) part of the guaranteed contract above.
+            # Left blank rather than guessed if the CRM endpoint omits them.
+            current_rent=_s(raw.get("current_rent")),
+            rent_period=_s(raw.get("rent_period")),
         )
 
 

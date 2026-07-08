@@ -70,6 +70,11 @@ class TenancyBundle(_Strict):
     renters: list[Renter] = Field(default_factory=list)
     rental_provider: RentalProvider = Field(default_factory=RentalProvider)
     meta: BundleMeta = Field(default_factory=BundleMeta)
+    # Current rent on file, when the provider has it. String-typed like every
+    # other money field the caller can also supply verbatim — the spec's
+    # caller value always wins over this (see cav_rent_increase_notice).
+    current_rent: str = ""
+    rent_period: str = ""
 
 
 def apply_service_address_defaults(bundle: TenancyBundle) -> TenancyBundle:

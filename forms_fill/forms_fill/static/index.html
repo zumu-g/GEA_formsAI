@@ -185,6 +185,11 @@
     resultBox.innerHTML = html;
   }
 
+  // Fields the tenancy bundle can prefill (U2) — caller can still edit/override;
+  // matches each spec's build_context fallback (bundle.current_rent / rent_period).
+  const RENT_PREFILL_FIELDS = { current_rent: true, rent_period: true };
+  let lastPreviewBundle = null;
+
   function renderCallerFields(spec) {
     callerFieldsBox.innerHTML = '';
     (spec.caller_fields || []).forEach((f) => {
@@ -198,6 +203,19 @@
       callerFieldsBox.appendChild(label);
       callerFieldsBox.appendChild(input);
     });
+    prefillRentFields();
+  }
+
+  function prefillRentFields() {
+    if (!lastPreviewBundle) return;
+    const currentRentInput = callerFieldsBox.querySelector('[data-field="current_rent"]');
+    if (currentRentInput && !currentRentInput.value && lastPreviewBundle.current_rent) {
+      currentRentInput.value = lastPreviewBundle.current_rent;
+    }
+    const rentPeriodInput = callerFieldsBox.querySelector('[data-field="rent_period"]');
+    if (rentPeriodInput && !rentPeriodInput.value && lastPreviewBundle.rent_period) {
+      rentPeriodInput.value = lastPreviewBundle.rent_period;
+    }
   }
 
   async function loadForms() {
@@ -282,6 +300,8 @@
       '</dl>' +
       (note ? '<div class="warn">' + esc(note) + '</div>' : '');
     previewBox.classList.add('show');
+    lastPreviewBundle = bundle;
+    prefillRentFields();
   }
 
   async function fetchPreview() {

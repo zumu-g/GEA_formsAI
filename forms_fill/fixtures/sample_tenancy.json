@@ -31,6 +31,8 @@
     "phone_after_hours": "",
     "email": "pm@agency.com"
   },
+  "current_rent": "615",
+  "rent_period": "week",
   "meta": {
     "tenancy_id": "T-1001",
     "lot_id": "L-2002",

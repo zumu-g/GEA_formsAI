@@ -59,3 +59,10 @@ def test_ui_page_contains_lookup_flow_elements(client):
     assert 'id="preview"' in text
     assert "/tenancy/search" in text
     assert "/tenancy/preview" in text
+
+
+def test_ui_page_prefills_rent_fields_from_preview(client):
+    text = client.get("/ui/").text
+    assert "RENT_PREFILL_FIELDS" in text
+    assert "lastPreviewBundle" in text
+    assert "prefillRentFields" in text

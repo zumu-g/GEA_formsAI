@@ -48,3 +48,39 @@ def test_overflow_note_for_more_than_four_renters(sample_bundle_dict, caller_fie
     assert ctx["renter1_name"] == "Renter 1"
     assert "extra page" in ctx["renter4_name"]
     assert "Renter 5" in ctx["renter4_name"]
+
+
+# ── rent prefill (U2) ────────────────────────────────────────────────────────
+
+
+def test_current_rent_falls_back_to_bundle_when_caller_omits_it(sample_bundle_dict):
+    fields_without_rent = {
+        "new_rent": "650",
+        "increase": "35",
+        "rent_period": "weekly",
+        "start_date": "2026-09-15",
+        "method_basis": "market comparison",
+    }
+    ctx = build_context(_bundle(sample_bundle_dict), fields_without_rent)
+    assert ctx["current_rent"] == sample_bundle_dict["current_rent"]
+
+
+def test_current_rent_caller_value_wins_over_bundle(sample_bundle_dict, caller_fields):
+    assert sample_bundle_dict["current_rent"] != caller_fields["current_rent"]
+    ctx = build_context(_bundle(sample_bundle_dict), caller_fields)
+    assert ctx["current_rent"] == str(caller_fields["current_rent"])
+
+
+def test_rent_period_falls_back_to_bundle_when_caller_omits_it(sample_bundle_dict):
+    fields_without_period = {"current_rent": "615", "new_rent": "650"}
+    ctx = build_context(_bundle(sample_bundle_dict), fields_without_period)
+    assert ctx["rent_period"] == normalise_period(sample_bundle_dict["rent_period"])
+
+
+def test_blank_bundle_rent_falls_through_to_blank(sample_bundle_dict):
+    data = dict(sample_bundle_dict)
+    data["current_rent"] = ""
+    data["rent_period"] = ""
+    ctx = build_context(_bundle(data), {})
+    assert ctx["current_rent"] == ""
+    assert ctx["rent_period"] == ""

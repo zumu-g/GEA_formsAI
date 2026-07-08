@@ -138,14 +138,18 @@ def build_context(bundle: TenancyBundle, fields: dict) -> dict[str, str]:
         "provider_business_hours": _s(bundle.rental_provider.phone_business_hours),
         "provider_after_hours": _s(bundle.rental_provider.phone_after_hours),
         "provider_email": _s(bundle.rental_provider.email),
-        # Caller fields — verbatim, no computation/validation (R4).
-        "current_rent": _s(fields.get("current_rent")),
+        # Caller fields — verbatim, no computation/validation (R4). current_rent
+        # and rent_period fall back to the tenancy record when the caller
+        # doesn't supply them; an explicit caller value always wins (U2).
+        "current_rent": _s(fields.get("current_rent")) or _s(bundle.current_rent),
         "new_rent": _s(fields.get("new_rent")),
         "increase": _s(fields.get("increase")),
         "start_date": _s(fields.get("start_date")),
         "method_basis": _s(fields.get("method_basis")),
         # Selector (not a declared text field).
-        "rent_period": normalise_period(fields.get("rent_period", "")),
+        "rent_period": normalise_period(
+            fields.get("rent_period") or bundle.rent_period or ""
+        ),
     }
 
     # >4 renters → overflow note appended to renter 4's slot (R5).
