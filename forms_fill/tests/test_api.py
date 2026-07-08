@@ -143,3 +143,53 @@ def test_cli_and_api_produce_same_text(client, caller_fields, tmp_path):
         return " ".join(c.text for t in d.tables for r in t.rows for c in r.cells)
 
     assert text(api_file) == text(result.files.docx)
+
+
+# ── /tenancy/search and /tenancy/preview (U2) ────────────────────────────────
+
+
+def test_tenancy_search_requires_auth(client):
+    assert client.get("/tenancy/search?q=example").status_code == 401
+
+
+def test_tenancy_preview_requires_auth(client):
+    assert client.get("/tenancy/preview?lot_id=L-2002").status_code == 401
+
+
+def test_tenancy_search_fixture_happy_path(client):
+    resp = client.get("/tenancy/search?q=example&provider=fixture", headers=AUTH)
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["provider"] == "fixture"
+    assert body["matches"][0]["lot_id"] == "L-2002"
+    assert "12 Example Street" in body["matches"][0]["address_label"]
+
+
+def test_tenancy_search_empty_query_rejected(client):
+    resp = client.get("/tenancy/search?q=  &provider=fixture", headers=AUTH)
+    assert resp.status_code == 400
+    assert resp.json()["error"] == "invalid_request"
+
+
+def test_tenancy_search_unsupported_provider_is_structured(client, monkeypatch):
+    monkeypatch.setenv("GEA_CRM_BASE_URL", "http://localhost:9")
+    monkeypatch.setenv("GEA_CRM_SYNC_SECRET", "x")
+    resp = client.get("/tenancy/search?q=example&provider=gea_crm", headers=AUTH)
+    assert resp.status_code == 400
+    body = resp.json()
+    assert body["error"] == "search_unsupported"
+    assert "Lot ID" in body["message"]
+
+
+def test_tenancy_preview_happy_path(client):
+    resp = client.get("/tenancy/preview?lot_id=L-2002&provider=fixture", headers=AUTH)
+    assert resp.status_code == 200
+    bundle = resp.json()["bundle"]
+    assert bundle["premises"]["address_line"] == "12 Example Street, Richmond"
+    assert bundle["renters"][0]["full_name"] == "Jane Alice Smith"
+    assert bundle["rental_provider"]["full_name"] == "Robert James Owner"
+
+
+def test_tenancy_preview_requires_an_identifier(client):
+    resp = client.get("/tenancy/preview?provider=fixture", headers=AUTH)
+    assert resp.status_code == 400

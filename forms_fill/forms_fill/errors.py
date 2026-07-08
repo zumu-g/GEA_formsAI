@@ -29,3 +29,7 @@ class UpstreamError(FormsFillError):
 
 class ProviderContractError(FormsFillError):
     """A provider response was missing a key the contract guarantees."""
+
+
+class SearchUnsupportedError(FormsFillError):
+    """The selected data provider cannot search lots by address."""

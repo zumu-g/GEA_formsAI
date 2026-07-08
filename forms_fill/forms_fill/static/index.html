@@ -38,7 +38,37 @@
     width: 100%; padding: 0.55rem 0.65rem; border: 1px solid var(--rule); border-radius: 6px;
     background: var(--paper); color: var(--ink); font: inherit; min-height: 44px;
   }
+  select {
+    -webkit-appearance: none; -moz-appearance: none; appearance: none;
+    padding-right: 2.25rem;
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%238B8580' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 0.75rem center;
+  }
+  input:focus, select:focus, textarea:focus {
+    outline: none; border-color: var(--gold); box-shadow: 0 0 0 2px var(--gold-soft);
+  }
   textarea { min-height: 5.5rem; resize: vertical; }
+  .matches { list-style: none; margin: 0.75rem 0 0; padding: 0; }
+  .matches li {
+    padding: 0.6rem 0.75rem; border: 1px solid var(--rule); border-radius: 6px;
+    margin-top: 0.4rem; cursor: pointer; background: var(--paper);
+  }
+  .matches li:hover, .matches li:focus { border-color: var(--gold); }
+  #preview {
+    display: none; margin-top: 1rem; padding: 0.9rem 1rem;
+    border: 1px solid var(--gold-soft); border-radius: 8px; background: var(--paper);
+    font-size: 0.9rem;
+  }
+  #preview.show { display: block; }
+  #preview dt { color: var(--muted); font-size: 0.78rem; margin-top: 0.5rem; }
+  #preview dt:first-child { margin-top: 0; }
+  #preview dd { margin: 0.1rem 0 0; }
+  #manual-ids { display: none; }
+  #manual-ids.show { display: block; }
+  .linklike {
+    background: none; border: none; min-height: 0; padding: 0; margin-top: 0.5rem;
+    color: var(--muted); font-size: 0.8rem; text-decoration: underline; cursor: pointer; font-weight: 500;
+  }
   button {
     min-height: 44px; padding: 0.6rem 1.4rem; border: none; border-radius: 6px;
     background: var(--gold); color: var(--ink); font: inherit; font-weight: 600; cursor: pointer;
@@ -78,24 +108,39 @@
 
     <fieldset>
       <legend>2. Tenancy</legend>
-      <div class="row">
-        <div>
-          <label for="provider">Data source</label>
-          <select id="provider">
-            <option value="propertyme">PropertyMe</option>
-            <option value="gea_crm">GEA CRM</option>
-            <option value="fixture">Fixture (test data)</option>
-          </select>
+      <label for="provider">Data source</label>
+      <select id="provider">
+        <option value="propertyme">PropertyMe</option>
+        <option value="gea_crm">GEA CRM</option>
+        <option value="fixture">Fixture (test data)</option>
+      </select>
+
+      <div id="search-box">
+        <label for="address-query">Property address</label>
+        <div class="row">
+          <input id="address-query" placeholder="Start typing an address, e.g. 12 Example Street" />
+          <button type="button" id="search-btn" class="secondary" style="flex:0 0 auto">Search</button>
         </div>
-        <div>
-          <label for="lot-id">Lot ID</label>
-          <input id="lot-id" placeholder="e.g. L-2002" />
-        </div>
-        <div>
-          <label for="tenancy-id">Tenancy ID (preferred)</label>
-          <input id="tenancy-id" placeholder="e.g. T-1001" />
+        <ul class="matches" id="search-results"></ul>
+      </div>
+
+      <button type="button" class="linklike" id="manual-toggle">Enter Lot / Tenancy IDs manually</button>
+
+      <div id="manual-ids">
+        <div class="row">
+          <div>
+            <label for="lot-id">Lot ID</label>
+            <input id="lot-id" placeholder="e.g. L-2002" />
+          </div>
+          <div>
+            <label for="tenancy-id">Tenancy ID (preferred)</label>
+            <input id="tenancy-id" placeholder="e.g. T-1001" />
+          </div>
+          <button type="button" id="preview-btn" class="secondary" style="flex:0 0 auto; align-self: end">Fetch details</button>
         </div>
       </div>
+
+      <div id="preview"></div>
     </fieldset>
 
     <fieldset id="caller-fields">
@@ -190,13 +235,127 @@
         renderCallerFields(catalogue[0]);
       }
     } catch (e) {
-      showResult('Could not reach the forms-fill API: ' + e, false);
+      showResult('Could not reach the forms-fill API: ' + esc(e), false);
     }
   }
 
   formSelect.addEventListener('change', () => {
     const spec = catalogue.find((f) => f.key === formSelect.value);
     if (spec) renderCallerFields(spec);
+  });
+
+  // ── address search → pick → tenancy preview ──────────────────────────────
+  const providerSelect = document.getElementById('provider');
+  const searchBtn = document.getElementById('search-btn');
+  const queryInput = document.getElementById('address-query');
+  const resultsList = document.getElementById('search-results');
+  const previewBox = document.getElementById('preview');
+  const manualBox = document.getElementById('manual-ids');
+  const manualToggle = document.getElementById('manual-toggle');
+  const previewBtn = document.getElementById('preview-btn');
+  const lotInput = document.getElementById('lot-id');
+  const tenancyInput = document.getElementById('tenancy-id');
+
+  function esc(s) {
+    const d = document.createElement('div');
+    d.textContent = s == null ? '' : String(s);
+    return d.innerHTML;
+  }
+
+  function showManual(show) {
+    manualBox.classList.toggle('show', show);
+    manualToggle.textContent = show
+      ? 'Hide manual ID entry'
+      : 'Enter Lot / Tenancy IDs manually';
+  }
+  manualToggle.addEventListener('click', () => showManual(!manualBox.classList.contains('show')));
+
+  function renderPreview(bundle) {
+    const renters = (bundle.renters || []).map((r) => r.full_name).filter(Boolean);
+    const note = bundle.meta && bundle.meta.note;
+    previewBox.innerHTML =
+      '<dl>' +
+      '<dt>Premises</dt><dd>' + esc(bundle.premises.address_line) +
+      (bundle.premises.postcode ? ' ' + esc(bundle.premises.postcode) : '') + '</dd>' +
+      '<dt>Renter' + (renters.length === 1 ? '' : 's') + '</dt><dd>' + (esc(renters.join(', ')) || '—') + '</dd>' +
+      '<dt>Rental provider (owner)</dt><dd>' + esc(bundle.rental_provider.full_name) + '</dd>' +
+      '</dl>' +
+      (note ? '<div class="warn">' + esc(note) + '</div>' : '');
+    previewBox.classList.add('show');
+  }
+
+  async function fetchPreview() {
+    previewBox.classList.remove('show');
+    const params = new URLSearchParams({ provider: providerSelect.value });
+    if (lotInput.value.trim()) params.set('lot_id', lotInput.value.trim());
+    if (tenancyInput.value.trim()) params.set('tenancy_id', tenancyInput.value.trim());
+    try {
+      const resp = await fetch(API + '/tenancy/preview?' + params, { headers: authHeaders() });
+      const body = await resp.json();
+      if (!resp.ok) {
+        showResult('Could not fetch tenancy: ' + esc(body.message || body.error), false);
+        return;
+      }
+      resultBox.style.display = 'none';
+      renderPreview(body.bundle);
+    } catch (err) {
+      showResult('Preview failed: ' + esc(err), false);
+    }
+  }
+  previewBtn.addEventListener('click', fetchPreview);
+
+  async function runSearch() {
+    resultsList.innerHTML = '';
+    previewBox.classList.remove('show');
+    const q = queryInput.value.trim();
+    if (!q) return;
+    searchBtn.disabled = true;
+    try {
+      const params = new URLSearchParams({ q: q, provider: providerSelect.value });
+      const resp = await fetch(API + '/tenancy/search?' + params, { headers: authHeaders() });
+      const body = await resp.json();
+      if (body.error === 'search_unsupported') {
+        resultsList.innerHTML = '<li style="cursor:default">' + esc(body.message) + '</li>';
+        showManual(true);
+        return;
+      }
+      if (!resp.ok) {
+        showResult('Search failed: ' + esc(body.message || body.error), false);
+        return;
+      }
+      resultBox.style.display = 'none';
+      if (!body.matches.length) {
+        resultsList.innerHTML = '<li style="cursor:default">No matching properties — try fewer words, or enter IDs manually.</li>';
+        return;
+      }
+      body.matches.forEach((m) => {
+        const li = document.createElement('li');
+        li.tabIndex = 0;
+        li.textContent = m.address_label + (m.lot_id ? ' (' + m.lot_id + ')' : '');
+        function pick() {
+          lotInput.value = m.lot_id || '';
+          tenancyInput.value = m.tenancy_id || '';
+          resultsList.innerHTML = '';
+          queryInput.value = m.address_label;
+          fetchPreview();
+        }
+        li.addEventListener('click', pick);
+        li.addEventListener('keydown', (e) => { if (e.key === 'Enter') pick(); });
+        resultsList.appendChild(li);
+      });
+    } catch (err) {
+      showResult('Search failed: ' + esc(err), false);
+    } finally {
+      searchBtn.disabled = false;
+    }
+  }
+  searchBtn.addEventListener('click', runSearch);
+  queryInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); runSearch(); }
+  });
+  providerSelect.addEventListener('change', () => {
+    resultsList.innerHTML = '';
+    previewBox.classList.remove('show');
   });
 
   tokenInput.addEventListener('change', () => {
@@ -206,6 +365,10 @@
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
+    if (!lotInput.value.trim() && !tenancyInput.value.trim()) {
+      showResult('Select a property first — search by address above, or enter a Lot/Tenancy ID manually.', false);
+      return;
+    }
     submitBtn.disabled = true;
     resultBox.style.display = 'none';
     try {
@@ -229,21 +392,21 @@
       });
       const body = await resp.json();
       if (!resp.ok || body.ok === false) {
-        showResult('Fill failed: ' + (body.message || body.error || resp.status), false);
+        showResult('Fill failed: ' + esc(body.message || body.error || resp.status), false);
         return;
       }
       let html = '<strong>Filled — review before serving/lodging.</strong><br>';
       if (body.files.pdf) html += '<a href="' + body.files.pdf + '" target="_blank">Download PDF</a> · ';
       if (body.files.docx) html += '<a href="' + body.files.docx + '" target="_blank">Download DOCX</a>';
       if (body.blank_fields && body.blank_fields.length) {
-        html += '<div class="warn">Blank fields (no data found): ' + body.blank_fields.join(', ') + '</div>';
+        html += '<div class="warn">Blank fields (no data found): ' + esc(body.blank_fields.join(', ')) + '</div>';
       }
       if (body.warnings && body.warnings.length) {
-        html += '<div class="warn">' + body.warnings.join('<br>') + '</div>';
+        html += '<div class="warn">' + body.warnings.map(esc).join('<br>') + '</div>';
       }
       showResult(html, true);
     } catch (err) {
-      showResult('Request failed: ' + err, false);
+      showResult('Request failed: ' + esc(err), false);
     } finally {
       submitBtn.disabled = false;
     }

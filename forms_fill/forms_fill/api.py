@@ -113,6 +113,70 @@ def grounds(
         raise HTTPException(status_code=400, detail=str(exc)) from None
 
 
+@app.get("/tenancy/search")
+def tenancy_search(
+    q: str = "", provider: str | None = None, authorization: str = Header(default="")
+) -> Any:
+    """Address search across the selected data provider's lots (U2, R2/R4)."""
+
+    _require_auth(authorization)
+    if not q.strip():
+        return _err(400, "invalid_request", "missing search query 'q'")
+    from dataclasses import asdict
+
+    from .errors import SearchUnsupportedError
+    from .providers.base import select_provider
+
+    try:
+        p = select_provider(provider)
+        matches = p.search_lots(q)
+    except SearchUnsupportedError as exc:
+        return _err(400, "search_unsupported", str(exc))
+    except ValueError as exc:
+        return _err(400, "invalid_request", str(exc))
+    except ProviderConfigError as exc:
+        return _err(500, "fetch_failed", f"provider config: {exc}")
+    except UpstreamError as exc:
+        return _err(502, "fetch_failed", str(exc))
+    except FormsFillError as exc:
+        return _err(502, "fetch_failed", str(exc))
+    return {"matches": [asdict(m) for m in matches], "provider": p.name}
+
+
+@app.get("/tenancy/preview")
+def tenancy_preview(
+    lot_id: str = "",
+    tenancy_id: str = "",
+    provider: str | None = None,
+    authorization: str = Header(default=""),
+) -> Any:
+    """Fetch and return the tenancy bundle for PM verification before filling
+    (U2, R3). Reuses fetch_bundle verbatim — read-only."""
+
+    _require_auth(authorization)
+    if not lot_id.strip() and not tenancy_id.strip():
+        return _err(400, "invalid_request", "provide at least one of lot_id, tenancy_id")
+    from .providers.base import select_provider
+
+    identifiers = {}
+    if lot_id.strip():
+        identifiers["lot_id"] = lot_id.strip()
+    if tenancy_id.strip():
+        identifiers["tenancy_id"] = tenancy_id.strip()
+    try:
+        p = select_provider(provider)
+        bundle = p.fetch_bundle(identifiers)
+    except TenancyNotFoundError as exc:
+        return _err(404, "no_current_tenancy", str(exc))
+    except ProviderConfigError as exc:
+        return _err(500, "fetch_failed", f"provider config: {exc}")
+    except UpstreamError as exc:
+        return _err(502, "fetch_failed", str(exc))
+    except FormsFillError as exc:
+        return _err(502, "fetch_failed", str(exc))
+    return {"bundle": bundle.model_dump(), "provider": p.name}
+
+
 @app.post("/fill")
 def fill(payload: dict[str, Any], authorization: str = Header(default="")) -> Any:
     _require_auth(authorization)

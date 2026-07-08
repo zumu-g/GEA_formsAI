@@ -50,3 +50,12 @@ def test_ui_fill_malformed_field_surfaces_api_error_not_blank_download(client):
     body = resp.json()
     assert body["ok"] is False
     assert body["error"] == "invalid_request"
+
+
+def test_ui_page_contains_lookup_flow_elements(client):
+    text = client.get("/ui/").text
+    assert 'id="address-query"' in text
+    assert 'id="search-results"' in text
+    assert 'id="preview"' in text
+    assert "/tenancy/search" in text
+    assert "/tenancy/preview" in text
