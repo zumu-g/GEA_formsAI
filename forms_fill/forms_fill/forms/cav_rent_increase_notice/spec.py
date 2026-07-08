@@ -166,4 +166,14 @@ SPEC = FormSpec(
     checkbox_ops=CHECKBOX_OPS,
     build_context=build_context,
     selector_fields=("rent_period",),
+    title="Notice of rent increase to renter of rented premises (s 44(1))",
+    group="rent_increase",
+    caller_field_labels={
+        "current_rent": "Current rent ($)",
+        "new_rent": "New rent ($)",
+        "increase": "Increase amount ($)",
+        "rent_period": "Rent period (weekly/fortnightly/calendar month)",
+        "start_date": "New rent start date",
+        "method_basis": "Basis for the increase (e.g. market comparison)",
+    },
 )

@@ -27,8 +27,10 @@ from typing import Any
 
 from fastapi import FastAPI, Header, HTTPException
 from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from .core import fill_form
+from .registry import form_catalogue
 from .errors import (
     FormsFillError,
     ProviderConfigError,
@@ -42,6 +44,11 @@ from .models import build_request
 app = FastAPI(title="GEA forms-fill", version="0.2.0")
 
 OUTPUT_ROOT = Path(os.environ.get("FORMS_OUTPUT_DIR", "./out"))
+STATIC_DIR = Path(__file__).with_name("static")
+
+# PM-facing review UI (U4) -- static, no auth on the page itself; every data
+# call it makes (`/forms`, `/fill`, `/files/...`) is bearer-protected as usual.
+app.mount("/ui", StaticFiles(directory=str(STATIC_DIR), html=True), name="ui")
 
 
 @app.on_event("startup")
@@ -85,6 +92,25 @@ async def _http_exc(request: Any, exc: HTTPException) -> JSONResponse:
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@app.get("/forms")
+def forms(authorization: str = Header(default="")) -> Any:
+    _require_auth(authorization)
+    return {"forms": form_catalogue()}
+
+
+@app.get("/grounds")
+def grounds(
+    family: str | None = None, authorization: str = Header(default="")
+) -> Any:
+    _require_auth(authorization)
+    from .grounds import UnknownGroundError, grounds_catalogue
+
+    try:
+        return {"grounds": grounds_catalogue(family)}
+    except UnknownGroundError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from None
 
 
 @app.post("/fill")
@@ -136,7 +162,7 @@ def get_file(
             detail={"error": "invalid_request", "message": "invalid request id"},
         )
     directory = OUTPUT_ROOT / request_id
-    matches = list(directory.glob(f"*.{kind}")) if directory.exists() else []
+    matches = sorted(directory.glob(f"*.{kind}")) if directory.exists() else []
     if not matches:
         raise HTTPException(
             status_code=404,
@@ -146,3 +172,68 @@ def get_file(
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
     )
     return FileResponse(str(matches[0]), media_type=media, filename=matches[0].name)
+
+
+def _require_approve_auth(authorization: str) -> None:
+    """Approval uses a SEPARATE secret from the generation token, so the
+    workflow that generates drafts cannot self-approve them (review P1)."""
+
+    token = os.environ.get("FORMS_APPROVE_TOKEN", "")
+    if not token:
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "error": "unauthorized",
+                "message": "approval disabled: FORMS_APPROVE_TOKEN not configured",
+            },
+        )
+    scheme, _, supplied = authorization.partition(" ")
+    if scheme.lower() != "bearer" or not hmac.compare_digest(supplied.strip(), token):
+        raise HTTPException(
+            status_code=401,
+            detail={"error": "unauthorized", "message": "invalid approval token"},
+        )
+
+
+@app.post("/approve/{request_id}/{kind}")
+def approve_file(
+    request_id: str,
+    kind: str,
+    payload: dict[str, Any],
+    authorization: str = Header(default=""),
+) -> Any:
+    """Record PM approval of a generated notice (U4).
+
+    Body: {"approver": "<name>", "ground": "<section, e.g. 91ZM>"}.
+    Requires the FORMS_APPROVE_TOKEN bearer (distinct from the generation token).
+    """
+
+    _require_approve_auth(authorization)
+    from .approval import ApprovalError, approve
+
+    if kind not in ("pdf", "docx") or not request_id.isalnum():
+        raise HTTPException(
+            status_code=400,
+            detail={"error": "invalid_request", "message": "bad request id or kind"},
+        )
+    directory = OUTPUT_ROOT / request_id
+    matches = sorted(directory.glob(f"*.{kind}")) if directory.exists() else []
+    if not matches:
+        raise HTTPException(
+            status_code=404,
+            detail={"error": "invalid_request", "message": f"no {kind} for request {request_id}"},
+        )
+    if len(matches) > 1:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "error": "invalid_request",
+                "message": f"multiple {kind} files for request {request_id} — cannot approve ambiguously",
+            },
+        )
+    try:
+        return approve(matches[0], str(payload.get("approver", "")), payload.get("ground"))
+    except ApprovalError as exc:
+        raise HTTPException(
+            status_code=400, detail={"error": "invalid_request", "message": str(exc)}
+        ) from None

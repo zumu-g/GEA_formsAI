@@ -59,3 +59,11 @@ class FormSpec:
     # Selector fields drive checkboxes, not text cells; they should not count
     # toward blank/filled text accounting.
     selector_fields: tuple[str, ...] = field(default=())
+    # Catalogue metadata (U1) — display-only, never consumed by the renderer.
+    # ``title`` is the human-readable form name; ``group`` clusters related
+    # forms in the UI (e.g. "notice_to_vacate", "breach_of_duty"); ``caller_field_labels``
+    # gives each caller-supplied field a short UI label (falls back to the raw
+    # field name when absent).
+    title: str = ""
+    group: str = ""
+    caller_field_labels: dict[str, str] = field(default_factory=dict)

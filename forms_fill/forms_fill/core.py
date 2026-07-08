@@ -19,7 +19,7 @@ def fill_form(
     provider: PropertyDataProvider | None = None,
 ) -> FillResult:
     spec = get_form_spec(request.form)
-    provider = provider or select_provider()
+    provider = provider or select_provider(request.provider)
 
     bundle = provider.fetch_bundle(request.identifiers)
     context = spec.build_context(bundle, request.fields)

@@ -64,6 +64,21 @@ def test_blank_fields_listed_for_missing_value(tmp_path, caller_fields, monkeypa
     assert "renter_email" in result.blank_fields
 
 
+def test_request_provider_override_selects_named_provider(tmp_path, caller_fields, monkeypatch):
+    # No `provider` arg passed to fill_form -- request.provider must drive
+    # select_provider() so the API/UI can let the PM choose per request.
+    monkeypatch.setenv("FORMS_DATA_PROVIDER", "gea_crm")  # env says gea_crm...
+    req = FillRequest(
+        form="cav_rent_increase_notice",
+        identifiers={"lot_id": "L-2002", "tenancy_id": "T-1001"},
+        fields=caller_fields,
+        out_dir=str(tmp_path),
+        provider="fixture",  # ...but the request explicitly asks for fixture
+    )
+    result = fill_form(req)
+    assert result.ok
+
+
 def test_unknown_form_raises(tmp_path, caller_fields):
     import pytest
 

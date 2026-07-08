@@ -80,6 +80,9 @@ class FillRequest(_Strict):
     identifiers: dict[str, Any] = Field(default_factory=dict)
     fields: dict[str, Any] = Field(default_factory=dict)
     out_dir: str = "./out"
+    # Optional per-request provider override (fixture/propertyme/gea_crm). None
+    # falls back to the FORMS_DATA_PROVIDER env var (select_provider's default).
+    provider: str | None = None
 
 
 class FillFiles(_Strict):

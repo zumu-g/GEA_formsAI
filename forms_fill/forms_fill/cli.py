@@ -60,6 +60,65 @@ def fill(
     typer.echo(result.model_dump_json())
 
 
+@app.command()
+def grounds(
+    family: str = typer.Option(None, "--family", help="Filter: vacate | breach_of_duty | general | rent_increase"),
+) -> None:
+    """Print the statutory grounds catalogue as JSON."""
+
+    import json
+
+    from .grounds import UnknownGroundError, grounds_catalogue
+
+    try:
+        typer.echo(json.dumps({"grounds": grounds_catalogue(family)}, indent=2))
+    except UnknownGroundError as exc:
+        typer.echo(f"error: {exc}", err=True)
+        raise typer.Exit(code=1)
+
+
+@app.command()
+def approve(
+    file: str = typer.Argument(..., help="Path to the generated notice (PDF or DOCX)"),
+    by: str = typer.Option(..., "--by", help="Approving PM's name"),
+    ground: str = typer.Option(None, "--ground", help="Statutory ground the approval covers, e.g. 91ZM"),
+) -> None:
+    """Record PM approval of a generated notice (writes <file>.approval.json)."""
+
+    import json
+
+    from .approval import ApprovalError, approve as _approve
+
+    try:
+        record = _approve(file, by, ground)
+    except ApprovalError as exc:
+        typer.echo(f"error: {exc}", err=True)
+        raise typer.Exit(code=1)
+    typer.echo(json.dumps(record, indent=2))
+
+
+@app.command("vcat-lodge")
+def vcat_lodge(
+    file: str = typer.Argument(..., help="Path to the approved notice"),
+    ground: str = typer.Option(..., "--ground", help="Statutory ground section, e.g. 91ZM"),
+    confirm_submit: bool = typer.Option(
+        False, "--confirm-submit", help="Actually submit (default stops at VCAT's review screen)"
+    ),
+) -> None:
+    """Lodge the follow-on VCAT application for an approved notice."""
+
+    import json
+
+    from .vcat import LodgementError, lodge
+
+    try:
+        result = lodge(file, ground, confirm=confirm_submit)
+    except FormsFillError as exc:
+        typer.echo(f"error: {exc}", err=True)
+        raise typer.Exit(code=1)
+    typer.echo(json.dumps(result, indent=2))
+
+
 def main() -> None:
     app()
 

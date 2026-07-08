@@ -141,4 +141,11 @@ SPEC = FormSpec(
     checkbox_ops=CHECKBOX_OPS,
     build_context=build_context,
     selector_fields=("giving_capacity",),
+    title="Notice to vacate to renter/s of rented premises",
+    group="notice_to_vacate",
+    caller_field_labels={
+        "minimum_notice_days": "Minimum notice period (days)",
+        "termination_date": "Termination date",
+        "reason_for_notice": "Reason for notice (ground + description, verbatim)",
+    },
 )

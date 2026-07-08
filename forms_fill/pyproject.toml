@@ -26,7 +26,7 @@ build-backend = "setuptools.build_meta"
 include = ["forms_fill*"]
 
 [tool.setuptools.package-data]
-forms_fill = ["forms/**/*.docx"]
+forms_fill = ["forms/**/*.docx", "static/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
