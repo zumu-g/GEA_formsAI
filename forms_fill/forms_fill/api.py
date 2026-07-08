@@ -27,6 +27,7 @@ from typing import Any
 
 from fastapi import FastAPI, Header, HTTPException
 from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from .core import fill_form
 from .registry import form_catalogue
@@ -43,6 +44,11 @@ from .models import build_request
 app = FastAPI(title="GEA forms-fill", version="0.2.0")
 
 OUTPUT_ROOT = Path(os.environ.get("FORMS_OUTPUT_DIR", "./out"))
+STATIC_DIR = Path(__file__).with_name("static")
+
+# PM-facing review UI (U4) -- static, no auth on the page itself; every data
+# call it makes (`/forms`, `/fill`, `/files/...`) is bearer-protected as usual.
+app.mount("/ui", StaticFiles(directory=str(STATIC_DIR), html=True), name="ui")
 
 
 @app.on_event("startup")
