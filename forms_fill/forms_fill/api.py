@@ -138,6 +138,8 @@ def tenancy_search(
         return _err(500, "fetch_failed", f"provider config: {exc}")
     except UpstreamError as exc:
         return _err(502, "fetch_failed", str(exc))
+    except FormsFillError as exc:
+        return _err(502, "fetch_failed", str(exc))
     return {"matches": [asdict(m) for m in matches], "provider": p.name}
 
 
@@ -169,6 +171,8 @@ def tenancy_preview(
     except ProviderConfigError as exc:
         return _err(500, "fetch_failed", f"provider config: {exc}")
     except UpstreamError as exc:
+        return _err(502, "fetch_failed", str(exc))
+    except FormsFillError as exc:
         return _err(502, "fetch_failed", str(exc))
     return {"bundle": bundle.model_dump(), "provider": p.name}
 

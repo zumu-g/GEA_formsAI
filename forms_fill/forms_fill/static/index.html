@@ -235,7 +235,7 @@
         renderCallerFields(catalogue[0]);
       }
     } catch (e) {
-      showResult('Could not reach the forms-fill API: ' + e, false);
+      showResult('Could not reach the forms-fill API: ' + esc(e), false);
     }
   }
 
@@ -293,13 +293,13 @@
       const resp = await fetch(API + '/tenancy/preview?' + params, { headers: authHeaders() });
       const body = await resp.json();
       if (!resp.ok) {
-        showResult('Could not fetch tenancy: ' + (body.message || body.error), false);
+        showResult('Could not fetch tenancy: ' + esc(body.message || body.error), false);
         return;
       }
       resultBox.style.display = 'none';
       renderPreview(body.bundle);
     } catch (err) {
-      showResult('Preview failed: ' + err, false);
+      showResult('Preview failed: ' + esc(err), false);
     }
   }
   previewBtn.addEventListener('click', fetchPreview);
@@ -320,7 +320,7 @@
         return;
       }
       if (!resp.ok) {
-        showResult('Search failed: ' + (body.message || body.error), false);
+        showResult('Search failed: ' + esc(body.message || body.error), false);
         return;
       }
       resultBox.style.display = 'none';
@@ -344,7 +344,7 @@
         resultsList.appendChild(li);
       });
     } catch (err) {
-      showResult('Search failed: ' + err, false);
+      showResult('Search failed: ' + esc(err), false);
     } finally {
       searchBtn.disabled = false;
     }
@@ -392,21 +392,21 @@
       });
       const body = await resp.json();
       if (!resp.ok || body.ok === false) {
-        showResult('Fill failed: ' + (body.message || body.error || resp.status), false);
+        showResult('Fill failed: ' + esc(body.message || body.error || resp.status), false);
         return;
       }
       let html = '<strong>Filled — review before serving/lodging.</strong><br>';
       if (body.files.pdf) html += '<a href="' + body.files.pdf + '" target="_blank">Download PDF</a> · ';
       if (body.files.docx) html += '<a href="' + body.files.docx + '" target="_blank">Download DOCX</a>';
       if (body.blank_fields && body.blank_fields.length) {
-        html += '<div class="warn">Blank fields (no data found): ' + body.blank_fields.join(', ') + '</div>';
+        html += '<div class="warn">Blank fields (no data found): ' + esc(body.blank_fields.join(', ')) + '</div>';
       }
       if (body.warnings && body.warnings.length) {
-        html += '<div class="warn">' + body.warnings.join('<br>') + '</div>';
+        html += '<div class="warn">' + body.warnings.map(esc).join('<br>') + '</div>';
       }
       showResult(html, true);
     } catch (err) {
-      showResult('Request failed: ' + err, false);
+      showResult('Request failed: ' + esc(err), false);
     } finally {
       submitBtn.disabled = false;
     }
