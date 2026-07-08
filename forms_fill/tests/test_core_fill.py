@@ -79,6 +79,33 @@ def test_request_provider_override_selects_named_provider(tmp_path, caller_field
     assert result.ok
 
 
+def test_blank_renter_service_address_defaults_to_premises(tmp_path, caller_fields):
+    # Real-world regression: a PropertyMe tenancy whose primary renter had no
+    # ContactPersons service address rendered a blank field instead of
+    # defaulting to the premises address (U1 fix).
+    import json
+
+    from forms_fill.models import TenancyBundle
+
+    class NoServiceAddressProvider(FixtureProvider):
+        def fetch_bundle(self, identifiers):
+            data = json.loads(self.path.read_text())
+            data["renters"][0]["address_for_service"] = ""
+            data["renters"][0]["service_postcode"] = ""
+            return TenancyBundle.model_validate(data)
+
+    req = FillRequest(
+        form="cav_rent_increase_notice",
+        identifiers={},
+        fields=caller_fields,
+        out_dir=str(tmp_path),
+    )
+    result = fill_form(req, provider=NoServiceAddressProvider())
+    assert "renter_service_address" not in result.blank_fields
+    text = _all_text(result.files.docx)
+    assert "12 Example Street, Richmond" in text
+
+
 def test_unknown_form_raises(tmp_path, caller_fields):
     import pytest
 
