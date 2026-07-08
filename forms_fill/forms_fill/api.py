@@ -100,6 +100,19 @@ def forms(authorization: str = Header(default="")) -> Any:
     return {"forms": form_catalogue()}
 
 
+@app.get("/grounds")
+def grounds(
+    family: str | None = None, authorization: str = Header(default="")
+) -> Any:
+    _require_auth(authorization)
+    from .grounds import UnknownGroundError, grounds_catalogue
+
+    try:
+        return {"grounds": grounds_catalogue(family)}
+    except UnknownGroundError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from None
+
+
 @app.post("/fill")
 def fill(payload: dict[str, Any], authorization: str = Header(default="")) -> Any:
     _require_auth(authorization)

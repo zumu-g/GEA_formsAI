@@ -60,6 +60,23 @@ def fill(
     typer.echo(result.model_dump_json())
 
 
+@app.command()
+def grounds(
+    family: str = typer.Option(None, "--family", help="Filter: vacate | breach_of_duty | general | rent_increase"),
+) -> None:
+    """Print the statutory grounds catalogue as JSON."""
+
+    import json
+
+    from .grounds import UnknownGroundError, grounds_catalogue
+
+    try:
+        typer.echo(json.dumps({"grounds": grounds_catalogue(family)}, indent=2))
+    except UnknownGroundError as exc:
+        typer.echo(f"error: {exc}", err=True)
+        raise typer.Exit(code=1)
+
+
 def main() -> None:
     app()
 
