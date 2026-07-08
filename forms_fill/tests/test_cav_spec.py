@@ -84,3 +84,12 @@ def test_blank_bundle_rent_falls_through_to_blank(sample_bundle_dict):
     ctx = build_context(_bundle(data), {})
     assert ctx["current_rent"] == ""
     assert ctx["rent_period"] == ""
+
+
+def test_current_rent_explicit_zero_is_not_treated_as_absent(sample_bundle_dict):
+    # _s() must run before the `or` fallback: an explicit 0 (int or "0") is a
+    # real caller-supplied value and must win over the bundle's prefill, not
+    # be treated as "not supplied" because "0" looks falsy before stringifying.
+    fields = {"current_rent": 0, "new_rent": "650"}
+    ctx = build_context(_bundle(sample_bundle_dict), fields)
+    assert ctx["current_rent"] == "0"
