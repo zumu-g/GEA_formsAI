@@ -13,7 +13,13 @@ from .forms.breach_of_duty_notice.spec import SPEC as BREACH_SPEC
 from .forms.cav_rent_increase_notice.spec import SPEC as CAV_SPEC
 from .forms.general_notice.spec import SPEC as GENERAL_SPEC
 from .forms.notice_of_entry.spec import SPEC as ENTRY_SPEC
+from .forms.notice_of_goods_left_behind.spec import SPEC as GOODS_LEFT_SPEC
+from .forms.notice_of_intention_to_sell.spec import SPEC as INTENTION_TO_SELL_SPEC
+from .forms.notice_requesting_additional_bond.spec import SPEC as ADDITIONAL_BOND_SPEC
 from .forms.notice_to_vacate.spec import SPEC as NTV_SPEC
+from .forms.notice_to_vacate_death_sole_renter.spec import (
+    SPEC as DEATH_SOLE_RENTER_SPEC,
+)
 
 FORM_REGISTRY: dict[str, FormSpec] = {
     CAV_SPEC.key: CAV_SPEC,
@@ -21,6 +27,10 @@ FORM_REGISTRY: dict[str, FormSpec] = {
     BREACH_SPEC.key: BREACH_SPEC,
     GENERAL_SPEC.key: GENERAL_SPEC,
     ENTRY_SPEC.key: ENTRY_SPEC,
+    INTENTION_TO_SELL_SPEC.key: INTENTION_TO_SELL_SPEC,
+    GOODS_LEFT_SPEC.key: GOODS_LEFT_SPEC,
+    DEATH_SOLE_RENTER_SPEC.key: DEATH_SOLE_RENTER_SPEC,
+    ADDITIONAL_BOND_SPEC.key: ADDITIONAL_BOND_SPEC,
 }
 
 
