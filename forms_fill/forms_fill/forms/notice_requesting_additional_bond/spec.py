@@ -83,6 +83,14 @@ def _s(value: object) -> str:
     return "" if value is None else str(value)
 
 
+def _money(value: object) -> str:
+    # Each of these template cells already contains a static "$" as its only
+    # run; _set_cell_text overwrites that run rather than appending, so the
+    # sign must be reapplied here or it's silently destroyed on fill.
+    s = _s(value)
+    return f"${s}" if s else ""
+
+
 def build_context(bundle: TenancyBundle, fields: dict) -> dict[str, str]:
     """Merge fetched bundle data with verbatim caller fields into a flat context."""
 
@@ -104,10 +112,10 @@ def build_context(bundle: TenancyBundle, fields: dict) -> dict[str, str]:
         "provider_email": _s(bundle.rental_provider.email),
         # Caller fields — verbatim, no computation/validation.
         "notice_date": _s(fields.get("notice_date")),
-        "existing_bond_amount": _s(fields.get("existing_bond_amount")),
-        "old_weekly_rent": _s(fields.get("old_weekly_rent")),
-        "new_weekly_rent": _s(fields.get("new_weekly_rent")),
-        "additional_bond_amount": _s(fields.get("additional_bond_amount")),
+        "existing_bond_amount": _money(fields.get("existing_bond_amount")),
+        "old_weekly_rent": _money(fields.get("old_weekly_rent")),
+        "new_weekly_rent": _money(fields.get("new_weekly_rent")),
+        "additional_bond_amount": _money(fields.get("additional_bond_amount")),
     }
 
     return ctx

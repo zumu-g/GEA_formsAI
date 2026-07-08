@@ -27,12 +27,15 @@ def test_context_has_premises_renter_provider(sample_bundle_dict):
     assert ctx["provider_name"] == "Robert James Owner"
 
 
-def test_caller_amounts_render_verbatim(sample_bundle_dict):
+def test_caller_amounts_render_with_dollar_sign(sample_bundle_dict):
+    # The template cells hold a static "$" as their only run; render.py
+    # overwrites that run rather than appending, so the sign must be
+    # reapplied by build_context or it's silently lost on fill.
     ctx = build_context(_bundle(sample_bundle_dict), _fields())
-    assert ctx["existing_bond_amount"] == "2460"
-    assert ctx["old_weekly_rent"] == "615"
-    assert ctx["new_weekly_rent"] == "650"
-    assert ctx["additional_bond_amount"] == "140"
+    assert ctx["existing_bond_amount"] == "$2460"
+    assert ctx["old_weekly_rent"] == "$615"
+    assert ctx["new_weekly_rent"] == "$650"
+    assert ctx["additional_bond_amount"] == "$140"
 
 
 def test_missing_amount_renders_blank_not_guessed(sample_bundle_dict):
