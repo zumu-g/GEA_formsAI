@@ -96,6 +96,28 @@ def approve(
     typer.echo(json.dumps(record, indent=2))
 
 
+@app.command("vcat-lodge")
+def vcat_lodge(
+    file: str = typer.Argument(..., help="Path to the approved notice"),
+    ground: str = typer.Option(..., "--ground", help="Statutory ground section, e.g. 91ZM"),
+    confirm_submit: bool = typer.Option(
+        False, "--confirm-submit", help="Actually submit (default stops at VCAT's review screen)"
+    ),
+) -> None:
+    """Lodge the follow-on VCAT application for an approved notice."""
+
+    import json
+
+    from .vcat import LodgementError, lodge
+
+    try:
+        result = lodge(file, ground, confirm=confirm_submit)
+    except FormsFillError as exc:
+        typer.echo(f"error: {exc}", err=True)
+        raise typer.Exit(code=1)
+    typer.echo(json.dumps(result, indent=2))
+
+
 def main() -> None:
     app()
 
