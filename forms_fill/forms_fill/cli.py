@@ -77,6 +77,25 @@ def grounds(
         raise typer.Exit(code=1)
 
 
+@app.command()
+def approve(
+    file: str = typer.Argument(..., help="Path to the generated notice (PDF or DOCX)"),
+    by: str = typer.Option(..., "--by", help="Approving PM's name"),
+) -> None:
+    """Record PM approval of a generated notice (writes <file>.approval.json)."""
+
+    import json
+
+    from .approval import ApprovalError, approve as _approve
+
+    try:
+        record = _approve(file, by)
+    except ApprovalError as exc:
+        typer.echo(f"error: {exc}", err=True)
+        raise typer.Exit(code=1)
+    typer.echo(json.dumps(record, indent=2))
+
+
 def main() -> None:
     app()
 

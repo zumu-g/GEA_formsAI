@@ -172,3 +172,35 @@ def get_file(
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
     )
     return FileResponse(str(matches[0]), media_type=media, filename=matches[0].name)
+
+
+@app.post("/approve/{request_id}/{kind}")
+def approve_file(
+    request_id: str,
+    kind: str,
+    payload: dict[str, Any],
+    authorization: str = Header(default=""),
+) -> Any:
+    """Record PM approval of a generated notice (U4). Body: {"approver": "<name>"}."""
+
+    _require_auth(authorization)
+    from .approval import ApprovalError, approve
+
+    if kind not in ("pdf", "docx") or not request_id.isalnum():
+        raise HTTPException(
+            status_code=400,
+            detail={"error": "invalid_request", "message": "bad request id or kind"},
+        )
+    directory = OUTPUT_ROOT / request_id
+    matches = list(directory.glob(f"*.{kind}")) if directory.exists() else []
+    if not matches:
+        raise HTTPException(
+            status_code=404,
+            detail={"error": "invalid_request", "message": f"no {kind} for request {request_id}"},
+        )
+    try:
+        return approve(matches[0], str(payload.get("approver", "")))
+    except ApprovalError as exc:
+        raise HTTPException(
+            status_code=400, detail={"error": "invalid_request", "message": str(exc)}
+        ) from None
