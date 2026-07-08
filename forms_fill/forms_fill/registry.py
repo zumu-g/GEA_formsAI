@@ -20,6 +20,10 @@ from .forms.notice_to_vacate.spec import SPEC as NTV_SPEC
 from .forms.notice_to_vacate_death_sole_renter.spec import (
     SPEC as DEATH_SOLE_RENTER_SPEC,
 )
+from .forms.residential_rental_agreement.spec import SPEC as RENTAL_AGREEMENT_SPEC
+from .forms.residential_rental_agreement_5yr.spec import (
+    SPEC as RENTAL_AGREEMENT_5YR_SPEC,
+)
 
 FORM_REGISTRY: dict[str, FormSpec] = {
     CAV_SPEC.key: CAV_SPEC,
@@ -31,6 +35,8 @@ FORM_REGISTRY: dict[str, FormSpec] = {
     GOODS_LEFT_SPEC.key: GOODS_LEFT_SPEC,
     DEATH_SOLE_RENTER_SPEC.key: DEATH_SOLE_RENTER_SPEC,
     ADDITIONAL_BOND_SPEC.key: ADDITIONAL_BOND_SPEC,
+    RENTAL_AGREEMENT_SPEC.key: RENTAL_AGREEMENT_SPEC,
+    RENTAL_AGREEMENT_5YR_SPEC.key: RENTAL_AGREEMENT_5YR_SPEC,
 }
 
 
