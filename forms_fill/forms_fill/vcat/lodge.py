@@ -85,20 +85,23 @@ def lodge(approved_path: str | Path, section: str, confirm: bool = False) -> dic
     """
 
     path = Path(approved_path)
-    approval = verify_approval(path)          # gate 1 — raises ApprovalError
+    # gate 1 — approval must exist, match the file hash, AND be for this same
+    # ground (an approval for a benign notice must not authorise a different
+    # tribunal application against the same file — review finding).
+    approval = verify_approval(path, ground=section)
     app_type = vcat_application_type(section)  # gate 2 — raises LodgementError
     _credentials()                             # gate 3 — raises LodgementError
 
     try:
         # gate 4 boundary: the recorded portal flow goes here (Playwright,
         # selectors in selectors.py, review-screen stop unless confirm).
+        # TOCTOU note for that implementation: read the notice bytes ONCE,
+        # verify the approval hash on those bytes, and upload the same bytes.
         raise LodgementError(
             "portal flow not yet recorded: walk the VCAT portal manually once "
             "and populate forms_fill/vcat/selectors.py before automated "
             f"lodgement (application type: {app_type}, approved by "
             f"{approval['approver']}, confirm={confirm})"
         )
-    except LodgementError:
-        raise
-    except Exception as exc:  # pragma: no cover — future browser errors
-        raise LodgementError(_redact(f"lodgement failed: {exc}")) from None
+    except Exception as exc:  # includes LodgementError — redact EVERY path
+        raise LodgementError(_redact(f"{exc}")) from None

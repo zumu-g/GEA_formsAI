@@ -81,6 +81,7 @@ def grounds(
 def approve(
     file: str = typer.Argument(..., help="Path to the generated notice (PDF or DOCX)"),
     by: str = typer.Option(..., "--by", help="Approving PM's name"),
+    ground: str = typer.Option(None, "--ground", help="Statutory ground the approval covers, e.g. 91ZM"),
 ) -> None:
     """Record PM approval of a generated notice (writes <file>.approval.json)."""
 
@@ -89,7 +90,7 @@ def approve(
     from .approval import ApprovalError, approve as _approve
 
     try:
-        record = _approve(file, by)
+        record = _approve(file, by, ground)
     except ApprovalError as exc:
         typer.echo(f"error: {exc}", err=True)
         raise typer.Exit(code=1)
