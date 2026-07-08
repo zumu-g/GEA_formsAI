@@ -30,3 +30,21 @@ def get_form_spec(key: str) -> FormSpec:
 
 def available_forms() -> list[str]:
     return sorted(FORM_REGISTRY)
+
+
+def form_catalogue() -> list[dict]:
+    """Registry-driven catalogue for the web UI (U1): key, title, group, and
+    the caller-supplied fields the PM needs to enter for each form."""
+
+    return [
+        {
+            "key": spec.key,
+            "title": spec.title or spec.key,
+            "group": spec.group or "other",
+            "caller_fields": [
+                {"name": name, "label": label}
+                for name, label in spec.caller_field_labels.items()
+            ],
+        }
+        for key, spec in sorted(FORM_REGISTRY.items())
+    ]

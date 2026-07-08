@@ -29,6 +29,7 @@ from fastapi import FastAPI, Header, HTTPException
 from fastapi.responses import FileResponse, JSONResponse
 
 from .core import fill_form
+from .registry import form_catalogue
 from .errors import (
     FormsFillError,
     ProviderConfigError,
@@ -85,6 +86,12 @@ async def _http_exc(request: Any, exc: HTTPException) -> JSONResponse:
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@app.get("/forms")
+def forms(authorization: str = Header(default="")) -> Any:
+    _require_auth(authorization)
+    return {"forms": form_catalogue()}
 
 
 @app.post("/fill")
