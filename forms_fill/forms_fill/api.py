@@ -39,7 +39,7 @@ from .errors import (
     UnknownFormError,
     UpstreamError,
 )
-from .models import build_request
+from .models import apply_service_address_defaults, build_request
 
 app = FastAPI(title="GEA forms-fill", version="0.2.0")
 
@@ -174,6 +174,7 @@ def tenancy_preview(
         return _err(502, "fetch_failed", str(exc))
     except FormsFillError as exc:
         return _err(502, "fetch_failed", str(exc))
+    bundle = apply_service_address_defaults(bundle)
     return {"bundle": bundle.model_dump(), "provider": p.name}
 
 

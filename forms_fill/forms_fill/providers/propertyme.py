@@ -207,8 +207,15 @@ class PropertyMeProvider(PropertyDataProvider):
             as_at=datetime.now(timezone.utc).isoformat(timespec="seconds"),
             note=note,
         )
+        current_rent = _money(tenancy.get("RentAmount"))
+        rent_period = _s(tenancy.get("RentPeriod"))
         return TenancyBundle(
-            premises=premises, renters=renters, rental_provider=provider, meta=meta
+            premises=premises,
+            renters=renters,
+            rental_provider=provider,
+            meta=meta,
+            current_rent=current_rent,
+            rent_period=rent_period,
         )
 
     def _resolve_tenancy(
@@ -359,3 +366,15 @@ def _postcode(text: str) -> str:
 
 def _s(value: object) -> str:
     return "" if value is None else str(value)
+
+
+def _money(value: object) -> str:
+    """Render a numeric amount as a plain string the PM would have typed —
+    "2607", not "2607.0" — without inventing decimal precision PropertyMe
+    itself doesn't imply."""
+
+    if value is None:
+        return ""
+    if isinstance(value, float) and value.is_integer():
+        return str(int(value))
+    return str(value)

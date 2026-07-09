@@ -141,6 +141,8 @@
       </div>
 
       <div id="preview"></div>
+      <button type="button" id="cma-btn" class="secondary" disabled>Request comparables report</button>
+      <p class="hint">Opens GEA St CMA in a new tab — you must already be logged in there, or it'll bounce to its login page.</p>
     </fieldset>
 
     <fieldset id="caller-fields">
@@ -185,6 +187,11 @@
     resultBox.innerHTML = html;
   }
 
+  // Fields the tenancy bundle can prefill (U2) — caller can still edit/override;
+  // matches each spec's build_context fallback (bundle.current_rent / rent_period).
+  const RENT_PREFILL_FIELDS = { current_rent: true, rent_period: true };
+  let lastPreviewBundle = null;
+
   function renderCallerFields(spec) {
     callerFieldsBox.innerHTML = '';
     (spec.caller_fields || []).forEach((f) => {
@@ -198,6 +205,19 @@
       callerFieldsBox.appendChild(label);
       callerFieldsBox.appendChild(input);
     });
+    prefillRentFields();
+  }
+
+  function prefillRentFields() {
+    if (!lastPreviewBundle) return;
+    const currentRentInput = callerFieldsBox.querySelector('[data-field="current_rent"]');
+    if (currentRentInput && !currentRentInput.value && lastPreviewBundle.current_rent) {
+      currentRentInput.value = lastPreviewBundle.current_rent;
+    }
+    const rentPeriodInput = callerFieldsBox.querySelector('[data-field="rent_period"]');
+    if (rentPeriodInput && !rentPeriodInput.value && lastPreviewBundle.rent_period) {
+      rentPeriodInput.value = lastPreviewBundle.rent_period;
+    }
   }
 
   async function loadForms() {
@@ -255,6 +275,28 @@
   const previewBtn = document.getElementById('preview-btn');
   const lotInput = document.getElementById('lot-id');
   const tenancyInput = document.getElementById('tenancy-id');
+  const cmaBtn = document.getElementById('cma-btn');
+
+  // GEA St CMA — deep link into its rent-increase report flow (U4). Session-
+  // gated on their side: the PM must already be logged in there, or the tab
+  // lands on their login page instead (no auth handoff supported here).
+  const CMA_BASE_URL = 'https://geastcma-production.up.railway.app/reports/new';
+
+  function buildCmaUrl(bundle) {
+    const params = new URLSearchParams({
+      reportType: 'rent-increase',
+      address: bundle.premises.address_line || '',
+    });
+    if (bundle.premises.suburb) params.set('suburb', bundle.premises.suburb);
+    if (bundle.premises.state) params.set('state', bundle.premises.state);
+    if (bundle.premises.postcode) params.set('postcode', bundle.premises.postcode);
+    return CMA_BASE_URL + '?' + params.toString();
+  }
+
+  cmaBtn.addEventListener('click', () => {
+    if (!lastPreviewBundle) return;
+    window.open(buildCmaUrl(lastPreviewBundle), '_blank', 'noopener');
+  });
 
   function esc(s) {
     const d = document.createElement('div');
@@ -282,6 +324,9 @@
       '</dl>' +
       (note ? '<div class="warn">' + esc(note) + '</div>' : '');
     previewBox.classList.add('show');
+    lastPreviewBundle = bundle;
+    cmaBtn.disabled = !bundle.premises.address_line;
+    prefillRentFields();
   }
 
   async function fetchPreview() {
@@ -356,6 +401,8 @@
   providerSelect.addEventListener('change', () => {
     resultsList.innerHTML = '';
     previewBox.classList.remove('show');
+    lastPreviewBundle = null;
+    cmaBtn.disabled = true;
   });
 
   tokenInput.addEventListener('change', () => {

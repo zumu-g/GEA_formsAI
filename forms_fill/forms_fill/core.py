@@ -8,7 +8,7 @@ the result with blank/filled accounting.
 
 from __future__ import annotations
 
-from .models import FillFiles, FillRequest, FillResult
+from .models import FillFiles, FillRequest, FillResult, apply_service_address_defaults
 from .providers.base import PropertyDataProvider, select_provider
 from .registry import get_form_spec
 from .render import compute_blank_fields, render
@@ -22,6 +22,7 @@ def fill_form(
     provider = provider or select_provider(request.provider)
 
     bundle = provider.fetch_bundle(request.identifiers)
+    bundle = apply_service_address_defaults(bundle)
     context = spec.build_context(bundle, request.fields)
 
     blank_fields = compute_blank_fields(spec, context)

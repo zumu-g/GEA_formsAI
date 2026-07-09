@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 import docx
@@ -57,8 +58,14 @@ def render(
 
     pdf_path = _to_pdf(docx_path, out)
     if pdf_path is None:
+        hint = (
+            "brew install --cask libreoffice"
+            if sys.platform == "darwin"
+            else "install LibreOffice and ensure `soffice` is on PATH"
+        )
         warnings.append(
-            "PDF skipped — LibreOffice (soffice) not found on PATH; DOCX produced only"
+            "PDF skipped — LibreOffice (soffice) not found on PATH; DOCX produced only. "
+            f"Fix: {hint}"
         )
 
     return docx_path, pdf_path, warnings

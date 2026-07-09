@@ -70,6 +70,48 @@ class TenancyBundle(_Strict):
     renters: list[Renter] = Field(default_factory=list)
     rental_provider: RentalProvider = Field(default_factory=RentalProvider)
     meta: BundleMeta = Field(default_factory=BundleMeta)
+    # Current rent on file, when the provider has it. String-typed like every
+    # other money field the caller can also supply verbatim — the spec's
+    # caller value always wins over this (see cav_rent_increase_notice).
+    current_rent: str = ""
+    rent_period: str = ""
+
+
+def apply_service_address_defaults(bundle: TenancyBundle) -> TenancyBundle:
+    """Default a blank renter service address/postcode to the premises'.
+
+    Both the GEA CRM provider docstring and several form specs already
+    document this as the intended contract ("null address_for_service when
+    service address == premises") — this is the one place that actually
+    implements it, applied provider-agnostically so PropertyMe, GEA CRM, and
+    the fixture provider all benefit without per-provider duplication.
+    Renters that already carry a real (different) service address are left
+    untouched.
+    """
+
+    if not bundle.premises.address_line:
+        return bundle
+
+    changed = False
+    new_renters = []
+    for renter in bundle.renters:
+        if renter.address_for_service.strip():
+            new_renters.append(renter)
+            continue
+        changed = True
+        new_renters.append(
+            renter.model_copy(
+                update={
+                    "address_for_service": bundle.premises.address_line,
+                    "service_postcode": renter.service_postcode
+                    or bundle.premises.postcode,
+                }
+            )
+        )
+
+    if not changed:
+        return bundle
+    return bundle.model_copy(update={"renters": new_renters})
 
 
 # ── Request / result ───────────────────────────────────────────────────────────

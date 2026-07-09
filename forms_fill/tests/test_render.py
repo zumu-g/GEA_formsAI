@@ -1,6 +1,7 @@
 import docx
 from docx.oxml.ns import qn
 
+import forms_fill.render as render_mod
 from forms_fill.forms.cav_rent_increase_notice.spec import SPEC, build_context
 from forms_fill.models import TenancyBundle
 from forms_fill.render import compute_blank_fields, render
@@ -63,6 +64,25 @@ def test_filled_and_blank_counts_consistent(tmp_path, sample_bundle_dict, caller
     # every declared text field is either filled or blank, no overlap
     filled = [f for f in declared_text if f not in blanks]
     assert len(filled) + len(blanks) == len(declared_text)
+
+
+def test_pdf_skipped_warning_names_fix(tmp_path, sample_bundle_dict, caller_fields, monkeypatch):
+    monkeypatch.setattr(render_mod, "_find_soffice", lambda: None)
+    monkeypatch.setattr(render_mod.sys, "platform", "darwin")
+    ctx = _ctx(sample_bundle_dict, caller_fields)
+    _docx, pdf_path, warn = render(SPEC, ctx, tmp_path)
+    assert pdf_path is None
+    assert warn == [
+        "PDF skipped — LibreOffice (soffice) not found on PATH; DOCX produced only. "
+        "Fix: brew install --cask libreoffice"
+    ]
+
+    monkeypatch.setattr(render_mod.sys, "platform", "linux")
+    _docx, pdf_path, warn = render(SPEC, ctx, tmp_path, basename="rent_increase_linux")
+    assert warn == [
+        "PDF skipped — LibreOffice (soffice) not found on PATH; DOCX produced only. "
+        "Fix: install LibreOffice and ensure `soffice` is on PATH"
+    ]
 
 
 def test_filled_cells_allow_wrap_and_growth(tmp_path, sample_bundle_dict, caller_fields):

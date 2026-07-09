@@ -193,3 +193,28 @@ def test_tenancy_preview_happy_path(client):
 def test_tenancy_preview_requires_an_identifier(client):
     resp = client.get("/tenancy/preview?provider=fixture", headers=AUTH)
     assert resp.status_code == 400
+
+
+def test_tenancy_preview_defaults_blank_service_address_to_premises(client, monkeypatch):
+    # U1: /tenancy/preview must show the same defaulted value the eventual
+    # fill will render — no preview/fill divergence.
+    import json
+
+    from forms_fill.providers import fixture as fixture_module
+
+    original_read = fixture_module.Path.read_text
+
+    def patched_read(self, *a, **kw):
+        text = original_read(self, *a, **kw)
+        if self.name == "sample_tenancy.json":
+            data = json.loads(text)
+            data["renters"][0]["address_for_service"] = ""
+            data["renters"][0]["service_postcode"] = ""
+            return json.dumps(data)
+        return text
+
+    monkeypatch.setattr(fixture_module.Path, "read_text", patched_read)
+    resp = client.get("/tenancy/preview?lot_id=L-2002&provider=fixture", headers=AUTH)
+    assert resp.status_code == 200
+    bundle = resp.json()["bundle"]
+    assert bundle["renters"][0]["address_for_service"] == bundle["premises"]["address_line"]

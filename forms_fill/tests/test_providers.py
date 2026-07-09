@@ -189,3 +189,34 @@ def test_propertyme_inactive_only_tenancy_is_not_found(monkeypatch):
     _patch_get(monkeypatch, _routes([], tenancies=[vacated]))
     with pytest.raises(TenancyNotFoundError):
         _provider().fetch_bundle({"lot_id": "L1"})
+
+
+# ── rent prefill mapping (U2) ────────────────────────────────────────────────
+
+
+def test_propertyme_maps_rent_amount_and_period(monkeypatch):
+    tenancy = {**TENANCY, "RentAmount": 2607.0, "RentPeriod": "monthly"}
+    _patch_get(monkeypatch, _routes([], tenancies=[tenancy]))
+    bundle = _provider().fetch_bundle({"lot_id": "L1"})
+    assert bundle.current_rent == "2607"  # not "2607.0"
+    assert bundle.rent_period == "monthly"
+
+
+def test_propertyme_missing_rent_amount_is_blank(monkeypatch):
+    _patch_get(monkeypatch, _routes([], tenancies=[TENANCY]))  # no RentAmount key
+    bundle = _provider().fetch_bundle({"lot_id": "L1"})
+    assert bundle.current_rent == ""
+    assert bundle.rent_period == ""
+
+
+def test_propertyme_non_integer_rent_amount_preserved(monkeypatch):
+    tenancy = {**TENANCY, "RentAmount": 615.5, "RentPeriod": "weekly"}
+    _patch_get(monkeypatch, _routes([], tenancies=[tenancy]))
+    bundle = _provider().fetch_bundle({"lot_id": "L1"})
+    assert bundle.current_rent == "615.5"
+
+
+def test_fixture_provider_returns_current_rent():
+    bundle = FixtureProvider().fetch_bundle({"lot_id": "L-2002"})
+    assert bundle.current_rent == "615"
+    assert bundle.rent_period == "week"
