@@ -169,6 +169,68 @@ loudly (`ProviderContractError`).
 
 No change to the core, renderer, CLI, or API.
 
+For **scanned-PDF templates** (no text layer — e.g. the REIV sales authorities),
+set `engine="pdf_overlay"` on the spec and declare `stamp_ops` / `tick_ops` /
+`strike_ops` with pixel coordinates on a reference render of the page
+(`overlay_ref_width`, default 1240px = 150dpi A4). Extra pre-printed pages go in
+`extra_pages`. Output is PDF-only (`files.docx` is null). Scan rotation is
+handled by the engine. See `forms/reiv_exclusive_sale_authority/spec.py`.
+
+**Sales forms** set `requires_bundle=False`: no tenancy fetch — context is caller
+`fields` (verbatim) over agency defaults from `fixtures/gea_agency.json`
+(override with `FORMS_AGENCY_FILE`).
+
+---
+
+## Consuming from internal tools
+
+Everything a caller needs is discoverable:
+
+1. **Auth** — send `Authorization: Bearer $FORMS_API_TOKEN` on every request
+   (the server fails closed at startup if the token env var is unset).
+2. **Discover forms** — `GET /forms` lists every form with `engine`,
+   `requires_identifiers`, and `fields[]` (`key`, `label`, `kind`, and
+   `options` for selector fields). Build your payload from this — no need to
+   read the source.
+3. **Fill** — `POST /fill` with `{form, identifiers, fields, ...}`. Sales
+   forms (`requires_identifiers: false`) take `"identifiers": {}`.
+
+Worked sales-form payload (n8n HTTP Request node or any client):
+
+```json
+{
+  "form": "reiv_exclusive_sale_authority",
+  "identifiers": {},
+  "fields": {
+    "vendor_name": "Australia and New Zealand Banking Group Limited,",
+    "vendor_capacity": "in the capacity only as mortgagee exercising power of sale",
+    "vendor_abn": "11 005 357 522",
+    "property_address": "43 Bellagio Road, Berwick VIC 3806",
+    "exclusive_days": "90",
+    "possession": "vacant_possession",
+    "payment": "full_purchase_price",
+    "commission_pct": "4.125% inclusive of GST",
+    "advertising": "3,380.00",
+    "marketing_payable": "written_request"
+  }
+}
+```
+
+TypeScript (slate) sketch:
+
+```ts
+const res = await fetch(`${FORMS_BASE_URL}/fill`, {
+  method: "POST",
+  headers: { Authorization: `Bearer ${FORMS_API_TOKEN}`, "Content-Type": "application/json" },
+  body: JSON.stringify(payload),
+});
+const result = await res.json(); // { ok, contract: "v1", files: { pdf, docx }, blank_fields, warnings }
+```
+
+**Contract stability:** the result carries `contract: "v1"`. Changes are
+additive-only; a breaking change to the request or result shape bumps the
+version. Treat unknown keys as ignorable.
+
 ---
 
 ## Deploy (Railway)

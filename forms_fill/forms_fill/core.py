@@ -19,10 +19,14 @@ def fill_form(
     provider: PropertyDataProvider | None = None,
 ) -> FillResult:
     spec = get_form_spec(request.form)
-    provider = provider or select_provider(request.provider)
 
-    bundle = provider.fetch_bundle(request.identifiers)
-    bundle = apply_service_address_defaults(bundle)
+    if spec.requires_bundle:
+        provider = provider or select_provider(request.provider)
+        bundle = provider.fetch_bundle(request.identifiers)
+        bundle = apply_service_address_defaults(bundle)
+    else:
+        # Sales forms (KTD8): caller fields + agency defaults, no tenancy fetch.
+        bundle = None
     context = spec.build_context(bundle, request.fields)
 
     blank_fields = compute_blank_fields(spec, context)
@@ -33,7 +37,9 @@ def fill_form(
     ]
 
     docx_path, pdf_path, warnings = render(spec, context, request.out_dir)
-    if bundle.meta.note:
+    if spec.validate_warnings is not None:
+        warnings = [*warnings, *spec.validate_warnings(context)]
+    if bundle is not None and bundle.meta.note:
         # provider data-quality flag (e.g. >1 active tenancy) — the PM must see it
         warnings = [*warnings, bundle.meta.note]
 
@@ -41,7 +47,7 @@ def fill_form(
         ok=True,
         form=request.form,
         files=FillFiles(
-            docx=str(docx_path),
+            docx=str(docx_path) if docx_path else None,
             pdf=str(pdf_path) if pdf_path else None,
         ),
         filled_fields=filled_fields,

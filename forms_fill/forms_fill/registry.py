@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from .errors import UnknownFormError
 from .formspec import FormSpec
+from .forms.allmain_letter_of_offer.spec import SPEC as LETTER_OF_OFFER_SPEC
 from .forms.breach_of_duty_notice.spec import SPEC as BREACH_SPEC
 from .forms.cav_rent_increase_notice.spec import SPEC as CAV_SPEC
 from .forms.condition_report.spec import SPEC as CONDITION_REPORT_SPEC
@@ -25,6 +26,7 @@ from .forms.notice_to_vacate.spec import SPEC as NTV_SPEC
 from .forms.notice_to_vacate_death_sole_renter.spec import (
     SPEC as DEATH_SOLE_RENTER_SPEC,
 )
+from .forms.reiv_exclusive_sale_authority.spec import SPEC as REIV_EXCLUSIVE_SPEC
 from .forms.rental_application.spec import SPEC as RENTAL_APPLICATION_SPEC
 from .forms.request_repairs_inspection.spec import SPEC as REPAIRS_INSPECTION_SPEC
 from .forms.residential_rental_agreement.spec import SPEC as RENTAL_AGREEMENT_SPEC
@@ -53,6 +55,8 @@ FORM_REGISTRY: dict[str, FormSpec] = {
     MANDATORY_DISCLOSURE_SPEC.key: MANDATORY_DISCLOSURE_SPEC,
     CONSENT_ELECTRONIC_SPEC.key: CONSENT_ELECTRONIC_SPEC,
     REPAIRS_INSPECTION_SPEC.key: REPAIRS_INSPECTION_SPEC,
+    REIV_EXCLUSIVE_SPEC.key: REIV_EXCLUSIVE_SPEC,
+    LETTER_OF_OFFER_SPEC.key: LETTER_OF_OFFER_SPEC,
 }
 
 
@@ -79,10 +83,39 @@ def form_catalogue() -> list[dict]:
             "key": spec.key,
             "title": spec.title or spec.key,
             "group": spec.group or "other",
+            "engine": spec.engine,
+            "requires_identifiers": spec.requires_bundle,
             "caller_fields": [
                 {"name": name, "label": label}
                 for name, label in spec.caller_field_labels.items()
             ],
+            "fields": [
+                {
+                    "key": name,
+                    "label": spec.caller_field_labels.get(name, name),
+                    "kind": "selector" if name in spec.selector_fields else "text",
+                    "options": _selector_options(spec, name),
+                }
+                for name in spec.declared_fields
+            ],
         }
         for key, spec in sorted(FORM_REGISTRY.items())
     ]
+
+
+def _selector_options(spec: FormSpec, name: str) -> list[str] | None:
+    """Allowed values for a selector field, from its checkbox/tick/strike ops."""
+
+    if name not in spec.selector_fields:
+        return None
+    values: set[str] = set()
+    for op in spec.checkbox_ops:
+        if op.selector_field == name:
+            values.update(op.options)
+    for op in spec.tick_ops:
+        if op.selector_field == name:
+            values.update(op.options)
+    for op in spec.strike_ops:
+        if op.selector_field == name:
+            values.add(op.when_value)
+    return sorted(values) or None

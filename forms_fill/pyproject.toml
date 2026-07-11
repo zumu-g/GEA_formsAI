@@ -10,6 +10,7 @@ dependencies = [
     "fastapi>=0.110",
     "uvicorn[standard]>=0.29",
     "httpx>=0.27",
+    "pymupdf>=1.24",
 ]
 
 [project.optional-dependencies]
@@ -26,7 +27,7 @@ build-backend = "setuptools.build_meta"
 include = ["forms_fill*"]
 
 [tool.setuptools.package-data]
-forms_fill = ["forms/**/*.docx", "static/*"]
+forms_fill = ["forms/**/*.docx", "forms/**/*.pdf", "static/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
