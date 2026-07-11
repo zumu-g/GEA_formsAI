@@ -135,6 +135,9 @@ class FillFiles(_Strict):
 class FillResult(_Strict):
     ok: bool
     form: str
+    # Contract-stability marker (R18): evolution is additive-only; a breaking
+    # change to the request/result shape bumps this version.
+    contract: str = "v1"
     files: FillFiles = Field(default_factory=FillFiles)
     # Names of the declared fields that were filled (engine contract: a list,
     # so the caller can show the PM exactly what came through).

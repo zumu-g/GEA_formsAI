@@ -49,13 +49,52 @@ class CheckboxOp:
 
 
 @dataclass(frozen=True)
+class StampOp:
+    """Stamp ``context[field_name]`` onto a scanned-PDF page (pdf_overlay engine).
+
+    ``x``/``y`` are pixel coordinates on the reference render of the template
+    (``FormSpec.overlay_ref_width`` wide); ``y`` is the text baseline. The
+    renderer converts to points and maps through the page's derotation matrix.
+    """
+
+    field_name: str
+    x: float
+    y: float
+    page: int = 0
+    size: float = 9.0
+
+
+@dataclass(frozen=True)
+class OverlayTickOp:
+    """Stamp an ``X`` at the coordinates chosen by a selector field's value."""
+
+    selector_field: str
+    options: dict[str, tuple[float, float]]
+    page: int = 0
+    size: float = 11.0
+
+
+@dataclass(frozen=True)
+class StrikeOp:
+    """Draw a strike-through line when ``context[selector_field] == when_value``."""
+
+    selector_field: str
+    when_value: str
+    x1: float
+    y1: float
+    x2: float
+    y2: float
+    page: int = 0
+
+
+@dataclass(frozen=True)
 class FormSpec:
     key: str
     template: Path
     declared_fields: tuple[str, ...]
     text_ops: tuple[TextOp, ...]
     checkbox_ops: tuple[CheckboxOp, ...]
-    build_context: Callable[[TenancyBundle, dict], dict[str, str]]
+    build_context: Callable[[TenancyBundle | None, dict], dict[str, str]]
     # Selector fields drive checkboxes, not text cells; they should not count
     # toward blank/filled text accounting.
     selector_fields: tuple[str, ...] = field(default=())
@@ -67,3 +106,22 @@ class FormSpec:
     title: str = ""
     group: str = ""
     caller_field_labels: dict[str, str] = field(default_factory=dict)
+    # --- pdf_overlay engine (KTD7, U9) ---------------------------------------
+    # ``engine`` selects the renderer: "docx" (text_ops/checkbox_ops above) or
+    # "pdf_overlay" (stamp values onto a scanned-PDF template).
+    engine: str = "docx"
+    # Ops for the overlay engine. Coordinates are pixels on a reference render
+    # of the template that is ``overlay_ref_width`` px wide.
+    stamp_ops: tuple[StampOp, ...] = ()
+    tick_ops: tuple[OverlayTickOp, ...] = ()
+    strike_ops: tuple[StrikeOp, ...] = ()
+    overlay_ref_width: float = 1240.0
+    # Extra template pages appended untouched after the stamped page(s)
+    # (e.g. pre-printed terms and conditions).
+    extra_pages: tuple[Path, ...] = ()
+    # Sales forms build their context from caller fields + agency defaults and
+    # never fetch a tenancy bundle (KTD8, U10).
+    requires_bundle: bool = True
+    # Optional non-blocking checks run after context build; returned strings
+    # become result warnings (e.g. estimate range spread >10%).
+    validate_warnings: Callable[[dict], list[str]] | None = None

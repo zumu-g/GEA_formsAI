@@ -42,8 +42,17 @@ def render(
     out_dir: str | Path,
     *,
     basename: str | None = None,
-) -> tuple[Path, Path | None, list[str]]:
-    """Render the form. Returns ``(docx_path, pdf_path_or_None, warnings)``."""
+) -> tuple[Path | None, Path | None, list[str]]:
+    """Render the form. Returns ``(docx_path_or_None, pdf_path_or_None, warnings)``.
+
+    Dispatches on ``spec.engine``: "docx" fills the Word template below;
+    "pdf_overlay" stamps a scanned-PDF template (no DOCX output).
+    """
+
+    if spec.engine == "pdf_overlay":
+        from .render_overlay import render_overlay
+
+        return render_overlay(spec, context, out_dir, basename=basename)
 
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
@@ -95,7 +104,9 @@ def _apply_text_ops(spec: FormSpec, document, context: dict[str, str]) -> None:
 def _set_cell_text(cell, value: str) -> None:
     """Write value into the first paragraph's first run, preserving formatting."""
 
-    para = cell.paragraphs[0]
+    # Some templates ship value cells with no paragraph element at all
+    # (e.g. the Allmain letter of offer) — add one rather than crashing.
+    para = cell.paragraphs[0] if cell.paragraphs else cell.add_paragraph()
     if para.runs:
         para.runs[0].text = value
         for extra in para.runs[1:]:

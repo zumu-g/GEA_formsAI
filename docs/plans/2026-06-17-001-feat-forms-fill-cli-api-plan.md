@@ -2,12 +2,17 @@
 title: "feat: Forms-fill tool — CLI + POST /fill sharing one core (CAV rent-increase notice)"
 status: active
 date: 2026-06-17
+updated: 2026-07-11
 type: feat
 ---
 
 # feat: Forms-fill tool — CLI + POST /fill sharing one core
 
 ## Summary
+
+**Update 2026-07-11.** Units U1–U8 are delivered and the build overtook parts of this plan: the API carries bearer auth (fail-closed at startup), engine-contract error codes, `GET /forms` discovery, `/tenancy/search`, `/tenancy/preview`, `/approve`, and a PM review UI; the registry holds 17 rental/PM forms; and the render engine diverged from KTD2 — it applies `text_ops`/`checkbox_ops` directly to the DOCX via python-docx rather than docxtpl Jinja templates (see KTD2 revision below). This update adds the next tranche: **sales forms on a scanned-PDF overlay engine (U9–U13)** and **internal-tool consumption hardening (U14–U15)**. Original summary follows.
+
+## Original Summary
 
 Build a headless **forms-fill service** that takes a single payload of `{form, identifiers, fields}`, fetches the tenancy/property/people details from a swappable data provider, fills a known form template, and writes **PDF (primary) + DOCX** to an output directory while printing a machine-readable result JSON. The same fill core is exposed two ways: a non-interactive **CLI** (`forms fill …`) and an **HTTP `POST /fill`** endpoint. The first and only working form is the CAV "Notice of proposed rent increase to renter of rented premises" (RTA 1997 s44(1)). A **template-registry** pattern makes future forms (VCAT, inspection) additive.
 
@@ -44,6 +49,14 @@ Traced from the request.
 - **R12** — Data provider is a swappable interface (PropertyMe now, GEA CRM later) conforming to the contract in `docs/integrations/crm-data-contract-prompt.md`.
 - **R13** — Deliverables: the CLI, `POST /fill`, a README with both invocation styles and a worked CAV example, and confirmation of the exact `fields`/`identifiers` JSON keys the rent-review system wires to.
 
+**Added 2026-07-11 (sales forms + internal-tool consumption):**
+
+- **R14** — Fill scanned-PDF templates by coordinate overlay: text stamps, checkbox ticks, strike-outs, correct handling of page rotation, multi-page output (filled page + untouched terms pages).
+- **R15** — Sales authority forms registered under the same registry/CLI/API: REIV exclusive sale authority (Code 002), auction authority, general sales authority, and the Allmain letter of offer.
+- **R16** — Sales forms accept caller-supplied `fields` verbatim (vendor, property, commission, marketing, estimates, dates) with agency/agent defaults applied from `fixtures/gea_agency.json`; blank-field reporting (R9) applies unchanged.
+- **R17** — `GET /forms` returns enough per-form metadata for an internal tool to build a request without reading source: accepted `fields` keys with labels, required vs optional, engine type, and title/group.
+- **R18** — README documents internal-tool consumption: worked HTTP examples for n8n and slate callers, auth setup, and a stated contract-stability rule (additive changes only; breaking changes bump a version marker in the result payload).
+
 ---
 
 ## Key Technical Decisions
@@ -54,6 +67,12 @@ Traced from the request.
 - **KTD4 — `PropertyDataProvider` interface with PropertyMe + Fixture adapters now.** The fill core depends on an abstract provider returning the `tenancy-bundle` shape from the data contract. `FixtureProvider` (reads local JSON) makes the CAV path end-to-end testable today; `PropertyMeProvider` targets `app.propertyme.com/api/v2` with `PROPERTYME_API_KEY`. A `GeaCrmProvider` is a later additive adapter against the same contract. Provider is selected by env/flag (`FORMS_DATA_PROVIDER`).
 - **KTD5 — One `fill_form()` core; CLI and API are thin shells.** Both the CLI and `POST /fill` build the same `FillRequest`, call the same `fill_form(request) -> FillResult`, and serialise the same result. No business logic lives in either shell.
 - **KTD6 — `blank_fields` is computed from the resolved context, not guessed.** After fetching + merging, the core walks the form's declared field set and records every declared field that resolved empty. This drives both the JSON report (R9) and the `filled_fields` count.
+
+**KTD revisions (2026-07-11):**
+
+- **KTD2 (revised as-built).** The delivered engine does not use docxtpl Jinja templates. `FormSpec` carries `text_ops` (table/cell coordinates) and `checkbox_ops` applied directly to the original DOCX via python-docx (`forms_fill/render.py`). New DOCX forms follow this pattern; the docxtpl approach is retired.
+- **KTD7 — Scanned-PDF overlay engine via PyMuPDF.** Sales authority templates (e.g. REIV Code 002) are scanned PDFs with no text layer or form fields. Filling means stamping text/ticks at known pixel coordinates, rotation-aware via the page derotation matrix — the approach proven manually on the 43 Bellagio Rd fill (session script `fill_reiv.py`). `FormSpec` gains an `engine` discriminator (`docx` | `pdf_overlay`); overlay specs declare `(field, x, y, size)` stamp ops, tick ops, strike ops, and multi-page assembly. PyMuPDF becomes a dependency.
+- **KTD8 — Sales forms are verbatim-fields-first, with agency defaults.** Sales forms don't fit `TenancyBundle` (vendor/agent/property/commission, no tenancy). They take caller `fields` verbatim plus defaults from `fixtures/gea_agency.json` (agency name, address, agent contact). No provider fetch is required; `identifiers` may be empty. The provider seam is untouched.
 
 ---
 
@@ -259,6 +278,94 @@ forms_fill/
 **Test scenarios:** `Test expectation: none -- documentation unit; correctness is covered by the worked example matching tests in U6/U7.`
 **Verification:** A reader can run both invocation styles from the README and knows the exact keys to send.
 
+### U9. PDF overlay render engine + FormSpec engine discriminator
+
+**Goal:** A second render engine that stamps values onto scanned-PDF templates, selected per-form by the spec.
+**Requirements:** R14, KTD7.
+**Dependencies:** none (parallel to existing engine).
+**Files:** `forms_fill/forms_fill/formspec.py` (modify — `engine` field, overlay op dataclasses), `forms_fill/forms_fill/render_overlay.py` (new), `forms_fill/pyproject.toml` (add pymupdf), `forms_fill/tests/test_render_overlay.py` (new).
+**Approach:** Overlay ops: `StampOp(field, page, x, y, size)`, `TickOp(selector_field, page, options: {value: (x, y)})`, `StrikeOp(page, x1, y1, x2, y2, when_field/value)`. Coordinates in source-image pixels with a declared reference width, converted to points and mapped through the page derotation matrix (scanned templates carry a `/Rotate` flag — proven failure mode). `render_overlay(spec, context, out_dir)` stamps page 1..n, appends untouched template pages, writes PDF (primary; no DOCX for overlay forms — result JSON `files.docx` is null). `render()` dispatches on `spec.engine` so `fill_form` is unchanged.
+**Patterns to follow:** the manual Bellagio fill (PyMuPDF `insert_text` + `derotation_matrix` + `rotate=page.rotation`); existing `render.py` structure for op-application and blank-field accounting.
+**Test scenarios:**
+- Happy: stamping a fixture context onto a rotated scanned page renders text upright at the expected position (assert via re-extract with PyMuPDF text search).
+- Edge (R14): a template with `/Rotate 90` and one with no rotation produce identically-positioned output relative to the page image.
+- Edge: tick op with an unknown selector value raises a typed error naming valid options.
+- Error: missing template file raises `template_error`, consistent with the engine contract.
+- Integration: multi-page assembly — filled page 1 + terms pages 2–5 appear in order in one PDF.
+**Verification:** Overlay engine fills a rotated scanned template correctly and `fill_form` routes to it via `spec.engine` with no core changes.
+
+### U10. Agency defaults + sales context builder
+
+**Goal:** Sales forms build their context from verbatim caller `fields` merged with agency defaults — no tenancy fetch.
+**Requirements:** R16, KTD8.
+**Dependencies:** U9.
+**Files:** `forms_fill/forms_fill/sales.py` (new), `forms_fill/fixtures/gea_agency.json` (exists), `forms_fill/tests/test_sales_context.py` (new).
+**Approach:** `load_agency_defaults()` reads `gea_agency.json` (overridable via `FORMS_AGENCY_FILE`). `build_sales_context(fields)` merges caller fields over defaults; caller always wins. Declared-field accounting reuses `compute_blank_fields`. `fill_form` treats a spec with `requires_bundle=False` as fetch-free (empty `identifiers` allowed).
+**Test scenarios:**
+- Happy: context contains agency name/address/agent mobile from defaults when the caller omits them.
+- Happy: caller-supplied `agent_name` overrides the default (verbatim, R4 discipline).
+- Edge: missing defaults file → clear config error naming the expected path.
+- Edge: `blank_fields` lists sales fields the caller left empty (e.g. `vendor_abn`).
+**Verification:** A fields-only request with no identifiers produces a complete sales context.
+
+### U11. REIV Exclusive Sale Authority (Code 002) form
+
+**Goal:** Register `reiv_exclusive_sale_authority` filling the scanned GEA template end-to-end.
+**Requirements:** R14, R15, R16.
+**Dependencies:** U9, U10.
+**Files:** `forms_fill/forms_fill/forms/reiv_exclusive_sale_authority/spec.py` (new), template pages copied from `GEA_exclusive_sale_auth/*.pdf`, `forms_fill/tests/test_reiv_exclusive_spec.py` (new).
+**Approach:** Overlay spec with the field map already proven on the Bellagio fill: agent block, vendor block (two-line capacity text), property, goods, exclusive/continuing days, vacant-possession + full-purchase-price ticks, vendor's price, estimate range, commission % and estimated dollars, marketing expenses, payable-on strike, date. Declared fields cover all particulars; signature boxes and ACN stay blank-capable. Estimate range validation (≤10% spread) is a **warning**, not a block — the tool owns no statutory logic (R4).
+**Test scenarios:**
+- Happy: Bellagio-equivalent payload renders all values on page 1 and appends pages 2–5.
+- Happy: `marketing_payable = written_request` strikes the "on signing" phrase only.
+- Edge: estimate spread >10% of lower bound emits a warning in the result, still renders.
+- Edge: omitted ACN and continuing period leave those areas untouched.
+**Verification:** Output PDF is visually equivalent to the manually-produced 43 Bellagio Rd authority.
+
+### U12. Auction authority + general sales authority forms
+
+**Goal:** The remaining two REIV sales authorities as overlay specs.
+**Requirements:** R15, R16.
+**Dependencies:** U11 (reuses its conventions).
+**Files:** `forms_fill/forms_fill/forms/reiv_auction_authority/spec.py`, `forms_fill/forms_fill/forms/reiv_general_sale_authority/spec.py`, templates (to be scanned/collected), matching test files (new).
+**Approach:** Same shape as U11 with form-specific fields (auction date/time, reserve handling field left blank, no exclusive-period strike variants as applicable). Template PDFs must be sourced first — an execution-time input from the user.
+**Test scenarios:** per-form equivalents of U11's happy/edge set.
+**Verification:** Both forms fill from a fields-only payload and appear in `GET /forms`.
+
+### U13. Allmain letter of offer (DOCX) form
+
+**Goal:** Register `allmain_letter_of_offer` using the existing DOCX engine.
+**Requirements:** R15, R16.
+**Dependencies:** U10.
+**Files:** `forms_fill/forms_fill/forms/allmain_letter_of_offer/spec.py`, template from the Allmain-provided DOCX, `forms_fill/tests/test_letter_of_offer_spec.py` (new).
+**Approach:** Standard `text_ops`/`checkbox_ops` spec (the template is a live DOCX with labelled sections: property/purchaser/offer terms/finance ticks/agent declaration). Agent-recommendation free text is a declared multi-line field.
+**Test scenarios:**
+- Happy: offer amount, settlement days, deposit, finance status tick render in the right cells.
+- Edge: cash-purchase tick excludes lender name; blank additional conditions stay blank.
+**Verification:** Filled letter matches the Allmain template layout with caller values verbatim.
+
+### U14. `GET /forms` field metadata for internal consumers
+
+**Goal:** Internal tools can construct a valid request from the discovery endpoint alone.
+**Requirements:** R17.
+**Dependencies:** U9 (engine field exists).
+**Files:** `forms_fill/forms_fill/api.py` (modify), `forms_fill/forms_fill/formspec.py` (modify — required/optional flags), `forms_fill/tests/test_api.py` (modify).
+**Approach:** Extend the `GET /forms` payload per form: `fields: [{key, label, required, kind}]` derived from `declared_fields` + `caller_field_labels` + selector options, plus `engine`, `title`, `group`, `requires_identifiers`. Additive change only.
+**Test scenarios:**
+- Happy: CAV entry lists `rent_period` with its allowed values; REIV entry shows `requires_identifiers: false`.
+- Edge: every registered form serialises without error (registry-wide sweep test).
+**Verification:** A consumer can round-trip: `GET /forms` → build payload → `POST /fill` succeeds, for one DOCX and one overlay form.
+
+### U15. Internal consumption docs + contract stability
+
+**Goal:** README section for internal callers and an explicit stability rule.
+**Requirements:** R18.
+**Dependencies:** U11, U14.
+**Files:** `forms_fill/README.md` (modify).
+**Approach:** Add "Consuming from internal tools": auth setup (bearer token env), n8n HTTP-node worked example, slate/TypeScript fetch example, the sales-form fields-only payload shape, and the stability rule — result payload gains `contract: "v1"`; additive-only evolution, version bump on breaking change.
+**Test scenarios:** `Test expectation: none -- documentation unit; the U14 round-trip test proves the documented flow.`
+**Verification:** An internal-tool developer can integrate from the README without reading forms_fill source.
+
 ---
 
 ## Scope Boundaries
@@ -269,6 +376,10 @@ forms_fill/
 - Delivering or serving the form; signatures; the "Delivery of this notice" section.
 - Any rent-review business logic; computing or validating legal dates or eligibility.
 - The renter's "Rent increase investigation" section.
+
+**In scope (2026-07-11 tranche):** overlay engine; REIV exclusive/auction/general sales authorities; Allmain letter of offer; `GET /forms` field metadata; internal-consumption README.
+
+**Out of scope (2026-07-11 tranche):** e-signature integration; auto-generating the Statement of Information for sales; rebate-statement variants of the REIV form; Section 32 / contract-of-sale documents; per-office multi-tenancy of agency defaults.
 
 ### Deferred to Follow-Up Work
 - **GEA CRM provider** (`GeaCrmProvider`) against the same data contract — additive adapter once the CRM exposes `GET /api/forms/tenancy-bundle` (`docs/integrations/crm-data-contract-prompt.md`).
@@ -291,6 +402,9 @@ forms_fill/
 - **Template-prep fidelity** — replacing 13 unnamed legacy checkboxes and inserting placeholders by hand risks mis-mapping a tick to the wrong rent row. Mitigation: U4 render tests assert exactly one ticked box per row for a known `rent_period`; visual spot-check of the prepared template before first use.
 - **PropertyMe owner-vs-agent** — the form legally forbids the agent's name in the provider field. Mitigation: provider mapping sources `full_name` from the owner explicitly; guard test in U3; the data contract states the rule.
 - **Verbatim rendering (R4)** — a stray reformat of `start_date` or rent figures would silently corrupt a legal notice. Mitigation: U5 test asserts byte-for-byte passthrough of caller `fields`.
+- **Overlay coordinate fragility (2026-07-11)** — a re-scanned or differently-cropped template silently shifts every stamp. Mitigation: specs pin a reference image width and template file hash; U9 position tests re-extract stamped text; changing a template requires re-verifying the spec.
+- **Page rotation (2026-07-11)** — scanned templates carry `/Rotate` flags that render text sideways if unhandled. Mitigation: derotation-matrix mapping is mandatory in the engine, with a dedicated rotated-template test.
+- **Missing templates for U12** — auction and general authority scans are not yet in the repo; those units block on the user supplying them.
 
 ---
 
@@ -300,3 +414,4 @@ forms_fill/
 - `GEA_crmAI` `src/lib/sync/propertyme.ts` — PropertyMe sync is a stub (`TODO`), intended API `https://app.propertyme.com/api/v2` with `PROPERTYME_API_KEY`; auth pattern `x-sync-secret`/`SYNC_SECRET`. Drives KTD4 + the deferral.
 - `GEA_crmAI` Prisma models (`ManagedProperty`, `Lease`, `Tenant`, `TenantLease`, `Contact` owner) — basis for the GEA CRM field mapping in the data contract.
 - Data contract: `docs/integrations/crm-data-contract-prompt.md` (this repo).
+- **2026-07-11:** REIV Code 002 template inspected — 5 scanned pages, no text layer, `/Rotate` flag on page 1 (`GEA_exclusive_sale_auth/`). Manual PyMuPDF overlay fill of 43 Bellagio Rd proved the coordinate map, derotation handling, tick/strike ops, and multi-page assembly that KTD7/U9/U11 encode. Agency defaults captured in `forms_fill/fixtures/gea_agency.json`. Delivered-state audit: `forms_fill/forms_fill/api.py` (auth, `GET /forms`, engine-contract errors), `render.py` (text/checkbox ops), 17-form registry, 243 tests passing.

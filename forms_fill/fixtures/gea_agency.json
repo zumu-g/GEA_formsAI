@@ -1,0 +1,22 @@
+{
+  "agency": {
+    "name": "Grants Estate Agents",
+    "office": "Berwick Office",
+    "address_line": "3a Gloucester Avenue",
+    "suburb": "Berwick",
+    "state": "VIC",
+    "postcode": "3806",
+    "acn": null
+  },
+  "agent": {
+    "full_name": "Stuart Grant",
+    "role": "Director, Berwick and Pakenham",
+    "mobile": "0438 554 522",
+    "email": "stuart@grantsea.com.au"
+  },
+  "meta": {
+    "source": "user",
+    "as_at": "2026-07-11",
+    "note": "Default agency/agent details for sales authority and appointment forms"
+  }
+}
