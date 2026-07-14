@@ -34,6 +34,11 @@ def fill(
     json_payload: str = typer.Option(
         None, "--json", help="Whole request as one JSON object (use '-' for stdin)"
     ),
+    pdf: bool = typer.Option(
+        True,
+        "--pdf/--no-pdf",
+        help="--no-pdf skips the slow LibreOffice conversion (DOCX only)",
+    ),
 ) -> None:
     """Fill a form and print the result JSON."""
 
@@ -51,6 +56,7 @@ def fill(
             fields=fields,
             out_dir=out,
             json_payload=json_payload,
+            pdf=None if pdf else False,
         )
         result = fill_form(request)
     except (FormsFillError, ValueError) as exc:

@@ -36,7 +36,9 @@ def fill_form(
         f for f in spec.declared_fields if f not in selectors and f not in blanks
     ]
 
-    docx_path, pdf_path, warnings = render(spec, context, request.out_dir)
+    docx_path, pdf_path, warnings = render(
+        spec, context, request.out_dir, pdf=request.pdf
+    )
     if spec.validate_warnings is not None:
         warnings = [*warnings, *spec.validate_warnings(context)]
     if bundle is not None and bundle.meta.note:

@@ -42,6 +42,7 @@ def render(
     out_dir: str | Path,
     *,
     basename: str | None = None,
+    pdf: bool = True,
 ) -> tuple[Path | None, Path | None, list[str]]:
     """Render the form. Returns ``(docx_path_or_None, pdf_path_or_None, warnings)``.
 
@@ -65,6 +66,9 @@ def render(
     _apply_checkbox_ops(spec, document, context)
     document.save(str(docx_path))
 
+    if not pdf:
+        return docx_path, None, warnings
+
     pdf_path = _to_pdf(docx_path, out)
     if pdf_path is None:
         hint = (
@@ -82,6 +86,11 @@ def render(
 
 def _apply_text_ops(spec: FormSpec, document, context: dict[str, str]) -> None:
     tables = document.tables
+    # Vertically-merged cells make two (row, cell) addresses resolve to ONE
+    # physical cell — a second op must append, not overwrite the first value.
+    # Hold the tc references: lxml proxies are transient, so bare id() values
+    # can be reused for different elements once a proxy is garbage-collected.
+    written: list = []
     for op in spec.text_ops:
         value = str(context.get(op.field_name, "") or "")
         if not value:
@@ -98,6 +107,11 @@ def _apply_text_ops(spec: FormSpec, document, context: dict[str, str]) -> None:
                 f"template cell out of range for field {op.field_name!r} "
                 f"(table {op.table_index}, row {op.row_index}, cell {op.cell_index})"
             ) from exc
+        tc = cell._tc
+        if any(tc is seen for seen in written):
+            cell.add_paragraph(value)
+            continue
+        written.append(tc)
         _set_cell_text(cell, value)
 
 

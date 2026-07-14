@@ -122,6 +122,10 @@ class FillRequest(_Strict):
     identifiers: dict[str, Any] = Field(default_factory=dict)
     fields: dict[str, Any] = Field(default_factory=dict)
     out_dir: str = "./out"
+    # False skips the LibreOffice DOCX→PDF conversion (the slowest step,
+    # 1-3s) for callers that only need the DOCX. Overlay forms ignore this —
+    # their native output is PDF.
+    pdf: bool = True
     # Optional per-request provider override (fixture/propertyme/gea_crm). None
     # falls back to the FORMS_DATA_PROVIDER env var (select_provider's default).
     provider: str | None = None
@@ -154,6 +158,7 @@ def build_request(
     fields: str | dict[str, Any] | None = None,
     out_dir: str | None = None,
     json_payload: str | dict[str, Any] | None = None,
+    pdf: bool | None = None,
 ) -> FillRequest:
     """Normalise any accepted input style into one ``FillRequest`` (R1).
 
@@ -175,6 +180,8 @@ def build_request(
         base["fields"] = _as_obj(fields, "fields")
     if out_dir is not None:
         base["out_dir"] = out_dir
+    if pdf is not None:
+        base["pdf"] = pdf
 
     if "form" not in base or not base["form"]:
         raise ValueError("missing required 'form'")
