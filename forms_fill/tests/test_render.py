@@ -103,3 +103,38 @@ def test_filled_cells_allow_wrap_and_growth(tmp_path, sample_bundle_dict, caller
         assert tr_height.get(qn("w:hRule")) == "atLeast", (
             f"table {table_index} row still fixed-height (would clip a long value)"
         )
+
+
+def test_merged_cell_ops_append_rather_than_overwrite(tmp_path):
+    """Two text ops resolving to one vertically-merged cell keep both values
+    (regression: provider_name was lost under provider_company_name in the
+    residential rental agreements)."""
+    import docx
+
+    from forms_fill.forms.residential_rental_agreement.spec import SPEC
+    from forms_fill.render import _apply_text_ops
+
+    document = docx.Document(str(SPEC.template))
+    ctx = {"provider_name": "Owner Person", "provider_company_name": "Owner Co Pty Ltd"}
+    _apply_text_ops(SPEC, document, ctx)
+    text = document.tables[3].rows[0].cells[1].text
+    assert "Owner Person" in text and "Owner Co Pty Ltd" in text
+
+
+def test_pdf_false_skips_conversion_and_warning(tmp_path):
+    from forms_fill.core import fill_form
+    from forms_fill.models import FillRequest
+
+    result = fill_form(
+        FillRequest(
+            form="general_notice",
+            identifiers={"lot_id": "mp_xyz789", "tenancy_id": "lease_abc123"},
+            fields={"reason_for_notice": "s55 test"},
+            out_dir=str(tmp_path),
+            provider="fixture",
+            pdf=False,
+        )
+    )
+    assert result.ok
+    assert result.files.docx and result.files.pdf is None
+    assert not any("LibreOffice" in w for w in result.warnings)

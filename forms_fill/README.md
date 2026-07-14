@@ -231,6 +231,12 @@ const result = await res.json(); // { ok, contract: "v1", files: { pdf, docx }, 
 additive-only; a breaking change to the request or result shape bumps the
 version. Treat unknown keys as ignorable.
 
+**Speed:** the whole fill is ~0.2s except the LibreOffice DOCX→PDF conversion
+(1–3s). Callers that only need the DOCX should send `"pdf": false` in the
+payload (CLI: `--no-pdf`) — `files.pdf` comes back null and the conversion is
+skipped entirely. Overlay forms (`engine: pdf_overlay`) are always fast
+(~50ms) and always produce PDF natively.
+
 ---
 
 ## Deploy (Railway)
