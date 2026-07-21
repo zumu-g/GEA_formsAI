@@ -381,7 +381,7 @@
       body.matches.forEach((m) => {
         const li = document.createElement('li');
         li.tabIndex = 0;
-        li.textContent = m.address_label + (m.lot_id ? ' (' + m.lot_id + ')' : '');
+        li.textContent = m.address_label;
         function pick() {
           lotInput.value = m.lot_id || '';
           tenancyInput.value = m.tenancy_id || '';
