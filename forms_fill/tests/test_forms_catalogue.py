@@ -38,6 +38,18 @@ def test_forms_lists_registered_forms_with_groups(client):
     assert field_names == {"minimum_notice_days", "termination_date", "reason_for_notice"}
 
 
+def test_forms_carry_display_category_and_short_title(client):
+    forms = client.get("/forms", headers=AUTH).json()["forms"]
+    for f in forms:
+        assert f["category"] in {"GEA Sales", "GEA PM"}
+        assert f["short_title"]
+    sales = {f["key"] for f in forms if f["category"] == "GEA Sales"}
+    assert sales == {"allmain_letter_of_offer", "reiv_exclusive_sale_authority"}
+    rent = next(f for f in forms if f["key"] == "cav_rent_increase_notice")
+    assert rent["short_title"] == "Rent increase to renter"
+    assert "s 44" not in rent["short_title"]
+
+
 def test_form_catalogue_helper_matches_endpoint():
     catalogue = form_catalogue()
     assert {c["key"] for c in catalogue} >= {"cav_rent_increase_notice", "notice_to_vacate"}
