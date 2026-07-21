@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>GEA — VCAT/RTA Notice Fill</title>
+<title>GEA — Forms Fill</title>
 <style>
   :root {
     --ink: #1A1814;
@@ -28,7 +28,7 @@
     font-size: 15px; line-height: 1.5;
   }
   .wrap { max-width: 720px; margin: 0 auto; }
-  h1 { font-size: 1.4rem; font-weight: 600; margin: 0 0 0.25rem; }
+  h1 { font-size: 1.85rem; font-weight: 700; letter-spacing: -0.02em; margin: 0 0 0.25rem; }
   .subtitle { color: var(--muted); margin: 0 0 2rem; font-size: 0.9rem; }
   fieldset { border: 1px solid var(--rule); border-radius: 10px; padding: 1.25rem; margin: 0 0 1.25rem; background: var(--surface); }
   legend { padding: 0 0.5rem; font-weight: 600; font-size: 0.9rem; }
@@ -89,8 +89,8 @@
 </head>
 <body>
 <div class="wrap">
-  <h1>VCAT / RTA Notice Fill</h1>
-  <p class="subtitle">Fill a Consumer Affairs Victoria notice for review — never lodges to VCAT Online.</p>
+  <h1>GEA Forms Fill</h1>
+  <p class="subtitle">Fill agency, tenancy and sales forms for review — never lodges or serves anything itself.</p>
 
   <fieldset id="token-banner">
     <legend>API token</legend>
@@ -101,9 +101,10 @@
 
   <form id="fill-form">
     <fieldset>
-      <legend>1. Notice</legend>
-      <label for="form-key">Notice type</label>
+      <legend>1. Form</legend>
+      <label for="form-key">Form type</label>
       <select id="form-key" required></select>
+      <p class="hint" id="form-legal-title"></p>
     </fieldset>
 
     <fieldset>
@@ -146,7 +147,7 @@
     </fieldset>
 
     <fieldset id="caller-fields">
-      <legend>3. Notice details</legend>
+      <legend>3. Form details</legend>
       <p class="hint">Rendered verbatim — this tool never computes dates, notice periods, or legal grounds.</p>
       <div id="caller-fields-inputs"></div>
     </fieldset>
@@ -163,6 +164,7 @@
   const tokenInput = document.getElementById('token');
   const tokenBanner = document.getElementById('token-banner');
   const formSelect = document.getElementById('form-key');
+  const legalTitle = document.getElementById('form-legal-title');
   const callerFieldsBox = document.getElementById('caller-fields-inputs');
   const resultBox = document.getElementById('result');
   const form = document.getElementById('fill-form');
@@ -221,38 +223,40 @@
   }
 
   async function loadForms() {
-    const token = getToken();
-    if (!token) {
-      tokenBanner.classList.add('show');
-      return;
-    }
     try {
       const resp = await fetch(API + '/forms', { headers: authHeaders() });
       if (resp.status === 401) {
+        tokenBanner.style.display = '';
         tokenBanner.classList.add('show');
         return;
       }
       const body = await resp.json();
+      tokenBanner.classList.remove('show');
+      tokenBanner.style.display = 'none';
       catalogue = body.forms || [];
       formSelect.innerHTML = '';
       const groups = {};
       catalogue.forEach((f) => {
-        groups[f.group] = groups[f.group] || [];
-        groups[f.group].push(f);
+        groups[f.category] = groups[f.category] || [];
+        groups[f.category].push(f);
       });
-      Object.keys(groups).sort().forEach((g) => {
+      ['GEA Sales', 'GEA PM'].concat(Object.keys(groups).sort()).forEach((g) => {
+        if (!groups[g]) return;
         const optgroup = document.createElement('optgroup');
         optgroup.label = g;
-        groups[g].forEach((f) => {
+        groups[g].sort((a, b) => a.short_title.localeCompare(b.short_title)).forEach((f) => {
           const opt = document.createElement('option');
           opt.value = f.key;
-          opt.textContent = f.title;
+          opt.textContent = f.short_title;
           optgroup.appendChild(opt);
         });
         formSelect.appendChild(optgroup);
+        delete groups[g];
       });
       if (catalogue.length) {
-        renderCallerFields(catalogue[0]);
+        const first = catalogue.find((f) => f.key === formSelect.value) || catalogue[0];
+        renderCallerFields(first);
+        legalTitle.textContent = first.title;
       }
     } catch (e) {
       showResult('Could not reach the forms-fill API: ' + esc(e), false);
@@ -261,6 +265,7 @@
 
   formSelect.addEventListener('change', () => {
     const spec = catalogue.find((f) => f.key === formSelect.value);
+    legalTitle.textContent = spec ? spec.title : '';
     if (spec) renderCallerFields(spec);
   });
 
@@ -397,6 +402,13 @@
   searchBtn.addEventListener('click', runSearch);
   queryInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') { e.preventDefault(); runSearch(); }
+  });
+  // type-ahead: debounced auto-search after 3+ chars
+  let searchTimer;
+  queryInput.addEventListener('input', () => {
+    clearTimeout(searchTimer);
+    if (queryInput.value.trim().length < 3) { resultsList.innerHTML = ''; return; }
+    searchTimer = setTimeout(runSearch, 350);
   });
   providerSelect.addEventListener('change', () => {
     resultsList.innerHTML = '';
