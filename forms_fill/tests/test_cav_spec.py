@@ -5,6 +5,10 @@ from forms_fill.forms.cav_rent_increase_notice.spec import (
 )
 from forms_fill.models import TenancyBundle
 
+from datetime import date, timedelta
+
+VALID_START_DATE = (date.today() + timedelta(days=90)).isoformat()
+
 
 def _bundle(d):
     return TenancyBundle.model_validate(d)
@@ -22,7 +26,7 @@ def test_caller_fields_render_verbatim(sample_bundle_dict, caller_fields):
     ctx = build_context(_bundle(sample_bundle_dict), caller_fields)
     assert ctx["current_rent"] == "615"
     assert ctx["new_rent"] == "650"
-    assert ctx["start_date"] == "2026-09-15"
+    assert ctx["start_date"] == VALID_START_DATE
     assert ctx["method_basis"] == "market comparison (rental CMA)"
 
 
@@ -58,7 +62,7 @@ def test_current_rent_falls_back_to_bundle_when_caller_omits_it(sample_bundle_di
         "new_rent": "650",
         "increase": "35",
         "rent_period": "weekly",
-        "start_date": "2026-09-15",
+        "start_date": VALID_START_DATE,
         "method_basis": "market comparison",
     }
     ctx = build_context(_bundle(sample_bundle_dict), fields_without_rent)

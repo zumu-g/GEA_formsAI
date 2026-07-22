@@ -111,8 +111,40 @@ def _s(value: object) -> str:
     return "" if value is None else str(value)
 
 
+def _validate_start_date(raw: str) -> None:
+    """RTA s 44: the increase can't start sooner than 60 days after the notice
+    is given. Accepts ISO (2026-09-25) or AU (25/09/2026) dates; issue date is
+    today in Melbourne."""
+
+    from datetime import date, datetime, timedelta
+    from zoneinfo import ZoneInfo
+
+    parsed = None
+    for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y"):
+        try:
+            parsed = datetime.strptime(raw.strip(), fmt).date()
+            break
+        except ValueError:
+            continue
+    if parsed is None:
+        raise ValueError(
+            f"start_date '{raw}' is not a date (use YYYY-MM-DD or DD/MM/YYYY)"
+        )
+    today = datetime.now(ZoneInfo("Australia/Melbourne")).date()
+    earliest = today + timedelta(days=60)
+    if parsed < earliest:
+        raise ValueError(
+            f"start_date {parsed.isoformat()} is less than 60 days from today "
+            f"({today.isoformat()}); earliest lawful start is {earliest.isoformat()} "
+            "(RTA 1997 s 44 requires at least 60 days' notice)"
+        )
+
+
 def build_context(bundle: TenancyBundle, fields: dict) -> dict[str, str]:
     """Merge fetched bundle data with verbatim caller fields into a flat context."""
+
+    if _s(fields.get("start_date")).strip():
+        _validate_start_date(_s(fields.get("start_date")))
 
     renters = list(bundle.renters)
 
