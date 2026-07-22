@@ -24,7 +24,7 @@ def test_ui_page_served_without_auth(client):
     # makes (/forms, /fill, /files/...) are protected.
     resp = client.get("/ui/")
     assert resp.status_code == 200
-    assert "VCAT" in resp.text
+    assert "GEA Forms Fill" in resp.text
 
 
 def test_ui_fill_round_trip_matches_direct_api_payload_shape(client, caller_fields):

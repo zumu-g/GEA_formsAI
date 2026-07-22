@@ -26,7 +26,7 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, Header, HTTPException
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from .core import fill_form
@@ -51,6 +51,11 @@ STATIC_DIR = Path(__file__).with_name("static")
 app.mount("/ui", StaticFiles(directory=str(STATIC_DIR), html=True), name="ui")
 
 
+@app.get("/", include_in_schema=False)
+def _root() -> RedirectResponse:
+    return RedirectResponse("/ui/")
+
+
 @app.on_event("startup")
 def _fail_closed() -> None:
     missing = [v for v in ("FORMS_API_TOKEN", "PUBLIC_BASE_URL") if not os.environ.get(v)]
@@ -62,6 +67,9 @@ def _fail_closed() -> None:
 
 
 def _require_auth(authorization: str) -> None:
+    # ponytail: local-dev escape hatch only; Railway never sets this
+    if os.environ.get("FORMS_DEV_NO_AUTH") == "1":
+        return
     token = os.environ.get("FORMS_API_TOKEN") or ""
     scheme, _, supplied = authorization.partition(" ")
     supplied = supplied.strip()

@@ -74,6 +74,33 @@ def available_forms() -> list[str]:
     return sorted(FORM_REGISTRY)
 
 
+# Display metadata for the web UI dropdown — one reviewed place (KTD1).
+# ponytail: display map lives here, not on 19 FormSpec declarations; move onto
+# FormSpec if a non-UI consumer ever needs it.
+_SALES_KEYS = {"allmain_letter_of_offer", "reiv_exclusive_sale_authority"}
+_SHORT_TITLES = {
+    "allmain_letter_of_offer": "Letter of Offer / EOI (Allmain)",
+    "breach_of_duty_notice": "Breach of duty notice",
+    "cav_rent_increase_notice": "Rent increase to renter",
+    "condition_report": "Condition report",
+    "consent_electronic_service": "Consent to electronic service",
+    "general_notice": "General notice to renter",
+    "mandatory_disclosure_checklist": "Mandatory disclosure checklist",
+    "notice_of_entry": "Entry notice (s 86)",
+    "notice_of_goods_left_behind": "Goods left behind",
+    "notice_of_intention_to_sell": "Intention to sell",
+    "notice_requesting_additional_bond": "Additional bond request",
+    "notice_to_vacate": "Notice to vacate",
+    "notice_to_vacate_death_sole_renter": "Notice to vacate — death of sole renter",
+    "reiv_exclusive_sale_authority": "Exclusive Sale Authority (REIV)",
+    "rental_application": "Rental application",
+    "request_repairs_inspection": "Repairs inspection / rent assessment",
+    "residential_rental_agreement": "Rental agreement (Form 1)",
+    "residential_rental_agreement_5yr": "Rental agreement, 5yr+ fixed term (Form 2)",
+    "statement_of_information_applicants": "Statement of information for applicants",
+}
+
+
 def form_catalogue() -> list[dict]:
     """Registry-driven catalogue for the web UI (U1): key, title, group, and
     the caller-supplied fields the PM needs to enter for each form."""
@@ -83,6 +110,8 @@ def form_catalogue() -> list[dict]:
             "key": spec.key,
             "title": spec.title or spec.key,
             "group": spec.group or "other",
+            "category": "GEA Sales" if key in _SALES_KEYS else "GEA PM",
+            "short_title": _SHORT_TITLES.get(key) or spec.title or spec.key,
             "engine": spec.engine,
             "requires_identifiers": spec.requires_bundle,
             "caller_fields": [

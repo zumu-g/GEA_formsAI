@@ -4,6 +4,10 @@ from forms_fill.core import fill_form
 from forms_fill.models import FillRequest
 from forms_fill.providers.fixture import FixtureProvider
 
+from datetime import date, timedelta
+
+VALID_START_DATE = (date.today() + timedelta(days=90)).isoformat()
+
 
 def _all_text(path) -> str:
     document = docx.Document(str(path))
@@ -39,7 +43,7 @@ def test_caller_values_verbatim_in_output(tmp_path, caller_fields):
     result = fill_form(req, provider=FixtureProvider())
     text = _all_text(result.files.docx)
     assert "615" in text and "650" in text
-    assert "2026-09-15" in text  # start date not reformatted
+    assert VALID_START_DATE in text  # start date not reformatted
 
 
 def test_blank_fields_listed_for_missing_value(tmp_path, caller_fields, monkeypatch):
