@@ -96,7 +96,7 @@
     <legend>API token</legend>
     <label for="token">Bearer token</label>
     <input id="token" type="password" placeholder="Paste the forms-fill bearer token" />
-    <p class="hint">Stored only in this browser tab (sessionStorage).</p>
+    <p class="hint">Stored in this browser (localStorage). Paste once and it persists.</p>
   </fieldset>
 
   <form id="fill-form">
@@ -190,10 +190,12 @@
   }
 
   function getToken() {
-    return sessionStorage.getItem('forms_fill_token') || '';
+    // localStorage so one paste survives new tabs/restarts; sessionStorage
+    // fallback keeps tabs authed from before this change.
+    return localStorage.getItem('forms_fill_token') || sessionStorage.getItem('forms_fill_token') || '';
   }
   function setToken(v) {
-    sessionStorage.setItem('forms_fill_token', v);
+    localStorage.setItem('forms_fill_token', v);
   }
 
   function authHeaders() {
