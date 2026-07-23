@@ -51,6 +51,16 @@ STATIC_DIR = Path(__file__).with_name("static")
 app.mount("/ui", StaticFiles(directory=str(STATIC_DIR), html=True), name="ui")
 
 
+@app.middleware("http")
+async def _no_cache_ui(request, call_next):
+    # Without Cache-Control, browsers heuristically cache /ui/ and keep serving
+    # stale pages after a deploy. no-cache forces an ETag revalidation (304).
+    response = await call_next(request)
+    if request.url.path.startswith("/ui"):
+        response.headers["Cache-Control"] = "no-cache"
+    return response
+
+
 @app.get("/", include_in_schema=False)
 def _root() -> RedirectResponse:
     return RedirectResponse("/ui/")

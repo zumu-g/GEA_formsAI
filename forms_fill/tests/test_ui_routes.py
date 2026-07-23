@@ -27,6 +27,12 @@ def test_ui_page_served_without_auth(client):
     assert "GEA Forms Fill" in resp.text
 
 
+def test_ui_page_is_not_browser_cached(client):
+    # no-cache forces ETag revalidation so a deploy is never masked by a
+    # heuristically-cached stale page.
+    assert client.get("/ui/").headers["cache-control"] == "no-cache"
+
+
 def test_ui_fill_round_trip_matches_direct_api_payload_shape(client, caller_fields):
     # Exercises the exact payload shape the UI's fetch() builds: form, provider,
     # identifiers, fields.
