@@ -108,7 +108,7 @@
     </fieldset>
 
     <fieldset>
-      <legend>2. Tenancy</legend>
+      <legend id="section-2-legend">2. Tenancy</legend>
       <label for="provider">Data source</label>
       <select id="provider">
         <option value="propertyme">PropertyMe</option>
@@ -130,11 +130,11 @@
       <div id="manual-ids">
         <div class="row">
           <div>
-            <label for="lot-id">Lot ID</label>
+            <label for="lot-id" id="lot-id-label">Lot ID</label>
             <input id="lot-id" placeholder="e.g. L-2002" />
           </div>
           <div>
-            <label for="tenancy-id">Tenancy ID (preferred)</label>
+            <label for="tenancy-id" id="tenancy-id-label">Tenancy ID (preferred)</label>
             <input id="tenancy-id" placeholder="e.g. T-1001" />
           </div>
           <button type="button" id="preview-btn" class="secondary" style="flex:0 0 auto; align-self: end">Fetch details</button>
@@ -171,6 +171,23 @@
   const submitBtn = document.getElementById('submit-btn');
 
   let catalogue = [];
+  const section2Legend = document.getElementById('section-2-legend');
+  const tenancyIdLabel = document.getElementById('tenancy-id-label');
+
+  function currentSpec() {
+    return catalogue.find((f) => f.key === formSelect.value) || null;
+  }
+
+  // Sales forms (KTD8) have no tenancy — relabel the section so "tenancy"
+  // framing doesn't confuse a PM filling in a vendor's details (U1).
+  function applyFormModeUI(spec) {
+    const sales = !!spec && spec.requires_identifiers === false;
+    section2Legend.textContent = sales ? '2. Property / Vendor' : '2. Tenancy';
+    tenancyIdLabel.textContent = sales ? 'Property ID (optional)' : 'Tenancy ID (preferred)';
+    manualToggle.textContent = manualBox.classList.contains('show')
+      ? (sales ? 'Hide property ID entry' : 'Hide manual ID entry')
+      : (sales ? 'Enter property ID manually' : 'Enter Lot / Tenancy IDs manually');
+  }
 
   function getToken() {
     return sessionStorage.getItem('forms_fill_token') || '';
@@ -208,6 +225,7 @@
       callerFieldsBox.appendChild(input);
     });
     prefillRentFields();
+    prefillSalesFields();
   }
 
   function prefillRentFields() {
@@ -220,6 +238,32 @@
     if (rentPeriodInput && !rentPeriodInput.value && lastPreviewBundle.rent_period) {
       rentPeriodInput.value = lastPreviewBundle.rent_period;
     }
+  }
+
+  function joinParts(parts) {
+    return parts.filter(Boolean).join(' ');
+  }
+
+  // Sales forms have no tenancy fetch (KTD8) — vendor fields are prefilled
+  // client-side from the same bundle's rental_provider, which is the OWNER by
+  // contract (models.py RentalProvider). Skipped entirely on a vacant lot
+  // (no_current_tenancy), where lastPreviewBundle stays null and the U1 hint
+  // covers manual entry instead (R5).
+  function prefillSalesFields() {
+    if (!lastPreviewBundle) return;
+    const spec = currentSpec();
+    if (!spec || spec.requires_identifiers !== false) return;
+    const owner = lastPreviewBundle.rental_provider || {};
+    const premises = lastPreviewBundle.premises || {};
+    const fill = (name, value) => {
+      const input = callerFieldsBox.querySelector('[data-field="' + name + '"]');
+      if (input && !input.value && value) input.value = value;
+    };
+    fill('vendor_name', owner.full_name);
+    fill('vendor_address', joinParts([owner.service_address, owner.service_postcode]));
+    fill('vendor_phone', owner.phone_business_hours);
+    fill('vendor_email', owner.email);
+    fill('property_address', joinParts([premises.address_line, premises.suburb, premises.state, premises.postcode]));
   }
 
   async function loadForms() {
@@ -257,6 +301,7 @@
         const first = catalogue.find((f) => f.key === formSelect.value) || catalogue[0];
         renderCallerFields(first);
         legalTitle.textContent = first.title;
+        applyFormModeUI(first);
       }
     } catch (e) {
       showResult('Could not reach the forms-fill API: ' + esc(e), false);
@@ -264,9 +309,10 @@
   }
 
   formSelect.addEventListener('change', () => {
-    const spec = catalogue.find((f) => f.key === formSelect.value);
+    const spec = currentSpec();
     legalTitle.textContent = spec ? spec.title : '';
     if (spec) renderCallerFields(spec);
+    applyFormModeUI(spec);
   });
 
   // ── address search → pick → tenancy preview ──────────────────────────────
@@ -311,31 +357,36 @@
 
   function showManual(show) {
     manualBox.classList.toggle('show', show);
-    manualToggle.textContent = show
-      ? 'Hide manual ID entry'
-      : 'Enter Lot / Tenancy IDs manually';
+    applyFormModeUI(currentSpec());
   }
   manualToggle.addEventListener('click', () => showManual(!manualBox.classList.contains('show')));
 
   function renderPreview(bundle) {
+    const sales = !!currentSpec() && currentSpec().requires_identifiers === false;
     const renters = (bundle.renters || []).map((r) => r.full_name).filter(Boolean);
     const note = bundle.meta && bundle.meta.note;
-    previewBox.innerHTML =
+    let html =
       '<dl>' +
       '<dt>Premises</dt><dd>' + esc(bundle.premises.address_line) +
-      (bundle.premises.postcode ? ' ' + esc(bundle.premises.postcode) : '') + '</dd>' +
-      '<dt>Renter' + (renters.length === 1 ? '' : 's') + '</dt><dd>' + (esc(renters.join(', ')) || '—') + '</dd>' +
-      '<dt>Rental provider (owner)</dt><dd>' + esc(bundle.rental_provider.full_name) + '</dd>' +
+      (bundle.premises.postcode ? ' ' + esc(bundle.premises.postcode) : '') + '</dd>';
+    if (!sales) {
+      html += '<dt>Renter' + (renters.length === 1 ? '' : 's') + '</dt><dd>' + (esc(renters.join(', ')) || '—') + '</dd>';
+    }
+    html +=
+      '<dt>' + (sales ? 'Vendor (owner)' : 'Rental provider (owner)') + '</dt><dd>' + esc(bundle.rental_provider.full_name) + '</dd>' +
       '</dl>' +
       (note ? '<div class="warn">' + esc(note) + '</div>' : '');
+    previewBox.innerHTML = html;
     previewBox.classList.add('show');
     lastPreviewBundle = bundle;
     cmaBtn.disabled = !bundle.premises.address_line;
     prefillRentFields();
+    prefillSalesFields();
   }
 
   async function fetchPreview() {
     previewBox.classList.remove('show');
+    const sales = !!currentSpec() && currentSpec().requires_identifiers === false;
     const params = new URLSearchParams({ provider: providerSelect.value });
     if (lotInput.value.trim()) params.set('lot_id', lotInput.value.trim());
     if (tenancyInput.value.trim()) params.set('tenancy_id', tenancyInput.value.trim());
@@ -343,6 +394,14 @@
       const resp = await fetch(API + '/tenancy/preview?' + params, { headers: authHeaders() });
       const body = await resp.json();
       if (!resp.ok) {
+        if (sales && body.error === 'no_current_tenancy') {
+          // R5: vacant/owner-occupied lot — no error banner, just a hint;
+          // vendor fields stay blank for manual entry (prefillSalesFields
+          // never runs since lastPreviewBundle is left untouched).
+          previewBox.innerHTML = '<div class="warn">No tenancy on this lot — enter vendor details manually.</div>';
+          previewBox.classList.add('show');
+          return;
+        }
         showResult('Could not fetch tenancy: ' + esc(body.message || body.error), false);
         return;
       }
@@ -424,7 +483,9 @@
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
-    if (!lotInput.value.trim() && !tenancyInput.value.trim()) {
+    const spec = currentSpec();
+    const requiresIdentifiers = !spec || spec.requires_identifiers !== false;
+    if (requiresIdentifiers && !lotInput.value.trim() && !tenancyInput.value.trim()) {
       showResult('Select a property first — search by address above, or enter a Lot/Tenancy ID manually.', false);
       return;
     }
