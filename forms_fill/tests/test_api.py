@@ -171,14 +171,34 @@ def test_tenancy_search_empty_query_rejected(client):
     assert resp.json()["error"] == "invalid_request"
 
 
-def test_tenancy_search_unsupported_provider_is_structured(client, monkeypatch):
+def test_tenancy_search_gea_crm_happy_path(client, monkeypatch):
+    import httpx
+
     monkeypatch.setenv("GEA_CRM_BASE_URL", "http://localhost:9")
     monkeypatch.setenv("GEA_CRM_SYNC_SECRET", "x")
+
+    class _FakeResponse:
+        status_code = 200
+
+        def json(self):
+            return [{"lot_id": "L-1", "address_label": "12 Example St", "tenancy_id": "T-1"}]
+
+    monkeypatch.setattr(httpx, "get", lambda *a, **k: _FakeResponse())
     resp = client.get("/tenancy/search?q=example&provider=gea_crm", headers=AUTH)
-    assert resp.status_code == 400
+    assert resp.status_code == 200
     body = resp.json()
-    assert body["error"] == "search_unsupported"
-    assert "Lot ID" in body["message"]
+    assert body["provider"] == "gea_crm"
+    assert body["matches"] == [
+        {"lot_id": "L-1", "address_label": "12 Example St", "tenancy_id": "T-1"}
+    ]
+
+
+def test_tenancy_search_gea_crm_empty_query_rejected(client, monkeypatch):
+    monkeypatch.setenv("GEA_CRM_BASE_URL", "http://localhost:9")
+    monkeypatch.setenv("GEA_CRM_SYNC_SECRET", "x")
+    resp = client.get("/tenancy/search?q=  &provider=gea_crm", headers=AUTH)
+    assert resp.status_code == 400
+    assert resp.json()["error"] == "invalid_request"
 
 
 def test_tenancy_preview_happy_path(client):

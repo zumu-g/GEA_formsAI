@@ -39,11 +39,12 @@ from ..models import (
     Renter,
     TenancyBundle,
 )
-from .base import PropertyDataProvider
+from .base import LotMatch, PropertyDataProvider
 
 log = logging.getLogger("forms_fill.providers.gea_crm")
 
 _RETRY_BACKOFFS = (0.5, 1.0)  # 3 attempts total on 5xx / transport errors
+_MAX_SEARCH_RESULTS = 10  # matches PropertyMeProvider's cap for consistent UX
 
 # Keys the contract guarantees are always present (blanks allowed, omission not).
 _PREMISES_KEYS = ("address_line", "suburb", "state", "postcode")
@@ -81,7 +82,72 @@ class GeaCrmProvider(PropertyDataProvider):
         raw = self._fetch_raw(identifiers)
         return self._to_bundle(raw)
 
+    def search_lots(self, query: str) -> list[LotMatch]:
+        """Address search against the CRM's tenancy-search endpoint (U2).
+
+        Contract: docs/integrations/crm-data-contract-prompt.md
+        ("Address search endpoint"). Returns [] rather than raising when the
+        upstream simply has no matches — same convention as the other providers.
+        """
+
+        q = (query or "").strip()
+        if not q:
+            raise ValueError("search query must not be empty")
+
+        resp = self._request("/api/forms/tenancy-search", {"q": q})
+        status = resp.status_code
+        if status == 200:
+            rows = resp.json()
+        elif status == 400:
+            raise ValueError(f"gea_crm: bad search request: {_err(resp)}")
+        elif status == 401:
+            raise ProviderConfigError(
+                "gea_crm: unauthorised — check GEA_CRM_SYNC_SECRET"
+            )
+        else:
+            raise UpstreamError(f"gea_crm search {status}: {_err(resp)}")
+
+        matches = [
+            LotMatch(
+                lot_id=_s(row.get("lot_id")),
+                address_label=_s(row.get("address_label")),
+                tenancy_id=_s(row.get("tenancy_id")),
+            )
+            for row in rows
+        ]
+        return matches[:_MAX_SEARCH_RESULTS]
+
     # ── network ────────────────────────────────────────────────────────────────
+    def _request(self, path: str, params: dict[str, str]) -> httpx.Response:
+        """GET with the shared auth header + retry-on-5xx/transport-error loop."""
+
+        url = f"{self.base_url}{path}"
+        headers = {"x-sync-secret": self.sync_secret, "Accept": "application/json"}
+
+        last_exc: Exception | None = None
+        for attempt in range(len(_RETRY_BACKOFFS) + 1):
+            try:
+                resp = httpx.get(url, headers=headers, params=params, timeout=30.0)
+            except httpx.HTTPError as exc:
+                last_exc = exc
+                if attempt < len(_RETRY_BACKOFFS):
+                    time.sleep(_RETRY_BACKOFFS[attempt])
+                    continue
+                raise UpstreamError(f"gea_crm request failed: {exc}") from exc
+
+            if resp.status_code >= 500:
+                last_exc = UpstreamError(
+                    f"gea_crm upstream {resp.status_code}: {_err(resp)}"
+                )
+                if attempt < len(_RETRY_BACKOFFS):
+                    time.sleep(_RETRY_BACKOFFS[attempt])
+                    continue
+                raise last_exc
+            return resp
+
+        # Unreachable, but keep the type-checker happy.
+        raise UpstreamError(f"gea_crm request failed: {last_exc}")
+
     def _fetch_raw(self, identifiers: dict) -> dict[str, Any]:
         tenancy_id = identifiers.get("tenancy_id")
         lot_id = identifiers.get("lot_id")
@@ -97,44 +163,22 @@ class GeaCrmProvider(PropertyDataProvider):
         if lot_id:
             params["lotId"] = str(lot_id)
 
-        url = f"{self.base_url}/api/forms/tenancy-bundle"
-        headers = {"x-sync-secret": self.sync_secret, "Accept": "application/json"}
-
-        last_exc: Exception | None = None
-        for attempt in range(len(_RETRY_BACKOFFS) + 1):
-            try:
-                resp = httpx.get(url, headers=headers, params=params, timeout=30.0)
-            except httpx.HTTPError as exc:
-                last_exc = exc
-                if attempt < len(_RETRY_BACKOFFS):
-                    time.sleep(_RETRY_BACKOFFS[attempt])
-                    continue
-                raise UpstreamError(f"gea_crm request failed: {exc}") from exc
-
-            status = resp.status_code
-            if status == 200:
-                return resp.json()
-            if status == 400:
-                raise TenancyNotFoundError(
-                    f"gea_crm: bad request (no identifier?): {_err(resp)}"
-                )
-            if status == 401:
-                raise ProviderConfigError(
-                    "gea_crm: unauthorised — check GEA_CRM_SYNC_SECRET"
-                )
-            if status == 404:
-                raise TenancyNotFoundError(f"no current tenancy: {_err(resp)}")
-            if status >= 500:
-                last_exc = UpstreamError(f"gea_crm upstream {status}: {_err(resp)}")
-                if attempt < len(_RETRY_BACKOFFS):
-                    time.sleep(_RETRY_BACKOFFS[attempt])
-                    continue
-                raise last_exc
-            # Any other status: surface plainly.
-            raise UpstreamError(f"gea_crm unexpected {status}: {_err(resp)}")
-
-        # Unreachable, but keep the type-checker happy.
-        raise UpstreamError(f"gea_crm request failed: {last_exc}")
+        resp = self._request("/api/forms/tenancy-bundle", params)
+        status = resp.status_code
+        if status == 200:
+            return resp.json()
+        if status == 400:
+            raise TenancyNotFoundError(
+                f"gea_crm: bad request (no identifier?): {_err(resp)}"
+            )
+        if status == 401:
+            raise ProviderConfigError(
+                "gea_crm: unauthorised — check GEA_CRM_SYNC_SECRET"
+            )
+        if status == 404:
+            raise TenancyNotFoundError(f"no current tenancy: {_err(resp)}")
+        # Any other status: surface plainly (5xx already retried in _request).
+        raise UpstreamError(f"gea_crm unexpected {status}: {_err(resp)}")
 
     # ── shape ────────────────────────────────────────────────────────────────--
     @staticmethod

@@ -1,6 +1,9 @@
+import time
+
+import httpx
 import pytest
 
-from forms_fill.errors import SearchUnsupportedError
+from forms_fill.errors import ProviderConfigError, UpstreamError
 from forms_fill.providers.base import LotMatch
 from forms_fill.providers.fixture import FixtureProvider
 from forms_fill.providers.gea_crm import GeaCrmProvider
@@ -32,15 +35,74 @@ def test_fixture_search_empty_query_raises():
         FixtureProvider().search_lots("   ")
 
 
-# ── unsupported providers ────────────────────────────────────────────────────
+# ── gea_crm search (mocked httpx.get, no live call) ─────────────────────────
 
 
-def test_gea_crm_search_raises_unsupported(monkeypatch):
+def _crm(monkeypatch):
     monkeypatch.setenv("GEA_CRM_BASE_URL", "http://localhost:9")
     monkeypatch.setenv("GEA_CRM_SYNC_SECRET", "x")
-    provider = GeaCrmProvider()
-    with pytest.raises(SearchUnsupportedError, match="does not support"):
-        provider.search_lots("12 Example St")
+    return GeaCrmProvider()
+
+
+class _FakeResponse:
+    def __init__(self, status_code, payload=None, text=""):
+        self.status_code = status_code
+        self._payload = payload
+        self.text = text
+
+    def json(self):
+        return self._payload
+
+
+def test_gea_crm_search_maps_rows(monkeypatch):
+    rows = [
+        {"lot_id": "L-1", "address_label": "12 Example St, Richmond VIC 3121", "tenancy_id": "T-1"},
+        {"lot_id": "L-2", "address_label": "14 Example St, Richmond VIC 3121", "tenancy_id": ""},
+    ]
+    monkeypatch.setattr(httpx, "get", lambda *a, **k: _FakeResponse(200, rows))
+    matches = _crm(monkeypatch).search_lots("example")
+    assert matches == [
+        LotMatch(lot_id="L-1", address_label="12 Example St, Richmond VIC 3121", tenancy_id="T-1"),
+        LotMatch(lot_id="L-2", address_label="14 Example St, Richmond VIC 3121", tenancy_id=""),
+    ]
+
+
+def test_gea_crm_search_caps_results(monkeypatch):
+    rows = [
+        {"lot_id": f"L-{i}", "address_label": f"{i} Example St", "tenancy_id": ""}
+        for i in range(25)
+    ]
+    monkeypatch.setattr(httpx, "get", lambda *a, **k: _FakeResponse(200, rows))
+    assert len(_crm(monkeypatch).search_lots("example")) == 10
+
+
+def test_gea_crm_search_empty_query_raises(monkeypatch):
+    with pytest.raises(ValueError):
+        _crm(monkeypatch).search_lots("   ")
+
+
+def test_gea_crm_search_unauthorised_raises_config_error(monkeypatch):
+    monkeypatch.setattr(httpx, "get", lambda *a, **k: _FakeResponse(401, text="nope"))
+    with pytest.raises(ProviderConfigError):
+        _crm(monkeypatch).search_lots("example")
+
+
+def test_gea_crm_search_upstream_5xx_raises_after_retries(monkeypatch):
+    monkeypatch.setattr(time, "sleep", lambda *_: None)
+    monkeypatch.setattr(httpx, "get", lambda *a, **k: _FakeResponse(500, text="boom"))
+    with pytest.raises(UpstreamError):
+        _crm(monkeypatch).search_lots("example")
+
+
+def test_gea_crm_search_transport_error_raises_after_retries(monkeypatch):
+    monkeypatch.setattr(time, "sleep", lambda *_: None)
+
+    def _raise(*a, **k):
+        raise httpx.ConnectError("connection refused")
+
+    monkeypatch.setattr(httpx, "get", _raise)
+    with pytest.raises(UpstreamError):
+        _crm(monkeypatch).search_lots("example")
 
 
 # ── propertyme mapping (canned response, no live call) ──────────────────────

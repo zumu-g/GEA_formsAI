@@ -131,9 +131,60 @@ fine, but missing keys break the contract.
 
 ---
 
+## Address search endpoint (additive — needed for the property-lookup UI)
+
+The forms tool's UI lets a user type a partial address and pick a match before
+fetching the bundle above. PropertyMe already supports this by scanning its own
+active-tenancy list; GEA CRM needs an equivalent endpoint so address search works
+for GEA CRM too, instead of falling back to manual Lot ID / Tenancy ID entry.
+
+```
+GET /api/forms/tenancy-search?q=<free text>
+```
+
+- **Auth:** identical to `tenancy-bundle` — `x-sync-secret` / `SYNC_SECRET`, no user session.
+- **Lookup:** case-insensitive substring match against the property address. No fuzzy
+  matching or geocoding required — a simple `ILIKE '%q%'`-style scan is sufficient.
+- **Read-only.** No writes, no side effects.
+- **Empty/missing `q`:** return `400` with a clear JSON error.
+- **No auth:** `401`, same as `tenancy-bundle`.
+
+### Response shape
+
+Return a JSON array (not wrapped in an object), one entry per matching property:
+
+```jsonc
+[
+  {
+    "lot_id": "<ManagedProperty id or stable external id>",
+    "address_label": "12 Example St, Richmond VIC 3121",
+    "tenancy_id": "<current active Lease id, or \"\" if the lot is vacant/owner-occupied>"
+  }
+  // as many matches as you have; the forms tool caps display at 10 client-side,
+  // so no need to paginate — returning more than 10 is fine, we'll trim.
+]
+```
+
+- `lot_id` / `tenancy_id` must be the **same identifiers** `tenancy-bundle` above
+  accepts as `lotId`/`tenancyId` — a match the user picks is fed straight back into
+  that endpoint.
+- `tenancy_id` is `""` (not omitted, not null) when there's no current active lease —
+  this mirrors how `tenancy-bundle` already handles vacant lots via its own 404 path;
+  here it's just an empty string in a list entry rather than an error.
+- Field mapping is the same as the table above: `address_label` from
+  `ManagedProperty.propertyAddress` (+ suburb/state/postcode if you want to compose
+  the full label), `lot_id` from `ManagedProperty.id`, `tenancy_id` from the current
+  active `Lease.id` for that property (empty if none).
+
+---
+
 ## Please confirm back
 
-1. The exact **endpoint path + auth header** you'll expose.
+1. The exact **endpoint path + auth header** you'll expose (for both `tenancy-bundle`
+   and, once built, `tenancy-search`).
 2. Which **identifier(s)** you key on and how `lotId`/`tenancyId` map to your models.
 3. Any field above you **can't** populate yet (so we mark it blank-by-design).
 4. How you distinguish **owner vs managing agent** for the `rental_provider` field.
+5. Whether `tenancy-search` is feasible against your current schema/indexes, and
+   roughly how large the property list is (affects whether you need to paginate —
+   today's PropertyMe adapter assumes a single-page scan at GEA's scale, ~300 active).
