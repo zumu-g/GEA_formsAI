@@ -43,6 +43,7 @@ from ..errors import (
 )
 from ..models import (
     BundleMeta,
+    LeaseTerms,
     Premises,
     RentalProvider,
     Renter,
@@ -215,6 +216,25 @@ class PropertyMeProvider(PropertyDataProvider):
             rental_provider=provider,
             meta=meta,
             current_rent=current_rent,
+            rent_period=rent_period,
+            lease=self._lease_terms(tenancy, current_rent, rent_period),
+        )
+
+    def _lease_terms(
+        self, tenancy: dict[str, Any], current_rent: str, rent_period: str
+    ) -> LeaseTerms:
+        """Rent/period mirror the existing top-level fields (U2, R2).
+
+        term_type, end date, bond, payment day, and first-due-date have no
+        confirmed field name in the /v1/tenancies shape used elsewhere in
+        this adapter (only TenancyStart, RentAmount, RentPeriod are verified
+        live) — left blank rather than guessed (execution note, R4). Confirm
+        against a live tenancy record or the PropertyMe API reference before
+        mapping them.
+        """
+
+        return LeaseTerms(
+            rent_amount=current_rent,
             rent_period=rent_period,
         )
 

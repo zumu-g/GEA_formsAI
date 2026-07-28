@@ -3,45 +3,31 @@
 Sales authorities have no tenancy: the context is caller ``fields`` rendered
 verbatim, merged over agency/agent defaults from ``fixtures/gea_agency.json``
 (overridable via ``FORMS_AGENCY_FILE``). Caller values always win.
+
+Agency/agent loading itself lives in ``forms_fill.agency`` (U4, KTD2) so the
+rental agreement can read the same config with different field names; this
+module is a thin mapper onto sales forms' own output shape, unchanged from
+before that split.
 """
 
 from __future__ import annotations
 
-import json
-import os
-from pathlib import Path
-
-from .errors import ProviderConfigError
-
-DEFAULT_AGENCY_FILE = Path(__file__).resolve().parent.parent / "fixtures" / "gea_agency.json"
+from .agency import default_agent, load_agency_config, office_address
 
 
 def load_agency_defaults() -> dict[str, str]:
-    """Flat default fields derived from the agency config file."""
+    """Flat default fields derived from the agency config file (sales shape)."""
 
-    path = Path(os.environ.get("FORMS_AGENCY_FILE", str(DEFAULT_AGENCY_FILE)))
-    if not path.exists():
-        raise ProviderConfigError(
-            f"agency defaults file not found: {path} (set FORMS_AGENCY_FILE)"
-        )
-    data = json.loads(path.read_text())
-    agency = data.get("agency", {})
-    agent = data.get("agent", {})
-    address = ", ".join(
-        p
-        for p in (
-            agency.get("address_line"),
-            f"{agency.get('suburb', '')} {agency.get('state', '')} {agency.get('postcode', '')}".strip(),
-        )
-        if p
-    )
+    cfg = load_agency_config()
+    agency = cfg["agency"]
+    agent = default_agent(cfg["agents"])
     name = agency.get("name", "")
     if agency.get("office"):
         name = f"{name} ({agency['office']})"
     return {
         "agent_name": name,
         "agent_acn": agency.get("acn") or "",
-        "agency_address": address,
+        "agency_address": office_address(agency),
         "attention": agent.get("full_name", ""),
         "agent_mobile": agent.get("mobile", ""),
         "agent_email": agent.get("email", ""),

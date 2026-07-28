@@ -131,6 +131,37 @@ def grounds(
         raise HTTPException(status_code=400, detail=str(exc)) from None
 
 
+@app.get("/agency")
+def agency(authorization: str = Header(default="")) -> Any:
+    """Office details + the configured handling-agent list (U4, R5) — lets the
+    UI offer an agent picker instead of the office defaulting silently."""
+
+    _require_auth(authorization)
+    from .agency import load_agency_config, office_address
+    from .errors import ProviderConfigError
+
+    try:
+        cfg = load_agency_config()
+    except ProviderConfigError as exc:
+        return _err(500, "fetch_failed", f"agency config: {exc}")
+    agency_data = cfg["agency"]
+    return {
+        "office": {
+            "name": agency_data.get("name", ""),
+            "address": office_address(agency_data),
+            "postcode": agency_data.get("postcode", ""),
+        },
+        "agents": [
+            {
+                "full_name": a.get("full_name", ""),
+                "mobile": a.get("mobile", ""),
+                "email": a.get("email", ""),
+            }
+            for a in cfg["agents"]
+        ],
+    }
+
+
 @app.get("/tenancy/search")
 def tenancy_search(
     q: str = "", provider: str | None = None, authorization: str = Header(default="")

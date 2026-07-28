@@ -34,6 +34,7 @@ from ..errors import (
 )
 from ..models import (
     BundleMeta,
+    LeaseTerms,
     Premises,
     RentalProvider,
     Renter,
@@ -65,6 +66,23 @@ _PROVIDER_KEYS = (
     "email",
 )
 _META_KEYS = ("tenancy_id", "lot_id", "source", "as_at")  # note is optional
+
+# Lease terms (U1/U3, R3) — like current_rent/rent_period, this is an OPTIONAL
+# block, not (yet) part of the guaranteed contract: the CRM does not return it
+# until docs/integrations/crm-data-contract-prompt.md's lease section ships on
+# their side. Any field the CRM omits comes back "" via LeaseTerms' defaults.
+_LEASE_KEYS = (
+    "term_type",
+    "fixed_start_date",
+    "fixed_end_date",
+    "periodic_start_date",
+    "rent_amount",
+    "rent_period",
+    "rent_payment_day",
+    "first_rent_due_date",
+    "bond_amount",
+    "bond_due_date",
+)
 
 
 class GeaCrmProvider(PropertyDataProvider):
@@ -211,6 +229,9 @@ class GeaCrmProvider(PropertyDataProvider):
                 note,
             )
 
+        lease_in = raw.get("lease") or {}
+        lease = LeaseTerms(**{k: _s(lease_in.get(k)) for k in _LEASE_KEYS})
+
         return TenancyBundle(
             premises=premises,
             renters=renters,
@@ -220,6 +241,7 @@ class GeaCrmProvider(PropertyDataProvider):
             # Left blank rather than guessed if the CRM endpoint omits them.
             current_rent=_s(raw.get("current_rent")),
             rent_period=_s(raw.get("rent_period")),
+            lease=lease,
         )
 
 

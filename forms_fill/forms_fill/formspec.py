@@ -106,6 +106,21 @@ class FormSpec:
     title: str = ""
     group: str = ""
     caller_field_labels: dict[str, str] = field(default_factory=dict)
+    # Presentation metadata (U7, KTD7) — all optional, all additive. A form
+    # that declares none of these renders exactly as it did before this
+    # existed: every field a plain text input, no section grouping. Only the
+    # rental agreement specs opt in today; the other forms are unaffected.
+    #   kind: "date" | "select" | "checkbox" | "textarea" | "text" (default)
+    #   options: explicit allowed values for a "select" kind. A selector field
+    #     already tied to a CheckboxOp/OverlayTickOp/StrikeOp derives its
+    #     options from those ops and does not need an entry here; this is for
+    #     "select" fields with no such op (e.g. a mode flag).
+    #   section: groups the field under this label in section order of first
+    #     appearance in ``declared_fields``. A field with no entry renders in
+    #     an implicit "" (ungrouped) section.
+    caller_field_kinds: dict[str, str] = field(default_factory=dict)
+    caller_field_options: dict[str, tuple[str, ...]] = field(default_factory=dict)
+    caller_field_sections: dict[str, str] = field(default_factory=dict)
     # --- pdf_overlay engine (KTD7, U9) ---------------------------------------
     # ``engine`` selects the renderer: "docx" (text_ops/checkbox_ops above) or
     # "pdf_overlay" (stamp values onto a scanned-PDF template).

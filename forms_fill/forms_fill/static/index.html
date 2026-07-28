@@ -85,6 +85,44 @@
   .hint { color: var(--muted); font-size: 0.8rem; margin-top: 0.35rem; }
   #token-banner { display: none; margin-bottom: 1.5rem; }
   #token-banner.show { display: block; }
+
+  /* U7: field kinds + section grouping */
+  .field-section-title { font-weight: 600; font-size: 0.8rem; color: var(--muted); margin: 1.1rem 0 0.15rem; text-transform: uppercase; letter-spacing: 0.03em; }
+  .field-section-title:first-child { margin-top: 0; }
+  .checkbox-row { display: flex; align-items: center; gap: 0.5rem; margin: 0.75rem 0 0; }
+  .checkbox-row input[type="checkbox"] { width: auto; min-height: 0; }
+  .checkbox-row label { margin: 0; color: var(--ink); font-size: 0.9rem; }
+  .source-tag { display: inline-block; font-size: 0.72rem; color: var(--muted); margin-left: 0.4rem; font-weight: 500; }
+  .source-tag.typed { color: var(--gold); }
+  .field-input-row { display: flex; gap: 0.4rem; align-items: center; }
+  .field-input-row input, .field-input-row select, .field-input-row textarea { flex: 1; }
+  .fetch-btn {
+    flex: 0 0 auto; min-height: 44px; min-width: 44px; padding: 0 0.7rem;
+    background: transparent; border: 1px solid var(--rule); border-radius: 6px;
+    color: var(--muted); cursor: pointer; font-size: 0.95rem; font-weight: 600;
+  }
+  .fetch-btn:hover { border-color: var(--gold); color: var(--ink); }
+  .fetch-btn:disabled { opacity: 0.4; cursor: default; }
+
+  /* U8: review screen */
+  #review-screen { display: none; }
+  #review-screen.show { display: block; }
+  #fill-form.hide-for-review { display: none; }
+  .review-row { display: flex; gap: 0.75rem; align-items: flex-start; padding: 0.6rem 0; border-bottom: 1px solid var(--rule); }
+  .review-row:last-child { border-bottom: none; }
+  .review-row .review-label { flex: 0 0 45%; font-size: 0.85rem; color: var(--muted); }
+  .review-row .review-value-col { flex: 1; }
+  .review-row.blank .review-label { color: #b3564a; }
+  .review-row input { margin: 0; }
+  #review-confirm-row { display: flex; align-items: center; gap: 0.5rem; margin: 1.25rem 0; padding: 0.85rem 1rem; border: 1px solid var(--gold-soft); border-radius: 8px; }
+  #review-confirm-row input { width: auto; min-height: 0; }
+  #review-confirm-row label { margin: 0; font-weight: 500; }
+
+  /* U9: approval */
+  #approve-box { display: none; margin-top: 1rem; padding: 1rem 1.25rem; border-radius: 10px; border: 1px solid var(--rule); }
+  #approve-box.show { display: block; }
+  #approve-box label { margin-top: 0.6rem; }
+  #approve-box label:first-of-type { margin-top: 0; }
 </style>
 </head>
 <body>
@@ -152,10 +190,37 @@
       <div id="caller-fields-inputs"></div>
     </fieldset>
 
-    <button type="submit" id="submit-btn">Fill notice</button>
+    <button type="submit" id="submit-btn">Review before filling</button>
   </form>
 
+  <div id="review-screen">
+    <fieldset>
+      <legend>Review — check every value before generating</legend>
+      <p class="hint">Auto-filled values are tagged with where they came from. Edit anything that's wrong; blank fields are shown so you know what the printed form will leave empty.</p>
+      <div id="review-rows"></div>
+      <div id="review-confirm-row">
+        <input type="checkbox" id="review-confirm-check" />
+        <label for="review-confirm-check">I've checked every value above</label>
+      </div>
+      <div class="row">
+        <button type="button" id="review-back-btn" class="secondary">Back to edit</button>
+        <button type="button" id="review-confirm-btn" disabled>Confirm &amp; fill</button>
+      </div>
+    </fieldset>
+  </div>
+
   <div id="result" style="display:none"></div>
+
+  <div id="approve-box">
+    <strong>Sign off this draft</strong>
+    <p class="hint">Uses a separate approval credential from the one above — the session that generated the draft cannot approve its own output.</p>
+    <label for="approve-name">Approver name</label>
+    <input id="approve-name" placeholder="Your full name" />
+    <label for="approve-token">Approval credential</label>
+    <input id="approve-token" type="password" placeholder="Paste the approval credential" />
+    <button type="button" id="approve-btn" style="margin-top:0.85rem">Approve</button>
+    <div id="approve-result" class="hint" style="margin-top:0.6rem"></div>
+  </div>
 </div>
 
 <script>
@@ -212,34 +277,298 @@
   // matches each spec's build_context fallback (bundle.current_rent / rent_period).
   const RENT_PREFILL_FIELDS = { current_rent: true, rent_period: true };
   let lastPreviewBundle = null;
+  let lastPreviewProvider = '';
+
+  // U7/U8: where each caller field's current value came from. The DOM input
+  // itself is the single source of truth for the value (as before this
+  // change); this map exists only to (a) tag the value's origin for the
+  // review screen and (b) make seeding STICKY — once a field's source is
+  // 'typed', no seeder overwrites a value the PM entered themselves (R7/
+  // KTD4 mirrored client-side, same rule the server's build_context uses).
+  let fieldSource = {}; // name -> '' | 'typed' | display source label
+  let officeData = null; // { office, agents } from GET /agency
+
+  function inputEl(name) {
+    return callerFieldsBox.querySelector('[data-field="' + name + '"]');
+  }
+
+  function setFieldDom(name, value) {
+    const el = inputEl(name);
+    if (!el) return;
+    if (el.type === 'checkbox') el.checked = !!value && value !== 'false';
+    else el.value = value == null ? '' : value;
+    updateSourceTag(name);
+  }
+
+  function updateSourceTag(name) {
+    const tag = callerFieldsBox.querySelector('.source-tag[data-for="' + name + '"]');
+    if (!tag) return;
+    const source = fieldSource[name] || '';
+    tag.textContent = source ? (source === 'typed' ? 'edited' : 'from ' + source) : '';
+    tag.className = 'source-tag' + (source === 'typed' ? ' typed' : '');
+  }
+
+  // Seed a field's value UNLESS the PM already typed something into it — the
+  // sticky rule above. Passing value='' with a truthy source still counts as
+  // "seeded" (a real fetched blank); passing source='' clears the tag.
+  function seedField(name, value, source) {
+    if (fieldSource[name] === 'typed') return;
+    fieldSource[name] = value ? source : '';
+    setFieldDom(name, value || '');
+  }
+
+  function isRenewalChecked() {
+    const el = inputEl('is_renewal');
+    return !!el && el.checked;
+  }
+
+  // U6/U7: agent block + lease/rent/bond fields, mirroring the server's own
+  // KTD4 seeding rule (build_context) so the PM sees the same values BEFORE
+  // generating, not only in the resulting PDF (that visibility is the point
+  // of the review step, U8).
+  const LEASE_FIELDS_COMMON = [
+    'fixed_start_date', 'fixed_end_date', 'rent_amount', 'rent_period',
+    'rent_payment_day', 'first_rent_due_date', 'bond_amount', 'bond_due_date',
+  ];
+  const RENEWAL_EXCLUDED_DATE_FIELDS = { fixed_start_date: true, fixed_end_date: true, periodic_start_date: true };
+
+  function applyAgentAutofill() {
+    const spec = currentSpec();
+    if (!spec || !inputEl('agent_name') || !officeData) return;
+    const handlingEl = inputEl('handling_agent');
+    const requested = ((handlingEl && handlingEl.value) || '').trim();
+    const agents = officeData.agents || [];
+    const agent = agents.find((a) => a.full_name === requested) || agents[0] || {};
+    const office = officeData.office || {};
+    seedField('agent_name', agent.full_name || '', 'GEA office');
+    seedField('agent_address', office.address || '', 'GEA office');
+    seedField('agent_postcode', office.postcode || '', 'GEA office');
+    seedField('agent_phone', agent.mobile || '', 'GEA office');
+    seedField('agent_email', agent.email || '', 'GEA office');
+    // Echo the resolved choice (R5) — never blank once an agent exists.
+    if (fieldSource.handling_agent !== 'typed') {
+      const resolved = requested || agent.full_name || '';
+      fieldSource.handling_agent = resolved ? 'GEA office' : '';
+      setFieldDom('handling_agent', resolved);
+    }
+  }
+
+  function applyLeaseAutofill() {
+    const spec = currentSpec();
+    if (!spec || !lastPreviewBundle || !lastPreviewBundle.lease) return;
+    const declaredNames = (spec.caller_fields || []).map((f) => f.name);
+    // "bond_amount" only exists on the two agreement specs — use it to scope
+    // this to them, so e.g. the CAV rent-increase notice (which shares the
+    // "rent_period" field name) isn't touched by lease-block seeding meant
+    // for a different form; its own prefillRentFields() already handles it.
+    if (!declaredNames.includes('bond_amount')) return;
+    const lease = lastPreviewBundle.lease;
+    const renewal = isRenewalChecked();
+    let fields = LEASE_FIELDS_COMMON.slice();
+    if (declaredNames.includes('term_type')) fields.push('term_type');
+    if (declaredNames.includes('periodic_start_date')) fields.push('periodic_start_date');
+    fields.forEach((name) => {
+      if (!declaredNames.includes(name)) return;
+      if (renewal && RENEWAL_EXCLUDED_DATE_FIELDS[name]) {
+        seedField(name, '', ''); // renewal never carries the old term's dates (KTD5)
+        return;
+      }
+      const value = lease[name] || '';
+      seedField(name, value, renewal ? 'carried across (renewal)' : (lastPreviewProvider || 'tenancy'));
+    });
+  }
+
+  async function loadOfficeData() {
+    if (officeData) return officeData;
+    try {
+      const resp = await fetch(API + '/agency', { headers: authHeaders() });
+      if (!resp.ok) return null;
+      officeData = await resp.json();
+      populateHandlingAgentOptions();
+      return officeData;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // Per-field "fetch" button (⟳ next to each field, U7 follow-up): re-pull
+  // one field's value from its source on demand, overriding the sticky
+  // 'typed' rule for that field only — useful when the PM edited a value
+  // and wants to revert it, or the underlying data changed after preview.
+  // Returns null when the field has no known source (e.g. renter current
+  // address, R13) or the source data hasn't loaded yet.
+  const SALES_VENDOR_SOURCE_FIELDS = {
+    vendor_name: (b) => b.rental_provider.full_name,
+    vendor_address: (b) => joinParts([b.rental_provider.service_address, b.rental_provider.service_postcode]),
+    vendor_phone: (b) => b.rental_provider.phone_business_hours,
+    vendor_email: (b) => b.rental_provider.email,
+    property_address: (b) => joinParts([b.premises.address_line, b.premises.suburb, b.premises.state, b.premises.postcode]),
+  };
+
+  function computeSeed(name) {
+    if (['agent_name', 'agent_address', 'agent_postcode', 'agent_phone', 'agent_email'].includes(name)) {
+      if (!officeData) return null;
+      const handlingEl = inputEl('handling_agent');
+      const requested = ((handlingEl && handlingEl.value) || '').trim();
+      const agents = officeData.agents || [];
+      const agent = agents.find((a) => a.full_name === requested) || agents[0] || {};
+      const office = officeData.office || {};
+      const map = {
+        agent_name: agent.full_name, agent_address: office.address,
+        agent_postcode: office.postcode, agent_phone: agent.mobile, agent_email: agent.email,
+      };
+      return { value: map[name] || '', source: 'GEA office' };
+    }
+    if (name === 'handling_agent') {
+      if (!officeData) return null;
+      const agent = (officeData.agents || [])[0] || {};
+      return { value: agent.full_name || '', source: 'GEA office' };
+    }
+    if (LEASE_FIELDS_COMMON.concat(['term_type', 'periodic_start_date']).includes(name)) {
+      if (!lastPreviewBundle || !lastPreviewBundle.lease) return null;
+      const renewal = isRenewalChecked();
+      if (renewal && RENEWAL_EXCLUDED_DATE_FIELDS[name]) return { value: '', source: '' };
+      return { value: lastPreviewBundle.lease[name] || '', source: renewal ? 'carried across (renewal)' : (lastPreviewProvider || 'tenancy') };
+    }
+    if (name === 'current_rent' || name === 'rent_period') {
+      if (!lastPreviewBundle) return null;
+      return { value: lastPreviewBundle[name] || '', source: lastPreviewProvider || 'tenancy' };
+    }
+    if (SALES_VENDOR_SOURCE_FIELDS[name]) {
+      if (!lastPreviewBundle) return null;
+      return { value: SALES_VENDOR_SOURCE_FIELDS[name](lastPreviewBundle) || '', source: lastPreviewProvider || 'tenancy' };
+    }
+    return null; // no known source (e.g. renter current address, R13) — no button rendered
+  }
+
+  function forceFetchField(name) {
+    const seed = computeSeed(name);
+    if (!seed) return;
+    fieldSource[name] = seed.value ? seed.source : '';
+    setFieldDom(name, seed.value);
+  }
+
+  // Static name set mirroring computeSeed's coverage — decides which fields
+  // get a fetch button rendered at all (whether the current data is loaded
+  // yet is a separate, runtime question computeSeed itself answers).
+  const FETCHABLE_FIELD_NAMES = new Set([
+    'agent_name', 'agent_address', 'agent_postcode', 'agent_phone', 'agent_email', 'handling_agent',
+    ...LEASE_FIELDS_COMMON, 'term_type', 'periodic_start_date',
+    'current_rent', 'rent_period',
+    ...Object.keys(SALES_VENDOR_SOURCE_FIELDS),
+  ]);
+
+  function populateHandlingAgentOptions() {
+    const el = inputEl('handling_agent');
+    if (!el || el.tagName !== 'SELECT' || !officeData) return;
+    const current = el.value;
+    el.innerHTML = '';
+    (officeData.agents || []).forEach((a) => {
+      const opt = document.createElement('option');
+      opt.value = a.full_name;
+      opt.textContent = a.full_name;
+      el.appendChild(opt);
+    });
+    if (current) el.value = current;
+  }
 
   function renderCallerFields(spec) {
     callerFieldsBox.innerHTML = '';
+    fieldSource = {};
+    let lastSection = null;
     (spec.caller_fields || []).forEach((f) => {
+      const section = f.section || '';
+      if (section !== lastSection) {
+        const h = document.createElement('div');
+        h.className = 'field-section-title';
+        h.textContent = section || 'Details';
+        callerFieldsBox.appendChild(h);
+        lastSection = section;
+      }
+      const kind = f.kind || 'text';
+      fieldSource[f.name] = '';
+
+      if (kind === 'checkbox') {
+        const row = document.createElement('div');
+        row.className = 'checkbox-row';
+        const input = document.createElement('input');
+        input.type = 'checkbox';
+        input.id = 'cf-' + f.name;
+        input.dataset.field = f.name;
+        const label = document.createElement('label');
+        label.textContent = f.label;
+        label.setAttribute('for', 'cf-' + f.name);
+        row.appendChild(input);
+        row.appendChild(label);
+        callerFieldsBox.appendChild(row);
+        return;
+      }
+
       const label = document.createElement('label');
       label.textContent = f.label;
       label.setAttribute('for', 'cf-' + f.name);
-      const long = f.name.includes('details') || f.name.includes('reason') || f.name.includes('damage') || f.name.includes('action');
-      const input = document.createElement(long ? 'textarea' : 'input');
+      const tag = document.createElement('span');
+      tag.className = 'source-tag';
+      tag.dataset.for = f.name;
+      label.appendChild(tag);
+
+      let input;
+      if (kind === 'select') {
+        input = document.createElement('select');
+        (f.options || []).forEach((v) => {
+          const opt = document.createElement('option');
+          opt.value = v;
+          opt.textContent = v;
+          input.appendChild(opt);
+        });
+      } else {
+        const long = f.name.includes('details') || f.name.includes('reason') || f.name.includes('damage') || f.name.includes('action');
+        input = document.createElement(long ? 'textarea' : 'input');
+        if (kind === 'date') input.type = 'date';
+      }
       input.id = 'cf-' + f.name;
       input.dataset.field = f.name;
       callerFieldsBox.appendChild(label);
-      callerFieldsBox.appendChild(input);
+
+      const inputRow = document.createElement('div');
+      inputRow.className = 'field-input-row';
+      inputRow.appendChild(input);
+      // Only fields with a known source get a fetch button (computeSeed
+      // returns null otherwise, e.g. renter current address has none, R13).
+      if (FETCHABLE_FIELD_NAMES.has(f.name)) {
+        const fetchBtn = document.createElement('button');
+        fetchBtn.type = 'button';
+        fetchBtn.className = 'fetch-btn';
+        fetchBtn.title = 'Pull the latest value from its source';
+        fetchBtn.textContent = '⟳';
+        fetchBtn.addEventListener('click', () => forceFetchField(f.name));
+        inputRow.appendChild(fetchBtn);
+      }
+      callerFieldsBox.appendChild(inputRow);
     });
+
+    // Any manual edit is sticky (KTD4) and marks the field 'typed'.
+    callerFieldsBox.querySelectorAll('[data-field]').forEach((el) => {
+      const name = el.dataset.field;
+      el.addEventListener(el.tagName === 'SELECT' || el.type === 'checkbox' ? 'change' : 'input', () => {
+        fieldSource[name] = el.type === 'checkbox' && !el.checked ? '' : 'typed';
+        updateSourceTag(name);
+        if (name === 'is_renewal') applyLeaseAutofill();
+        if (name === 'handling_agent') applyAgentAutofill();
+      });
+    });
+
+    if ((spec.caller_fields || []).some((f) => f.name === 'handling_agent')) {
+      loadOfficeData().then(() => applyAgentAutofill());
+    }
     prefillRentFields();
     prefillSalesFields();
   }
 
   function prefillRentFields() {
     if (!lastPreviewBundle) return;
-    const currentRentInput = callerFieldsBox.querySelector('[data-field="current_rent"]');
-    if (currentRentInput && !currentRentInput.value && lastPreviewBundle.current_rent) {
-      currentRentInput.value = lastPreviewBundle.current_rent;
-    }
-    const rentPeriodInput = callerFieldsBox.querySelector('[data-field="rent_period"]');
-    if (rentPeriodInput && !rentPeriodInput.value && lastPreviewBundle.rent_period) {
-      rentPeriodInput.value = lastPreviewBundle.rent_period;
-    }
+    if (inputEl('current_rent')) seedField('current_rent', lastPreviewBundle.current_rent, lastPreviewProvider || 'tenancy');
+    if (inputEl('rent_period')) seedField('rent_period', lastPreviewBundle.rent_period, lastPreviewProvider || 'tenancy');
   }
 
   function joinParts(parts) {
@@ -257,9 +586,9 @@
     if (!spec || spec.requires_identifiers !== false) return;
     const owner = lastPreviewBundle.rental_provider || {};
     const premises = lastPreviewBundle.premises || {};
+    const source = lastPreviewProvider || 'tenancy';
     const fill = (name, value) => {
-      const input = callerFieldsBox.querySelector('[data-field="' + name + '"]');
-      if (input && !input.value && value) input.value = value;
+      if (inputEl(name)) seedField(name, value, source);
     };
     fill('vendor_name', owner.full_name);
     fill('vendor_address', joinParts([owner.service_address, owner.service_postcode]));
@@ -363,7 +692,9 @@
   }
   manualToggle.addEventListener('click', () => showManual(!manualBox.classList.contains('show')));
 
-  function renderPreview(bundle) {
+  const PROVIDER_LABELS = { propertyme: 'PropertyMe', gea_crm: 'GEA CRM', fixture: 'Fixture' };
+
+  function renderPreview(bundle, provider) {
     const sales = !!currentSpec() && currentSpec().requires_identifiers === false;
     const renters = (bundle.renters || []).map((r) => r.full_name).filter(Boolean);
     const note = bundle.meta && bundle.meta.note;
@@ -381,9 +712,12 @@
     previewBox.innerHTML = html;
     previewBox.classList.add('show');
     lastPreviewBundle = bundle;
+    lastPreviewProvider = PROVIDER_LABELS[provider] || provider || 'tenancy';
     cmaBtn.disabled = !bundle.premises.address_line;
     prefillRentFields();
     prefillSalesFields();
+    applyAgentAutofill(); // office data may already be loaded from a prior render
+    applyLeaseAutofill(); // U5/U6 — lease/rent/bond fields for the agreement forms
   }
 
   async function fetchPreview() {
@@ -408,7 +742,7 @@
         return;
       }
       resultBox.style.display = 'none';
-      renderPreview(body.bundle);
+      renderPreview(body.bundle, body.provider);
     } catch (err) {
       showResult('Preview failed: ' + esc(err), false);
     }
@@ -483,7 +817,98 @@
     loadForms();
   });
 
-  form.addEventListener('submit', async (e) => {
+  // ── U8: review screen ────────────────────────────────────────────────────
+  const reviewScreen = document.getElementById('review-screen');
+  const reviewRows = document.getElementById('review-rows');
+  const reviewConfirmCheck = document.getElementById('review-confirm-check');
+  const reviewConfirmBtn = document.getElementById('review-confirm-btn');
+  const reviewBackBtn = document.getElementById('review-back-btn');
+
+  function buildFetchedSummaryRow() {
+    if (!lastPreviewBundle) return null;
+    const b = lastPreviewBundle;
+    const renters = (b.renters || []).map((r) => r.full_name).filter(Boolean).join(', ');
+    const row = document.createElement('div');
+    row.className = 'review-row';
+    const label = document.createElement('div');
+    label.className = 'review-label';
+    label.textContent = 'Fetched from ' + (lastPreviewProvider || 'tenancy');
+    const val = document.createElement('div');
+    val.className = 'review-value-col';
+    val.textContent = joinParts([
+      b.premises.address_line, b.premises.postcode,
+      renters ? '· Renters: ' + renters : '',
+      '· Rental provider: ' + (b.rental_provider.full_name || '—'),
+    ]);
+    row.appendChild(label);
+    row.appendChild(val);
+    return row;
+  }
+
+  // Every field the fill will use, with where it came from (R11). Caller
+  // fields stay editable here — the mirror input writes straight back into
+  // the ORIGINAL field element, so there is one submitted value, not two.
+  function buildReviewScreen() {
+    const spec = currentSpec();
+    reviewRows.innerHTML = '';
+    const summary = buildFetchedSummaryRow();
+    if (summary) reviewRows.appendChild(summary);
+    (spec.caller_fields || []).forEach((f) => {
+      const orig = inputEl(f.name);
+      if (!orig) return;
+      const isCheckbox = orig.type === 'checkbox';
+      const value = isCheckbox ? (orig.checked ? 'Yes' : 'No') : orig.value;
+      const isBlank = !isCheckbox && !value;
+      const row = document.createElement('div');
+      row.className = 'review-row' + (isBlank ? ' blank' : '');
+      const label = document.createElement('div');
+      label.className = 'review-label';
+      label.textContent = f.label + (isBlank ? ' — blank' : '');
+      const valCol = document.createElement('div');
+      valCol.className = 'review-value-col';
+      if (isCheckbox) {
+        valCol.textContent = value;
+      } else {
+        const mirror = document.createElement('input');
+        mirror.value = value;
+        mirror.addEventListener('input', () => {
+          orig.value = mirror.value;
+          fieldSource[f.name] = 'typed';
+        });
+        valCol.appendChild(mirror);
+      }
+      const source = fieldSource[f.name] || '';
+      if (source) {
+        const tag = document.createElement('span');
+        tag.className = 'source-tag' + (source === 'typed' ? ' typed' : '');
+        tag.textContent = source === 'typed' ? 'edited' : 'from ' + source;
+        valCol.appendChild(tag);
+      }
+      row.appendChild(label);
+      row.appendChild(valCol);
+      reviewRows.appendChild(row);
+    });
+  }
+
+  function showReviewScreen() {
+    buildReviewScreen();
+    form.classList.add('hide-for-review');
+    reviewScreen.classList.add('show');
+    reviewConfirmCheck.checked = false;
+    reviewConfirmBtn.disabled = true;
+  }
+
+  function hideReviewScreen() {
+    reviewScreen.classList.remove('show');
+    form.classList.remove('hide-for-review');
+  }
+
+  reviewBackBtn.addEventListener('click', hideReviewScreen);
+  reviewConfirmCheck.addEventListener('change', () => {
+    reviewConfirmBtn.disabled = !reviewConfirmCheck.checked; // R11: submission blocked until confirmed
+  });
+
+  form.addEventListener('submit', (e) => {
     e.preventDefault();
     const spec = currentSpec();
     const requiresIdentifiers = !spec || spec.requires_identifiers !== false;
@@ -491,12 +916,63 @@
       showResult('Select a property first — search by address above, or enter a Lot/Tenancy ID manually.', false);
       return;
     }
-    submitBtn.disabled = true;
     resultBox.style.display = 'none';
+    showReviewScreen();
+  });
+
+  // ── U9: approval ─────────────────────────────────────────────────────────
+  const approveBox = document.getElementById('approve-box');
+  const approveResult = document.getElementById('approve-result');
+  let lastFill = null; // { request_id, kind } — set after a successful /fill
+
+  document.getElementById('approve-btn').addEventListener('click', async () => {
+    if (!lastFill) return;
+    const approver = document.getElementById('approve-name').value.trim();
+    // Deliberately a SEPARATE credential from the generation bearer token
+    // (KTD6) — never read via getToken()/authHeaders() here.
+    const approveToken = document.getElementById('approve-token').value.trim();
+    if (!approver || !approveToken) {
+      approveResult.textContent = 'Enter your name and the approval credential first.';
+      return;
+    }
+    try {
+      const resp = await fetch(
+        API + '/approve/' + lastFill.request_id + '/' + lastFill.kind,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + approveToken },
+          body: JSON.stringify({ approver: approver, ground: null }),
+        }
+      );
+      const body = await resp.json();
+      if (resp.status === 503) {
+        approveResult.textContent = 'Approval is not configured on this server.';
+        return;
+      }
+      if (!resp.ok) {
+        approveResult.textContent = 'Approval failed: ' + (body.message || body.error || resp.status);
+        return;
+      }
+      approveResult.textContent = 'Approved by ' + esc(body.approver) + ' at ' + esc(body.approved_at) + '.';
+    } catch (err) {
+      approveResult.textContent = 'Approval request failed: ' + esc(err);
+    }
+  });
+
+  // The actual /fill call, run only after the review-screen confirmation gate.
+  reviewConfirmBtn.addEventListener('click', async () => {
+    reviewConfirmBtn.disabled = true;
+    resultBox.style.display = 'none';
+    approveBox.classList.remove('show');
+    lastFill = null;
     try {
       const fields = {};
       callerFieldsBox.querySelectorAll('[data-field]').forEach((el) => {
-        if (el.value) fields[el.dataset.field] = el.value;
+        if (el.type === 'checkbox') {
+          if (el.checked) fields[el.dataset.field] = 'true';
+        } else if (el.value) {
+          fields[el.dataset.field] = el.value;
+        }
       });
       const payload = {
         form: formSelect.value,
@@ -527,10 +1003,18 @@
         html += '<div class="warn">' + body.warnings.map(esc).join('<br>') + '</div>';
       }
       showResult(html, true);
+      hideReviewScreen();
+      if (body.request_id && (body.files.pdf || body.files.docx)) {
+        lastFill = { request_id: body.request_id, kind: body.files.pdf ? 'pdf' : 'docx' };
+        approveResult.textContent = '';
+        document.getElementById('approve-name').value = '';
+        document.getElementById('approve-token').value = '';
+        approveBox.classList.add('show');
+      }
     } catch (err) {
       showResult('Request failed: ' + esc(err), false);
     } finally {
-      submitBtn.disabled = false;
+      reviewConfirmBtn.disabled = false;
     }
   });
 

@@ -55,6 +55,27 @@ class RentalProvider(_Strict):
     email: str = ""
 
 
+class LeaseTerms(_Strict):
+    """Lease facts a rental agreement needs beyond premises/renters/owner (U1).
+
+    All string-typed like every other money/date field the caller can also
+    supply verbatim — the spec's caller value always wins (KTD4). A provider
+    that omits this block entirely still validates (every field defaults to
+    "" via the parent's default_factory), so adding this is additive-only.
+    """
+
+    term_type: str = ""  # "fixed" or "periodic"
+    fixed_start_date: str = ""
+    fixed_end_date: str = ""
+    periodic_start_date: str = ""
+    rent_amount: str = ""
+    rent_period: str = ""
+    rent_payment_day: str = ""
+    first_rent_due_date: str = ""
+    bond_amount: str = ""
+    bond_due_date: str = ""
+
+
 class BundleMeta(_Strict):
     tenancy_id: str = ""
     lot_id: str = ""
@@ -69,6 +90,7 @@ class TenancyBundle(_Strict):
     premises: Premises = Field(default_factory=Premises)
     renters: list[Renter] = Field(default_factory=list)
     rental_provider: RentalProvider = Field(default_factory=RentalProvider)
+    lease: LeaseTerms = Field(default_factory=LeaseTerms)
     meta: BundleMeta = Field(default_factory=BundleMeta)
     # Current rent on file, when the provider has it. String-typed like every
     # other money field the caller can also supply verbatim — the spec's

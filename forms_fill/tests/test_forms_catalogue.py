@@ -53,3 +53,41 @@ def test_forms_carry_display_category_and_short_title(client):
 def test_form_catalogue_helper_matches_endpoint():
     catalogue = form_catalogue()
     assert {c["key"] for c in catalogue} >= {"cav_rent_increase_notice", "notice_to_vacate"}
+
+
+# ── U7: field kind/section metadata ─────────────────────────────────────────
+
+
+def test_declaring_form_publishes_kind_and_section(client):
+    forms = client.get("/forms", headers=AUTH).json()["forms"]
+    agreement = next(f for f in forms if f["key"] == "residential_rental_agreement")
+    by_name = {f["name"]: f for f in agreement["caller_fields"]}
+    assert by_name["agreement_date"]["kind"] == "date"
+    assert by_name["agreement_date"]["section"] == "1. Date of agreement"
+    assert by_name["is_renewal"]["kind"] == "checkbox"
+
+
+def test_non_declaring_form_falls_back_to_current_behaviour(client):
+    forms = client.get("/forms", headers=AUTH).json()["forms"]
+    ntv = next(f for f in forms if f["key"] == "notice_to_vacate")
+    for f in ntv["caller_fields"]:
+        assert f["kind"] == "text"
+        assert f["section"] == ""
+
+
+def test_selector_field_with_checkbox_ops_still_publishes_its_options():
+    catalogue = form_catalogue()
+    agreement = next(c for c in catalogue if c["key"] == "residential_rental_agreement")
+    by_name = {f["name"]: f for f in agreement["caller_fields"]}
+    assert by_name["term_type"]["kind"] == "select"
+    assert sorted(by_name["term_type"]["options"]) == ["fixed", "periodic"]
+    assert sorted(by_name["rent_period"]["options"]) == ["calendar month", "fortnight", "week"]
+
+
+def test_agreement_fields_group_under_form_sections_in_order():
+    catalogue = form_catalogue()
+    agreement = next(c for c in catalogue if c["key"] == "residential_rental_agreement")
+    sections = [f["section"] for f in agreement["caller_fields"]]
+    assert "3. Rental provider & agent" in sections
+    assert "6. Rent" in sections
+    assert "10. Urgent repairs contact" in sections

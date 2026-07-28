@@ -34,14 +34,28 @@ from pathlib import Path
 
 from ...formspec import CheckboxOp, FormSpec, TextOp
 from ...models import TenancyBundle
+from .._rental_agreement_shared import (
+    LEASE_FIELDS_COMMON,
+    apply_agent_autofill,
+    apply_lease_autofill,
+    lease_fields_for_mode,
+)
 
 TEMPLATE = Path(__file__).with_name("template.docx")
 
+# Term type + periodic start are Form 1-only lease fields (Form 2 is
+# fixed-term-only — see residential_rental_agreement_5yr's module docstring).
+LEASE_FIELDS = LEASE_FIELDS_COMMON + ("term_type", "periodic_start_date")
+
 # Caller-supplied, rendered verbatim — not part of the TenancyBundle contract.
+# "handling_agent" and "is_renewal" are selectors only (U5/U6) — see
+# _rental_agreement_shared; both are excluded from text_ops/printed output.
 CALLER_FIELDS = (
     "agreement_date",
     "provider_company_name",
     "provider_acn",
+    "handling_agent",
+    "is_renewal",
     "agent_name",
     "agent_address",
     "agent_postcode",
@@ -207,7 +221,12 @@ def build_context(bundle: TenancyBundle, fields: dict) -> dict[str, str]:
     for name in CALLER_FIELDS:
         ctx[name] = _s(fields.get(name))
 
-    ctx["rent_period"] = normalise_period(fields.get("rent_period", ""))
+    apply_agent_autofill(ctx, fields)
+    apply_lease_autofill(
+        ctx, fields, bundle, lease_fields=lease_fields_for_mode(LEASE_FIELDS, fields)
+    )
+
+    ctx["rent_period"] = normalise_period(ctx.get("rent_period", ""))
 
     return ctx
 
@@ -219,13 +238,17 @@ SPEC = FormSpec(
     text_ops=TEXT_OPS,
     checkbox_ops=CHECKBOX_OPS,
     build_context=build_context,
-    selector_fields=("term_type", "rent_period"),
+    selector_fields=("term_type", "rent_period", "is_renewal"),
     title="Residential rental agreement (Form 1)",
     group="residential_rental_agreement",
     caller_field_labels={
+        # is_renewal first (U6/U7) — the PM's first decision, shown before
+        # any other section, since it changes what several later fields mean.
+        "is_renewal": "This is a lease renewal (carry across the current lease's rent, bond and term type)",
         "agreement_date": "Date of agreement",
         "provider_company_name": "Rental provider company name (if applicable)",
         "provider_acn": "Rental provider ACN (if applicable)",
+        "handling_agent": "Handling agent (choose from GEA Berwick)",
         "agent_name": "Agent full name",
         "agent_address": "Agent address",
         "agent_postcode": "Agent postcode",
@@ -253,5 +276,52 @@ SPEC = FormSpec(
         "emergency_contact_name": "Urgent-repairs emergency contact name",
         "emergency_phone": "Urgent-repairs emergency phone",
         "emergency_email": "Urgent-repairs emergency email",
+    },
+    # U7: field kind/section metadata — matches the printed form's own
+    # numbering (module docstring), so the review UI groups fields the way a
+    # PM already reads the paper form.
+    caller_field_kinds={
+        "is_renewal": "checkbox",
+        "handling_agent": "select",  # options come live from /agency, not here
+        "agreement_date": "date",
+        "fixed_start_date": "date",
+        "fixed_end_date": "date",
+        "periodic_start_date": "date",
+        "first_rent_due_date": "date",
+        "bond_due_date": "date",
+    },
+    caller_field_sections={
+        "is_renewal": "Renewal",
+        "agreement_date": "1. Date of agreement",
+        "provider_company_name": "3. Rental provider & agent",
+        "provider_acn": "3. Rental provider & agent",
+        "handling_agent": "3. Rental provider & agent",
+        "agent_name": "3. Rental provider & agent",
+        "agent_address": "3. Rental provider & agent",
+        "agent_postcode": "3. Rental provider & agent",
+        "agent_phone": "3. Rental provider & agent",
+        "agent_acn": "3. Rental provider & agent",
+        "agent_email": "3. Rental provider & agent",
+        "renter1_current_address": "4. Renters — current address",
+        "renter1_current_postcode": "4. Renters — current address",
+        "renter2_current_address": "4. Renters — current address",
+        "renter2_current_postcode": "4. Renters — current address",
+        "renter3_current_address": "4. Renters — current address",
+        "renter3_current_postcode": "4. Renters — current address",
+        "renter4_current_address": "4. Renters — current address",
+        "renter4_current_postcode": "4. Renters — current address",
+        "term_type": "5. Length of agreement",
+        "fixed_start_date": "5. Length of agreement",
+        "fixed_end_date": "5. Length of agreement",
+        "periodic_start_date": "5. Length of agreement",
+        "rent_amount": "6. Rent",
+        "rent_period": "6. Rent",
+        "rent_payment_day": "6. Rent",
+        "first_rent_due_date": "6. Rent",
+        "bond_amount": "7. Bond",
+        "bond_due_date": "7. Bond",
+        "emergency_contact_name": "10. Urgent repairs contact",
+        "emergency_phone": "10. Urgent repairs contact",
+        "emergency_email": "10. Urgent repairs contact",
     },
 )

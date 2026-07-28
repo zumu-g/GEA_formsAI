@@ -100,6 +100,39 @@ def test_optional_note_key_absent_is_fine():
     assert bundle.meta.note is None
 
 
+# ── lease block (U1/U3, R3/R4) ──────────────────────────────────────────────
+
+
+def test_lease_block_maps_when_present():
+    bundle = GeaCrmProvider._to_bundle(copy.deepcopy(SAMPLE))
+    assert bundle.lease.term_type == "fixed"
+    assert bundle.lease.fixed_start_date == "2026-01-15"
+    assert bundle.lease.rent_amount == "550"
+    assert bundle.lease.bond_amount == "2200"
+
+
+def test_lease_null_value_becomes_blank():
+    bundle = GeaCrmProvider._to_bundle(copy.deepcopy(SAMPLE))
+    assert bundle.lease.periodic_start_date == ""
+
+
+def test_lease_block_absent_is_not_a_contract_failure():
+    data = copy.deepcopy(SAMPLE)
+    del data["lease"]
+    bundle = GeaCrmProvider._to_bundle(data)  # must not raise
+    assert bundle.lease.term_type == ""
+    assert bundle.lease.rent_amount == ""
+    assert bundle.lease.bond_due_date == ""
+
+
+def test_lease_partial_block_leaves_rest_blank():
+    data = copy.deepcopy(SAMPLE)
+    data["lease"] = {"rent_amount": "600"}
+    bundle = GeaCrmProvider._to_bundle(data)
+    assert bundle.lease.rent_amount == "600"
+    assert bundle.lease.bond_amount == ""
+
+
 # ── config / selection ─────────────────────────────────────────────────────────
 
 

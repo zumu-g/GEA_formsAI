@@ -90,6 +90,11 @@ fine, but missing keys break the contract.
     "source": "gea_crm",                          // or "propertyme"
     "as_at": "2026-06-17T00:00:00Z"               // when the data was read
   }
+
+  // "lease" is OPTIONAL — see "Lease terms" section below. Omit the whole
+  // key entirely until you're ready to populate it; the tool treats a
+  // missing "lease" exactly like a missing "current_rent" today (blank
+  // fields, not an error).
 }
 ```
 
@@ -178,6 +183,53 @@ Return a JSON array (not wrapped in an object), one entry per matching property:
 
 ---
 
+## Lease terms (additive, optional — needed for the rental agreement form)
+
+We're now also filling the CAV "Residential rental agreement" (Form 1 / Form 2),
+which needs the lease's own terms, not just who's on it. This is an **optional**
+`lease` block on `tenancy-bundle`'s response, alongside the existing optional
+`current_rent`/`rent_period` fields you may already return. Omit the whole
+`lease` key until you're ready — the tool treats an absent block exactly like
+an absent `current_rent` today: the corresponding form fields come back blank,
+never an error. This is a **relaxation** of requirement 2 above ("never drop
+keys") scoped to this one block only — every other key in the contract must
+still always be present.
+
+```jsonc
+{
+  // ...premises / renters / rental_provider / meta as above...
+
+  "lease": {
+    "term_type": "fixed",              // "fixed" or "periodic"; "" if unknown
+    "fixed_start_date": "2026-01-15",  // "" if not a fixed term
+    "fixed_end_date": "2027-01-14",    // "" if not a fixed term
+    "periodic_start_date": null,       // "" / null if not periodic
+    "rent_amount": "550",              // plain string, no currency symbol
+    "rent_period": "week",             // "week" | "fortnight" | "calendar month"
+    "rent_payment_day": "Friday",
+    "first_rent_due_date": "2026-01-15",
+    "bond_amount": "2200",
+    "bond_due_date": "2026-01-08"
+  }
+}
+```
+
+Every key in `lease` follows the same blank convention as the rest of the
+contract: `null` or `""` for unknown, never omitted **once you include the
+`lease` key at all**. If a field genuinely has no source in your schema yet,
+return it blank rather than leaving it out — a dropped key inside a present
+`lease` block is a contract violation the same way a dropped key in `premises`
+would be; only the *whole block* is allowed to be absent.
+
+Field mapping guess (confirm against your schema): `term_type`/`fixed_start_date`/
+`fixed_end_date`/`periodic_start_date` from `Lease.termType`/`startDate`/`endDate`;
+`rent_amount`/`rent_period` from wherever you already source the top-level
+`current_rent`/`rent_period`; `rent_payment_day`/`first_rent_due_date` from the
+lease's payment schedule if you track one; `bond_amount`/`bond_due_date` from
+`Lease.bond` or your bond-lodgement record.
+
+---
+
 ## Please confirm back
 
 1. The exact **endpoint path + auth header** you'll expose (for both `tenancy-bundle`
@@ -188,3 +240,5 @@ Return a JSON array (not wrapped in an object), one entry per matching property:
 5. Whether `tenancy-search` is feasible against your current schema/indexes, and
    roughly how large the property list is (affects whether you need to paginate —
    today's PropertyMe adapter assumes a single-page scan at GEA's scale, ~300 active).
+6. Whether/when you can add the optional `lease` block, and which of its fields
+   your schema already tracks vs. would need new columns for.

@@ -8,12 +8,14 @@
     "postcode": "3806",
     "acn": null
   },
-  "agent": {
-    "full_name": "Stuart Grant",
-    "role": "Director, Berwick and Pakenham",
-    "mobile": "0438 554 522",
-    "email": "stuart@grantsea.com.au"
-  },
+  "agents": [
+    {
+      "full_name": "Stuart Grant",
+      "role": "Director, Berwick and Pakenham",
+      "mobile": "0438 554 522",
+      "email": "stuart@grantsea.com.au"
+    }
+  ],
   "meta": {
     "source": "user",
     "as_at": "2026-07-11",

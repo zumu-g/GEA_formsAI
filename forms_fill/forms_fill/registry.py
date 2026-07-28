@@ -115,7 +115,13 @@ def form_catalogue() -> list[dict]:
             "engine": spec.engine,
             "requires_identifiers": spec.requires_bundle,
             "caller_fields": [
-                {"name": name, "label": label}
+                {
+                    "name": name,
+                    "label": label,
+                    "kind": _caller_field_kind(spec, name),
+                    "options": _caller_field_options(spec, name),
+                    "section": spec.caller_field_sections.get(name) or "",
+                }
                 for name, label in spec.caller_field_labels.items()
             ],
             "fields": [
@@ -130,6 +136,25 @@ def form_catalogue() -> list[dict]:
         }
         for key, spec in sorted(FORM_REGISTRY.items())
     ]
+
+
+def _caller_field_kind(spec: FormSpec, name: str) -> str:
+    """A caller field's UI input kind (U7, KTD7) — additive, defaults to the
+    behaviour every form had before this metadata existed ("text")."""
+
+    explicit = spec.caller_field_kinds.get(name)
+    if explicit:
+        return explicit
+    if name in spec.selector_fields:
+        return "select"
+    return "text"
+
+
+def _caller_field_options(spec: FormSpec, name: str) -> list[str] | None:
+    explicit = spec.caller_field_options.get(name)
+    if explicit:
+        return list(explicit)
+    return _selector_options(spec, name)
 
 
 def _selector_options(spec: FormSpec, name: str) -> list[str] | None:

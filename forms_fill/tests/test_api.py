@@ -63,6 +63,16 @@ def test_fill_requires_bearer_token(client, caller_fields):
     assert wrong.status_code == 401
 
 
+def test_agency_requires_bearer_token(client):
+    assert client.get("/agency").status_code == 401
+
+
+def test_agency_returns_office_and_agents(client):
+    body = client.get("/agency", headers=AUTH).json()
+    assert "Grants Estate Agents" in body["office"]["name"]
+    assert body["agents"][0]["full_name"] == "Stuart Grant"
+
+
 def test_files_require_bearer_token(client, caller_fields):
     body = _fill(client, caller_fields).json()
     url = body["files"]["docx"]

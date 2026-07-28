@@ -37,5 +37,17 @@
     "source": "gea_crm",
     "as_at": "2026-06-17T02:30:00Z",
     "note": null
+  },
+  "lease": {
+    "term_type": "fixed",
+    "fixed_start_date": "2026-01-15",
+    "fixed_end_date": "2027-01-14",
+    "periodic_start_date": null,
+    "rent_amount": "550",
+    "rent_period": "week",
+    "rent_payment_day": "Friday",
+    "first_rent_due_date": "2026-01-15",
+    "bond_amount": "2200",
+    "bond_due_date": "2026-01-08"
   }
 }

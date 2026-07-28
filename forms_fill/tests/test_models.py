@@ -2,7 +2,48 @@ import json
 
 import pytest
 
-from forms_fill.models import build_request
+from forms_fill.models import TenancyBundle, build_request
+
+
+# ── LeaseTerms (U1) ──────────────────────────────────────────────────────────
+
+
+def test_bundle_without_lease_block_validates_with_blank_fields(sample_bundle_dict):
+    d = dict(sample_bundle_dict)
+    d.pop("lease", None)
+    bundle = TenancyBundle.model_validate(d)
+    assert bundle.lease.term_type == ""
+    assert bundle.lease.rent_amount == ""
+    assert bundle.lease.bond_due_date == ""
+
+
+def test_bundle_with_full_lease_block_round_trips():
+    lease = {
+        "term_type": "fixed",
+        "fixed_start_date": "2026-08-01",
+        "fixed_end_date": "2027-08-01",
+        "periodic_start_date": "",
+        "rent_amount": "615",
+        "rent_period": "week",
+        "rent_payment_day": "Thursday",
+        "first_rent_due_date": "2026-08-01",
+        "bond_amount": "2460",
+        "bond_due_date": "2026-08-01",
+    }
+    bundle = TenancyBundle.model_validate({"lease": lease})
+    assert bundle.lease.model_dump() == lease
+
+
+def test_bundle_with_partial_lease_block_leaves_rest_blank():
+    bundle = TenancyBundle.model_validate({"lease": {"rent_amount": "615"}})
+    assert bundle.lease.rent_amount == "615"
+    assert bundle.lease.bond_amount == ""
+    assert bundle.lease.term_type == ""
+
+
+def test_lease_block_rejects_unknown_key():
+    with pytest.raises(Exception):
+        TenancyBundle.model_validate({"lease": {"not_a_field": "x"}})
 
 
 def test_split_flags_and_json_produce_identical_request(caller_fields):

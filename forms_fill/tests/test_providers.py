@@ -220,3 +220,52 @@ def test_fixture_provider_returns_current_rent():
     bundle = FixtureProvider().fetch_bundle({"lot_id": "L-2002"})
     assert bundle.current_rent == "615"
     assert bundle.rent_period == "week"
+
+
+# ── lease block mapping (U2) ─────────────────────────────────────────────────
+
+
+def test_propertyme_lease_mirrors_rent_amount_and_period(monkeypatch):
+    tenancy = {**TENANCY, "RentAmount": 2607.0, "RentPeriod": "monthly"}
+    _patch_get(monkeypatch, _routes([], tenancies=[tenancy]))
+    bundle = _provider().fetch_bundle({"lot_id": "L1"})
+    assert bundle.lease.rent_amount == "2607"
+    assert bundle.lease.rent_period == "monthly"
+
+
+def test_propertyme_lease_unconfirmed_fields_stay_blank(monkeypatch):
+    tenancy = {**TENANCY, "RentAmount": 615.0, "RentPeriod": "week"}
+    _patch_get(monkeypatch, _routes([], tenancies=[tenancy]))
+    bundle = _provider().fetch_bundle({"lot_id": "L1"})
+    # term_type, dates (other than via rent), bond, and payment day have no
+    # confirmed field name in this adapter's tenancy shape — left blank.
+    assert bundle.lease.term_type == ""
+    assert bundle.lease.fixed_start_date == ""
+    assert bundle.lease.fixed_end_date == ""
+    assert bundle.lease.bond_amount == ""
+    assert bundle.lease.bond_due_date == ""
+    assert bundle.lease.rent_payment_day == ""
+    assert bundle.lease.first_rent_due_date == ""
+
+
+def test_propertyme_lease_no_error_on_missing_rent(monkeypatch):
+    _patch_get(monkeypatch, _routes([], tenancies=[TENANCY]))  # no RentAmount key
+    bundle = _provider().fetch_bundle({"lot_id": "L1"})
+    assert bundle.lease.rent_amount == ""
+    assert bundle.lease.rent_period == ""
+
+
+def test_fixture_provider_returns_empty_lease_block():
+    bundle = FixtureProvider().fetch_bundle({"lot_id": "L-2002"})
+    assert bundle.lease.term_type == ""
+    assert bundle.lease.rent_amount == ""
+
+
+def test_multiple_active_tenancies_still_notes_and_selects_most_recent(monkeypatch):
+    older = {**TENANCY, "Id": "T-OLD", "TenancyStart": "2020-01-01"}
+    newer = {**TENANCY, "Id": "T-NEW", "TenancyStart": "2025-06-01", "RentAmount": 700.0}
+    _patch_get(monkeypatch, _routes([], tenancies=[older, newer]))
+    bundle = _provider().fetch_bundle({"lot_id": "L1"})
+    assert bundle.meta.note and "2 active tenancies" in bundle.meta.note
+    assert bundle.meta.tenancy_id == "T-NEW"
+    assert bundle.lease.rent_amount == "700"
