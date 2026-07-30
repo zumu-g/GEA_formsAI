@@ -26,6 +26,9 @@ from .forms.notice_to_vacate.spec import SPEC as NTV_SPEC
 from .forms.notice_to_vacate_death_sole_renter.spec import (
     SPEC as DEATH_SOLE_RENTER_SPEC,
 )
+from .forms.pm_exclusive_leasing_authority.spec import (
+    SPEC as PM_LEASING_AUTHORITY_SPEC,
+)
 from .forms.reiv_exclusive_sale_authority.spec import SPEC as REIV_EXCLUSIVE_SPEC
 from .forms.rental_application.spec import SPEC as RENTAL_APPLICATION_SPEC
 from .forms.request_repairs_inspection.spec import SPEC as REPAIRS_INSPECTION_SPEC
@@ -57,6 +60,7 @@ FORM_REGISTRY: dict[str, FormSpec] = {
     REPAIRS_INSPECTION_SPEC.key: REPAIRS_INSPECTION_SPEC,
     REIV_EXCLUSIVE_SPEC.key: REIV_EXCLUSIVE_SPEC,
     LETTER_OF_OFFER_SPEC.key: LETTER_OF_OFFER_SPEC,
+    PM_LEASING_AUTHORITY_SPEC.key: PM_LEASING_AUTHORITY_SPEC,
 }
 
 
@@ -92,6 +96,7 @@ _SHORT_TITLES = {
     "notice_requesting_additional_bond": "Additional bond request",
     "notice_to_vacate": "Notice to vacate",
     "notice_to_vacate_death_sole_renter": "Notice to vacate — death of sole renter",
+    "pm_exclusive_leasing_authority": "Exclusive Leasing Authority",
     "reiv_exclusive_sale_authority": "Exclusive Sale Authority (REIV)",
     "rental_application": "Rental application",
     "request_repairs_inspection": "Repairs inspection / rent assessment",
