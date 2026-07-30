@@ -64,7 +64,11 @@ def select_provider(name: str | None = None) -> PropertyDataProvider:
         from .gea_crm import GeaCrmProvider
 
         return GeaCrmProvider()
+    if name == "vaultre":
+        from .vaultre import VaultreProvider
+
+        return VaultreProvider()
 
     raise ProviderConfigError(
-        f"unknown data provider '{name}'. Valid: fixture, propertyme, gea_crm"
+        f"unknown data provider '{name}'. Valid: fixture, propertyme, gea_crm, vaultre"
     )

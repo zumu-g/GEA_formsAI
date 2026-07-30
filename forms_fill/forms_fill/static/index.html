@@ -200,6 +200,7 @@
       <legend><span class="disc">2</span><span id="section-2-legend">Tenancy</span></legend>
       <label for="provider">Data source</label>
       <select id="provider">
+        <option value="vaultre">VaultRE</option>
         <option value="propertyme">PropertyMe</option>
         <option value="gea_crm">GEA CRM</option>
       </select>
@@ -294,6 +295,7 @@
   const submitBtn = document.getElementById('submit-btn');
 
   let catalogue = [];
+  let providerTouched = false; // becomes true once the PM manually picks a data source
   const section2Legend = document.getElementById('section-2-legend');
   const tenancyIdLabel = document.getElementById('tenancy-id-label');
 
@@ -316,6 +318,11 @@
     if (typeof manualAddBtn !== 'undefined') {
       if (!sales) setManualAddMode(false);
       manualAddBtn.style.display = sales ? '' : 'none';
+    }
+    // Route to the right data source by form type (sales → VaultRE, PM →
+    // PropertyMe) — only when the PM hasn't already picked one themselves.
+    if (typeof providerSelect !== 'undefined' && !providerTouched) {
+      providerSelect.value = sales ? 'vaultre' : 'propertyme';
     }
   }
 
@@ -781,7 +788,7 @@
   manualAddBtn.addEventListener('click', () => setManualAddMode(true));
   manualAddBackBtn.addEventListener('click', () => setManualAddMode(false));
 
-  const PROVIDER_LABELS = { propertyme: 'PropertyMe', gea_crm: 'GEA CRM' };
+  const PROVIDER_LABELS = { vaultre: 'VaultRE', propertyme: 'PropertyMe', gea_crm: 'GEA CRM' };
 
   function renderPreview(bundle, provider) {
     const sales = !!currentSpec() && currentSpec().requires_identifiers === false;
@@ -895,6 +902,7 @@
     searchTimer = setTimeout(runSearch, 350);
   });
   providerSelect.addEventListener('change', () => {
+    providerTouched = true; // PM chose a source explicitly — stop auto-routing it
     resultsList.innerHTML = '';
     previewBox.classList.remove('show');
     lastPreviewBundle = null;

@@ -212,10 +212,14 @@ def tenancy_preview(
         identifiers["lot_id"] = lot_id.strip()
     if tenancy_id.strip():
         identifiers["tenancy_id"] = tenancy_id.strip()
+    from .errors import FetchUnsupportedError
+
     try:
         p = select_provider(provider)
         bundle = p.fetch_bundle(identifiers)
-    except TenancyNotFoundError as exc:
+    except (TenancyNotFoundError, FetchUnsupportedError) as exc:
+        # Same UI path either way (R5): no match, or this provider simply
+        # can't supply contact details — both mean "enter manually".
         return _err(404, "no_current_tenancy", str(exc))
     except ProviderConfigError as exc:
         return _err(500, "fetch_failed", f"provider config: {exc}")

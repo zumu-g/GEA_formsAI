@@ -33,3 +33,9 @@ class ProviderContractError(FormsFillError):
 
 class SearchUnsupportedError(FormsFillError):
     """The selected data provider cannot search lots by address."""
+
+
+class FetchUnsupportedError(FormsFillError):
+    """The selected data provider can find a property but not its contact/
+    tenancy details — the caller should fall back to manual field entry
+    rather than treat this as an upstream failure."""
