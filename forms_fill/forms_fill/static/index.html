@@ -202,37 +202,44 @@
       <select id="provider">
         <option value="propertyme">PropertyMe</option>
         <option value="gea_crm">GEA CRM</option>
-        <option value="fixture">Fixture (test data)</option>
       </select>
 
-      <div id="search-box">
-        <label for="address-query">Property address</label>
-        <div class="row">
-          <input id="address-query" placeholder="Start typing an address, e.g. 12 Example Street" />
-          <button type="button" id="search-btn" class="secondary" style="flex:0 0 auto">Search</button>
+      <div id="search-ui">
+        <div id="search-box">
+          <label for="address-query">Property address</label>
+          <div class="row">
+            <input id="address-query" placeholder="Start typing an address, e.g. 12 Example Street" />
+            <button type="button" id="search-btn" class="secondary" style="flex:0 0 auto">Search</button>
+          </div>
+          <ul class="matches" id="search-results"></ul>
         </div>
-        <ul class="matches" id="search-results"></ul>
+
+        <button type="button" class="linklike" id="manual-toggle">Enter Lot / Tenancy IDs manually</button>
+
+        <div id="manual-ids">
+          <div class="row">
+            <div>
+              <label for="lot-id" id="lot-id-label">Lot ID</label>
+              <input id="lot-id" placeholder="e.g. L-2002" />
+            </div>
+            <div>
+              <label for="tenancy-id" id="tenancy-id-label">Tenancy ID (preferred)</label>
+              <input id="tenancy-id" placeholder="e.g. T-1001" />
+            </div>
+            <button type="button" id="preview-btn" class="secondary" style="flex:0 0 auto; align-self: end">Fetch details</button>
+          </div>
+        </div>
+
+        <div id="preview"></div>
+        <button type="button" id="cma-btn" class="secondary" disabled>Request comparables report</button>
+        <p class="hint">Opens GEA St CMA in a new tab — you must already be logged in there, or it'll bounce to its login page.</p>
       </div>
 
-      <button type="button" class="linklike" id="manual-toggle">Enter Lot / Tenancy IDs manually</button>
-
-      <div id="manual-ids">
-        <div class="row">
-          <div>
-            <label for="lot-id" id="lot-id-label">Lot ID</label>
-            <input id="lot-id" placeholder="e.g. L-2002" />
-          </div>
-          <div>
-            <label for="tenancy-id" id="tenancy-id-label">Tenancy ID (preferred)</label>
-            <input id="tenancy-id" placeholder="e.g. T-1001" />
-          </div>
-          <button type="button" id="preview-btn" class="secondary" style="flex:0 0 auto; align-self: end">Fetch details</button>
-        </div>
+      <button type="button" class="linklike" id="manual-add-btn">Property not listed? Add it manually</button>
+      <div id="manual-add-note" style="display:none">
+        <p class="hint">Skipped the lookup — enter the property and vendor details directly in <strong>3. Form details</strong> below.</p>
+        <button type="button" class="linklike" id="manual-add-back-btn">Use property search instead</button>
       </div>
-
-      <div id="preview"></div>
-      <button type="button" id="cma-btn" class="secondary" disabled>Request comparables report</button>
-      <p class="hint">Opens GEA St CMA in a new tab — you must already be logged in there, or it'll bounce to its login page.</p>
     </fieldset>
 
     <fieldset id="caller-fields">
@@ -303,6 +310,13 @@
     manualToggle.textContent = manualBox.classList.contains('show')
       ? (sales ? 'Hide property ID entry' : 'Hide manual ID entry')
       : (sales ? 'Enter property ID manually' : 'Enter Lot / Tenancy IDs manually');
+    // "Add manually" (skip lookup entirely) only makes sense for sales forms —
+    // every field there is caller-supplied. PM forms fetch renter/lease data
+    // from the tenancy bundle, which a skipped lookup would leave unfilled.
+    if (typeof manualAddBtn !== 'undefined') {
+      if (!sales) setManualAddMode(false);
+      manualAddBtn.style.display = sales ? '' : 'none';
+    }
   }
 
   function getToken() {
@@ -743,7 +757,31 @@
   }
   manualToggle.addEventListener('click', () => showManual(!manualBox.classList.contains('show')));
 
-  const PROVIDER_LABELS = { propertyme: 'PropertyMe', gea_crm: 'GEA CRM', fixture: 'Fixture' };
+  // "Property not listed?" — skip the lookup entirely (no provider match, no
+  // lot/tenancy ID needed) and go straight to typing the property/vendor
+  // fields already declared in section 3 (spec.caller_fields).
+  const searchUi = document.getElementById('search-ui');
+  const manualAddBtn = document.getElementById('manual-add-btn');
+  const manualAddNote = document.getElementById('manual-add-note');
+  const manualAddBackBtn = document.getElementById('manual-add-back-btn');
+
+  function setManualAddMode(on) {
+    searchUi.style.display = on ? 'none' : '';
+    manualAddBtn.style.display = on ? 'none' : '';
+    manualAddNote.style.display = on ? '' : 'none';
+    if (on) {
+      resultsList.innerHTML = '';
+      previewBox.classList.remove('show');
+      lastPreviewBundle = null;
+      cmaBtn.disabled = true;
+      const addressField = inputEl('property_address');
+      if (addressField) addressField.focus();
+    }
+  }
+  manualAddBtn.addEventListener('click', () => setManualAddMode(true));
+  manualAddBackBtn.addEventListener('click', () => setManualAddMode(false));
+
+  const PROVIDER_LABELS = { propertyme: 'PropertyMe', gea_crm: 'GEA CRM' };
 
   function renderPreview(bundle, provider) {
     const sales = !!currentSpec() && currentSpec().requires_identifiers === false;
