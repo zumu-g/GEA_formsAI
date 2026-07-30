@@ -216,6 +216,84 @@ Worked sales-form payload (n8n HTTP Request node or any client):
 }
 ```
 
+### `reiv_exclusive_sale_authority` — full field contract
+
+`POST /fill` with `{"form": "reiv_exclusive_sale_authority", "identifiers": {},
+"fields": {...}}`. This is a sales form (`requires_identifiers: false`,
+`engine: pdf_overlay`), so:
+
+- **`identifiers` is unused — send `{}`.** It only carries `lot_id` /
+  `tenancy_id` for *tenancy-backed* forms that fetch a bundle from the data
+  provider. Sales authorities have no tenancy; every value comes from `fields`.
+- **No field is hard-required by the API** — the engine renders whatever it's
+  given verbatim and reports anything left empty in `blank_fields` (it never
+  rejects a fill for a missing value). "Required" below means *required for a
+  legally usable authority*, not an API validation gate. Discover the live list
+  any time with `GET /forms`.
+- **Agent/agency fields default** from `fixtures/gea_agency.json` (override with
+  `FORMS_AGENCY_FILE`); a caller value always wins over the default.
+
+**Vendor & property (caller must supply — no defaults):**
+
+| field | required | notes |
+|---|---|---|
+| `vendor_name` | ✅ | vendor's full legal name |
+| `vendor_capacity` | optional | e.g. `in the capacity only as mortgagee exercising power of sale` |
+| `vendor_abn` | optional | vendor ABN |
+| `vendor_address` | optional | vendor address, or `C/-` legal representative |
+| `vendor_phone`, `vendor_email` | optional | vendor contact |
+| `property_address` | ✅ | address of the property being sold |
+| `goods` | optional | goods sold with the property |
+
+**Authority terms:**
+
+| field | required | notes |
+|---|---|---|
+| `exclusive_days` | ✅ | exclusive authority period, in days (e.g. `90`) |
+| `continuing_days` | optional | continuing (post-exclusive) authority period |
+| `possession` | ✅ selector | `subject_to_tenancy` \| `vacant_possession` |
+| `payment` | selector | `full_purchase_price` (only option) |
+| `marketing_payable` | selector | `on_signing` \| `written_request` |
+
+**Price & estimate** (all optional; supply the ones relevant to the deal):
+`vendors_price`, `payable_in_days`, `estimate_single`, `estimate_low`,
+`estimate_high`, `sold_at_price`. If both `estimate_low` and `estimate_high` are
+given and the high exceeds the low by >10%, a `warnings` entry flags s47A Estate
+Agents Act 1980.
+
+**Commission & expenses** (optional): `fixed_commission`, `commission_pct`
+(e.g. `4.125% inclusive of GST`), `commission_estimate`, `commission_gst`,
+`advertising` ($ incl GST), `other_expenses`, `total_expenses`.
+
+**Signing date** (optional, split): `date_day`, `date_month`, `date_year`.
+
+**Agent/agency** (optional — default from `gea_agency.json`): `agent_name`,
+`agent_acn`, `agency_address`, `attention`, `agent_mobile`, `agent_email`,
+`agent_phone` (no default — blank unless supplied).
+
+**Response shape** (confirmed — top-level keys):
+
+```jsonc
+{
+  "ok": true,
+  "form": "reiv_exclusive_sale_authority",
+  "contract": "v1",
+  "request_id": "b3cda60a0fe4453a83f0e35079f17987",
+  "files": {
+    "pdf": "https://<PUBLIC_BASE_URL>/files/<request_id>/pdf",
+    "docx": null      // always null for pdf_overlay sales forms — PDF only
+  },
+  "filled_fields": ["vendor_name", "property_address", ...],
+  "blank_fields":  ["vendor_abn", "goods", ...],   // declared fields left empty
+  "warnings":      []                               // e.g. s47A estimate-range flag
+}
+```
+
+`files.pdf` is an absolute, **bearer-protected** URL — fetch it with the same
+`Authorization: Bearer $FORMS_API_TOKEN`. Files are ephemeral on the instance
+disk; fetch promptly. Errors use `{"ok": false, "error": <code>, "message": ...}`
+with the codes listed under **Programmatic API** above.
+
 TypeScript (slate) sketch:
 
 ```ts

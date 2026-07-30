@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import docx
 from docx.oxml.ns import qn
 
@@ -83,6 +85,33 @@ def test_pdf_skipped_warning_names_fix(tmp_path, sample_bundle_dict, caller_fiel
         "PDF skipped — LibreOffice (soffice) not found on PATH; DOCX produced only. "
         "Fix: install LibreOffice and ensure `soffice` is on PATH"
     ]
+
+
+def test_pdf_conversion_uses_isolated_profile_and_cleans_up(tmp_path, monkeypatch):
+    # Guards the concurrency fix: each conversion must get its own throwaway
+    # LibreOffice profile via -env:UserInstallation (otherwise concurrent/orphaned
+    # soffice deadlock on the shared default-profile lock), and the temp profile
+    # must be removed afterwards.
+    captured = {}
+
+    def fake_run(argv, **kwargs):
+        captured["argv"] = argv
+        captured["timeout"] = kwargs.get("timeout")
+        (tmp_path / "doc.pdf").write_bytes(b"%PDF-1.4")
+        return None
+
+    monkeypatch.setattr(render_mod, "_find_soffice", lambda: "/usr/bin/soffice")
+    monkeypatch.setattr(render_mod.subprocess, "run", fake_run)
+
+    (tmp_path / "doc.docx").write_bytes(b"x")
+    out = render_mod._to_pdf(tmp_path / "doc.docx", tmp_path)
+
+    assert out == tmp_path / "doc.pdf"
+    prof = [a for a in captured["argv"] if a.startswith("-env:UserInstallation=file://")]
+    assert len(prof) == 1, "each conversion needs its own isolated profile"
+    assert captured["timeout"] and captured["timeout"] > 0, "must be bounded"
+    profile_path = prof[0].split("file://", 1)[1]
+    assert not Path(profile_path).exists(), "temp profile must be cleaned up"
 
 
 def test_filled_cells_allow_wrap_and_growth(tmp_path, sample_bundle_dict, caller_fields):

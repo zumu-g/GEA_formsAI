@@ -13,9 +13,11 @@ context (KTD6) — this is the single source of truth for the blank/filled repor
 
 from __future__ import annotations
 
+import os
 import shutil
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 import docx
@@ -198,16 +200,30 @@ def _set_checkbox(checkbox_el, checked: bool) -> None:
 
 
 def _to_pdf(docx_path: Path, out_dir: Path) -> Path | None:
-    """Convert DOCX → PDF via LibreOffice headless. Returns None if unavailable."""
+    """Convert DOCX → PDF via LibreOffice headless. Returns None if unavailable.
+
+    Each invocation gets its OWN throwaway LibreOffice user profile via
+    ``-env:UserInstallation``. LibreOffice single-instance-locks its default
+    profile (``~/.config/libreoffice``), so without this two concurrent
+    conversions — or one orphaned ``soffice.bin`` from a killed request —
+    deadlock on that lock and hang indefinitely. An isolated per-request
+    profile removes the shared lock entirely, so concurrent /fill calls never
+    block each other. Bounded by ``FORMS_SOFFICE_TIMEOUT_S`` (default 90s) so a
+    stuck conversion fails fast instead of hanging the request.
+    """
 
     soffice = _find_soffice()
     if soffice is None:
         return None
+    timeout_s = int(os.environ.get("FORMS_SOFFICE_TIMEOUT_S", "90"))
+    profile_dir = tempfile.mkdtemp(prefix="lo-profile-")
     try:
         subprocess.run(
             [
                 soffice,
+                f"-env:UserInstallation=file://{profile_dir}",
                 "--headless",
+                "--norestore",
                 "--convert-to",
                 "pdf",
                 "--outdir",
@@ -216,10 +232,12 @@ def _to_pdf(docx_path: Path, out_dir: Path) -> Path | None:
             ],
             check=True,
             capture_output=True,
-            timeout=120,
+            timeout=timeout_s,
         )
     except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
         raise RenderError(f"LibreOffice PDF conversion failed: {exc}") from exc
+    finally:
+        shutil.rmtree(profile_dir, ignore_errors=True)
     pdf_path = out_dir / f"{docx_path.stem}.pdf"
     return pdf_path if pdf_path.exists() else None
 
