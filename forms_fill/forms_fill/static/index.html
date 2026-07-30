@@ -4,6 +4,9 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>GEA — Forms Fill</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400&family=DM+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400&display=swap" rel="stylesheet" />
 <style>
   :root {
     --ink: #1A1814;
@@ -13,29 +16,66 @@
     --muted: #8B8580;
     --gold: #C8A96E;
     --gold-soft: #E8D4A8;
+    --status-approved: #4A7C6F;
+    --status-approved-bg: #E7F0EC;
+    --status-rejected: #9A5B5B;
+    --status-rejected-bg: #F3E9E9;
+    --font-display: 'Playfair Display', Georgia, serif;
+    --font-body: 'DM Sans', system-ui, sans-serif;
+    --font-mono: 'IBM Plex Mono', 'Courier New', monospace;
   }
   @media (prefers-color-scheme: dark) {
-    :root { --ink: #F0EDE8; --paper: #141210; --surface: #1C1A17; --rule: #2A2825; --muted: #6B6560; }
+    :root { --ink: #F0EDE8; --paper: #141210; --surface: #1C1A17; --rule: #2A2825; --muted: #6B6560; --status-approved-bg: #1E2B27; --status-rejected-bg: #2E2222; }
   }
-  :root[data-theme="dark"] { --ink: #F0EDE8; --paper: #141210; --surface: #1C1A17; --rule: #2A2825; --muted: #6B6560; }
-  :root[data-theme="light"] { --ink: #1A1814; --paper: #FAF8F4; --surface: #F2EEE8; --rule: #E0DBD4; --muted: #8B8580; }
+  :root[data-theme="dark"] { --ink: #F0EDE8; --paper: #141210; --surface: #1C1A17; --rule: #2A2825; --muted: #6B6560; --status-approved-bg: #1E2B27; --status-rejected-bg: #2E2222; }
+  :root[data-theme="light"] { --ink: #1A1814; --paper: #FAF8F4; --surface: #F2EEE8; --rule: #E0DBD4; --muted: #8B8580; --status-approved-bg: #E7F0EC; --status-rejected-bg: #F3E9E9; }
 
   * { box-sizing: border-box; }
   body {
-    margin: 0; padding: 2rem 1.25rem 4rem;
+    margin: 0; padding: 0 0 5rem;
     background: var(--paper); color: var(--ink);
-    font-family: 'DM Sans', system-ui, sans-serif;
+    font-family: var(--font-body);
     font-size: 15px; line-height: 1.5;
   }
-  .wrap { max-width: 720px; margin: 0 auto; }
-  h1 { font-size: 1.85rem; font-weight: 700; letter-spacing: -0.02em; margin: 0 0 0.25rem; }
-  .subtitle { color: var(--muted); margin: 0 0 2rem; font-size: 0.9rem; }
-  fieldset { border: 1px solid var(--rule); border-radius: 10px; padding: 1.25rem; margin: 0 0 1.25rem; background: var(--surface); }
-  legend { padding: 0 0.5rem; font-weight: 600; font-size: 0.9rem; }
+
+  /* Hero masthead — compact interior size (GEA Leave DESIGN.md §Hero banner) */
+  .hero {
+    background-image:
+      linear-gradient(to bottom, rgba(26,24,20,0.82), rgba(26,24,20,0.68)),
+      url('header-bg.jpg');
+    background-size: cover; background-position: center top;
+    text-align: center; padding: 2.5rem 1.25rem 2.75rem;
+  }
+  .hero img { height: 44px; opacity: 0.9; display: block; margin: 0 auto 1rem; }
+  .hero h1 {
+    font-family: var(--font-display); font-weight: 400;
+    font-size: clamp(1.7rem, 4vw, 2.4rem); letter-spacing: -0.02em; line-height: 1.15;
+    color: #FAF8F4; margin: 0;
+  }
+  .hero .gold-rule { height: 1px; width: 3.5rem; background: var(--gold); border: 0; margin: 0.9rem auto; }
+  .hero .subtitle { color: rgba(250,248,244,0.65); margin: 0; font-size: 0.9rem; }
+
+  .wrap { max-width: 720px; margin: 0 auto; padding: 2rem 1.25rem 0; }
+
+  /* Section shell — rounded surface panel with a ruled header band */
+  fieldset { border: 1px solid var(--rule); border-radius: 1rem; padding: 0 1.5rem 1.4rem; margin: 0 0 1.5rem; background: var(--surface); }
+  legend {
+    float: left; width: 100%; padding: 1.2rem 0 0.85rem; margin-bottom: 1.2rem;
+    border-bottom: 1px solid var(--rule);
+    font-family: var(--font-display); font-weight: 400; font-size: 1.15rem; letter-spacing: -0.01em;
+  }
+  legend + * { clear: both; }
+  legend .disc {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 1.5rem; height: 1.5rem; border-radius: 50%; margin-right: 0.55rem;
+    background: var(--gold); color: #1A1814;
+    font-family: var(--font-body); font-weight: 600; font-size: 0.8rem;
+    vertical-align: 0.1rem;
+  }
   label { display: block; font-size: 0.85rem; color: var(--muted); margin: 0.75rem 0 0.25rem; }
   label:first-of-type { margin-top: 0; }
   input, select, textarea {
-    width: 100%; padding: 0.55rem 0.65rem; border: 1px solid var(--rule); border-radius: 6px;
+    width: 100%; padding: 0.65rem 1rem; border: 1px solid var(--rule); border-radius: 0.5rem;
     background: var(--paper); color: var(--ink); font: inherit; min-height: 44px;
   }
   select {
@@ -45,7 +85,7 @@
     background-repeat: no-repeat; background-position: right 0.75rem center;
   }
   input:focus, select:focus, textarea:focus {
-    outline: none; border-color: var(--gold); box-shadow: 0 0 0 2px var(--gold-soft);
+    outline: none; border-color: var(--gold); box-shadow: 0 0 0 2px rgba(200,169,110,0.25);
   }
   textarea { min-height: 5.5rem; resize: vertical; }
   .matches { list-style: none; margin: 0.75rem 0 0; padding: 0; }
@@ -63,6 +103,8 @@
   #preview dt { color: var(--muted); font-size: 0.78rem; margin-top: 0.5rem; }
   #preview dt:first-child { margin-top: 0; }
   #preview dd { margin: 0.1rem 0 0; }
+  /* Data-of-record figures read as precise in mono tabular (house rule) */
+  input[type="date"], .tnum { font-family: var(--font-mono); font-variant-numeric: tabular-nums; font-size: 0.9rem; }
   #manual-ids { display: none; }
   #manual-ids.show { display: block; }
   .linklike {
@@ -70,18 +112,23 @@
     color: var(--muted); font-size: 0.8rem; text-decoration: underline; cursor: pointer; font-weight: 500;
   }
   button {
-    min-height: 44px; padding: 0.6rem 1.4rem; border: none; border-radius: 6px;
-    background: var(--gold); color: var(--ink); font: inherit; font-weight: 600; cursor: pointer;
+    min-height: 44px; padding: 0.6rem 1.4rem; border: none; border-radius: 0.5rem;
+    background: var(--gold); color: #1A1814; font: inherit; font-weight: 600; cursor: pointer;
+    transition: background 0.18s ease-in-out, transform 0.1s ease-in-out;
   }
-  button:disabled { opacity: 0.5; cursor: default; }
-  button.secondary { background: transparent; border: 1px solid var(--rule); font-weight: 500; }
+  button:hover { background: var(--gold-soft); }
+  button:active { transform: scale(0.97); }
+  button:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--paper), 0 0 0 4px var(--gold); }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+  button.secondary { background: transparent; border: 1px solid var(--rule); font-weight: 500; color: var(--ink); }
+  button.secondary:hover { background: transparent; border-color: var(--gold); }
   .row { display: flex; gap: 0.75rem; }
   .row > * { flex: 1; }
-  #result { margin-top: 1.5rem; padding: 1rem 1.25rem; border-radius: 10px; border: 1px solid var(--rule); }
-  #result.ok { border-color: var(--gold-soft); }
-  #result.err { border-color: #b3564a; }
+  #result { margin-top: 1.5rem; padding: 1rem 1.25rem; border-radius: 0.625rem; border: 1px solid var(--rule); }
+  #result.ok { border-color: var(--status-approved); background: var(--status-approved-bg); }
+  #result.err { border-color: var(--status-rejected); background: var(--status-rejected-bg); }
   #result a { color: inherit; font-weight: 600; }
-  .warn { color: #b3564a; font-size: 0.85rem; margin-top: 0.5rem; }
+  .warn { color: var(--status-rejected); font-size: 0.85rem; margin-top: 0.5rem; }
   .hint { color: var(--muted); font-size: 0.8rem; margin-top: 0.35rem; }
   #token-banner { display: none; margin-bottom: 1.5rem; }
   #token-banner.show { display: block; }
@@ -101,7 +148,8 @@
     background: transparent; border: 1px solid var(--rule); border-radius: 6px;
     color: var(--muted); cursor: pointer; font-size: 0.95rem; font-weight: 600;
   }
-  .fetch-btn:hover { border-color: var(--gold); color: var(--ink); }
+  .fetch-btn:hover { border-color: var(--gold); color: var(--ink); background: transparent; }
+  .linklike:hover { background: none; }
   .fetch-btn:disabled { opacity: 0.4; cursor: default; }
 
   /* U8: review screen */
@@ -112,7 +160,7 @@
   .review-row:last-child { border-bottom: none; }
   .review-row .review-label { flex: 0 0 45%; font-size: 0.85rem; color: var(--muted); }
   .review-row .review-value-col { flex: 1; }
-  .review-row.blank .review-label { color: #b3564a; }
+  .review-row.blank .review-label { color: var(--status-rejected); }
   .review-row input { margin: 0; }
   #review-confirm-row { display: flex; align-items: center; gap: 0.5rem; margin: 1.25rem 0; padding: 0.85rem 1rem; border: 1px solid var(--gold-soft); border-radius: 8px; }
   #review-confirm-row input { width: auto; min-height: 0; }
@@ -126,10 +174,13 @@
 </style>
 </head>
 <body>
-<div class="wrap">
-  <h1>GEA Forms Fill</h1>
+<header class="hero">
+  <img src="logo.png" alt="Grants Estate Agents" />
+  <h1>Forms Fill</h1>
+  <hr class="gold-rule" />
   <p class="subtitle">Fill agency, tenancy and sales forms for review — never lodges or serves anything itself.</p>
-
+</header>
+<div class="wrap">
   <fieldset id="token-banner">
     <legend>API token</legend>
     <label for="token">Bearer token</label>
@@ -139,14 +190,14 @@
 
   <form id="fill-form">
     <fieldset>
-      <legend>1. Form</legend>
+      <legend><span class="disc">1</span>Form</legend>
       <label for="form-key">Form type</label>
       <select id="form-key" required></select>
       <p class="hint" id="form-legal-title"></p>
     </fieldset>
 
     <fieldset>
-      <legend id="section-2-legend">2. Tenancy</legend>
+      <legend><span class="disc">2</span><span id="section-2-legend">Tenancy</span></legend>
       <label for="provider">Data source</label>
       <select id="provider">
         <option value="propertyme">PropertyMe</option>
@@ -185,7 +236,7 @@
     </fieldset>
 
     <fieldset id="caller-fields">
-      <legend>3. Form details</legend>
+      <legend><span class="disc">3</span>Form details</legend>
       <p class="hint">Rendered verbatim — this tool never computes dates, notice periods, or legal grounds.</p>
       <div id="caller-fields-inputs"></div>
     </fieldset>
@@ -247,7 +298,7 @@
   // framing doesn't confuse a PM filling in a vendor's details (U1).
   function applyFormModeUI(spec) {
     const sales = !!spec && spec.requires_identifiers === false;
-    section2Legend.textContent = sales ? '2. Property / Vendor' : '2. Tenancy';
+    section2Legend.textContent = sales ? 'Property / Vendor' : 'Tenancy';
     tenancyIdLabel.textContent = sales ? 'Property ID (optional)' : 'Tenancy ID (preferred)';
     manualToggle.textContent = manualBox.classList.contains('show')
       ? (sales ? 'Hide property ID entry' : 'Hide manual ID entry')
