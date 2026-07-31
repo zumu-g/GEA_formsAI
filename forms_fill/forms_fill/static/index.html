@@ -303,6 +303,15 @@
     return catalogue.find((f) => f.key === formSelect.value) || null;
   }
 
+  // Which VaultRE listing book to query: a no-bundle PM form (the exclusive
+  // leasing authority) is a property being LEASED — its owner lives on the
+  // lease life, not a sale life. Keyed on registry category, not form key.
+  function listingMode() {
+    const spec = currentSpec();
+    if (!spec || spec.requires_identifiers !== false) return 'sale';
+    return spec.category === 'GEA Sales' ? 'sale' : 'lease';
+  }
+
   // Sales forms (KTD8) have no tenancy — relabel the section so "tenancy"
   // framing doesn't confuse a PM filling in a vendor's details (U1).
   function applyFormModeUI(spec) {
@@ -474,6 +483,12 @@
     vendor_address: (b) => joinParts([b.rental_provider.service_address, b.rental_provider.service_postcode]),
     vendor_phone: (b) => b.rental_provider.phone_business_hours,
     vendor_email: (b) => b.rental_provider.email,
+    // owner_* twins: the PM exclusive leasing authority names the same
+    // rental_provider block "owner" instead of "vendor" (its spec fields).
+    owner_names: (b) => b.rental_provider.full_name,
+    owner_address: (b) => joinParts([b.rental_provider.service_address, b.rental_provider.service_postcode]),
+    owner_phone: (b) => b.rental_provider.phone_business_hours,
+    owner_email: (b) => b.rental_provider.email,
     property_address: (b) => joinParts([b.premises.address_line, b.premises.suburb, b.premises.state, b.premises.postcode]),
   };
 
@@ -666,6 +681,10 @@
     fill('vendor_address', joinParts([owner.service_address, owner.service_postcode]));
     fill('vendor_phone', owner.phone_business_hours);
     fill('vendor_email', owner.email);
+    fill('owner_names', owner.full_name);
+    fill('owner_address', joinParts([owner.service_address, owner.service_postcode]));
+    fill('owner_phone', owner.phone_business_hours);
+    fill('owner_email', owner.email);
     fill('property_address', joinParts([premises.address_line, premises.suburb, premises.state, premises.postcode]));
   }
 
@@ -819,7 +838,7 @@
   async function fetchPreview() {
     previewBox.classList.remove('show');
     const sales = !!currentSpec() && currentSpec().requires_identifiers === false;
-    const params = new URLSearchParams({ provider: providerSelect.value });
+    const params = new URLSearchParams({ provider: providerSelect.value, listing: listingMode() });
     if (lotInput.value.trim()) params.set('lot_id', lotInput.value.trim());
     if (tenancyInput.value.trim()) params.set('tenancy_id', tenancyInput.value.trim());
     try {
@@ -852,7 +871,7 @@
     if (!q) return;
     searchBtn.disabled = true;
     try {
-      const params = new URLSearchParams({ q: q, provider: providerSelect.value });
+      const params = new URLSearchParams({ q: q, provider: providerSelect.value, listing: listingMode() });
       const resp = await fetch(API + '/tenancy/search?' + params, { headers: authHeaders() });
       const body = await resp.json();
       if (body.error === 'search_unsupported') {
@@ -878,6 +897,13 @@
           tenancyInput.value = m.tenancy_id || '';
           resultsList.innerHTML = '';
           queryInput.value = m.address_label;
+          // The picked address is already known — seed it now so a failed
+          // bundle fetch (vacant lot, pre-tenancy, provider gap) never
+          // leaves property_address blank. Bundle prefill may overwrite
+          // with a richer value on success.
+          if (inputEl('property_address')) {
+            seedField('property_address', m.address_label, 'search result');
+          }
           fetchPreview();
         }
         li.addEventListener('click', pick);
