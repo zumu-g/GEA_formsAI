@@ -37,7 +37,7 @@ class FixtureProvider(PropertyDataProvider):
             meta["tenancy_id"] = str(identifiers["tenancy_id"])
         return TenancyBundle.model_validate(data)
 
-    def search_lots(self, query: str) -> list[LotMatch]:
+    def search_lots(self, query: str, listing: str = "sale") -> list[LotMatch]:
         """Case-insensitive substring match against the fixture's address."""
 
         q = (query or "").strip().lower()

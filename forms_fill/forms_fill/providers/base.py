@@ -33,9 +33,13 @@ class PropertyDataProvider(ABC):
     def fetch_bundle(self, identifiers: dict) -> TenancyBundle:
         """Return the tenancy bundle for the given identifiers (lot_id/tenancy_id)."""
 
-    def search_lots(self, query: str) -> list[LotMatch]:
+    def search_lots(self, query: str, listing: str = "sale") -> list[LotMatch]:
         """Address search. Providers opt in; the default is a typed refusal so
-        the API/UI can degrade to manual ID entry rather than erroring."""
+        the API/UI can degrade to manual ID entry rather than erroring.
+
+        ``listing`` ("sale" | "lease") selects which listing book to search.
+        Only VaultRE distinguishes the two; other providers accept and ignore
+        it so the API layer can pass it unconditionally."""
 
         raise SearchUnsupportedError(
             f"provider '{self.name}' does not support address search — "

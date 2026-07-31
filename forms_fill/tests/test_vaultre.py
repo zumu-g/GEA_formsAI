@@ -184,3 +184,94 @@ def test_fetch_bundle_no_sale_life_id_raises_not_found(provider, monkeypatch):
 def test_fetch_bundle_missing_lot_id_raises_value_error(provider):
     with pytest.raises(ValueError):
         provider.fetch_bundle({})
+
+
+# ── lease mode (PM exclusive leasing authority) ────────────────────────────────
+
+
+def _lease_fake_get(responses):
+    def fake_get(url, headers=None, timeout=None):
+        for path, resp in responses.items():
+            if url.endswith(path):
+                return resp
+        raise AssertionError(f"unexpected url {url}")
+
+    return fake_get
+
+
+def test_lease_search_uses_lease_endpoint(provider, monkeypatch):
+    seen = {}
+
+    def fake_get(url, headers=None, timeout=None):
+        seen["url"] = url
+        return _FakeResp(200, {"items": [
+            {"id": 7, "address": {"streetAddress": "3 Lease Ln", "suburb": "Berwick", "state": "VIC", "postcode": "3806"}},
+        ]})
+
+    monkeypatch.setattr(vr.httpx, "get", fake_get)
+    matches = provider.search_lots("lease ln", listing="lease")
+    assert seen["url"].endswith("/properties/residential/lease")
+    assert [m.lot_id for m in matches] == ["7"]
+
+
+def test_lease_bundle_maps_landlord_to_rental_provider(provider, monkeypatch):
+    responses = {
+        "/properties/residential/lease/7": _FakeResp(200, {
+            "id": 7,
+            "leaseLifeId": 900,
+            "address": {"streetAddress": "3 Lease Ln", "suburb": "Berwick", "state": "VIC", "postcode": "3806"},
+        }),
+        "/properties/7/lease/900/landlords": _FakeResp(200, [
+            {
+                "displayName": "Lana Landlord",
+                "phoneNumbers": [{"type": "Work", "number": "0399998888"}],
+                "emails": ["lana@example.com"],
+            }
+        ]),
+    }
+    monkeypatch.setattr(vr.httpx, "get", _lease_fake_get(responses))
+    bundle = provider.fetch_bundle({"lot_id": "7", "listing": "lease"})
+    assert bundle.rental_provider.full_name == "Lana Landlord"
+    assert bundle.rental_provider.phone_business_hours == "0399998888"
+    assert bundle.premises.suburb == "Berwick"
+
+
+def test_lease_bundle_resolves_landlord_id_reference(provider, monkeypatch):
+    responses = {
+        "/properties/residential/lease/7": _FakeResp(200, {"id": 7, "leaseLifeId": 900, "address": {}}),
+        "/properties/7/lease/900/landlords": _FakeResp(200, {"items": [{"id": 42}]}),
+        "/contacts/42": _FakeResp(200, {"firstName": "Len", "lastName": "Lord", "phoneNumbers": [], "emails": []}),
+    }
+    monkeypatch.setattr(vr.httpx, "get", _lease_fake_get(responses))
+    bundle = provider.fetch_bundle({"lot_id": "7", "listing": "lease"})
+    assert bundle.rental_provider.full_name == "Len Lord"
+
+
+def test_lease_bundle_no_lease_life_id_raises_not_found(provider, monkeypatch):
+    monkeypatch.setattr(
+        vr.httpx, "get", lambda *a, **k: _FakeResp(200, {"id": 7, "address": {}})
+    )
+    with pytest.raises(TenancyNotFoundError):
+        provider.fetch_bundle({"lot_id": "7", "listing": "lease"})
+
+
+def test_lease_bundle_no_landlords_raises_not_found(provider, monkeypatch):
+    responses = {
+        "/properties/residential/lease/7": _FakeResp(200, {"id": 7, "leaseLifeId": 900, "address": {}}),
+        "/properties/7/lease/900/landlords": _FakeResp(200, []),
+    }
+    monkeypatch.setattr(vr.httpx, "get", _lease_fake_get(responses))
+    with pytest.raises(TenancyNotFoundError):
+        provider.fetch_bundle({"lot_id": "7", "listing": "lease"})
+
+
+def test_default_listing_still_uses_sale_endpoints(provider, monkeypatch):
+    seen = {}
+
+    def fake_get(url, headers=None, timeout=None):
+        seen.setdefault("urls", []).append(url)
+        return _FakeResp(200, {"items": []})
+
+    monkeypatch.setattr(vr.httpx, "get", fake_get)
+    provider.search_lots("anything")
+    assert seen["urls"][0].endswith("/properties/residential/sale")

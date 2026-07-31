@@ -264,7 +264,7 @@ class PropertyMeProvider(PropertyDataProvider):
             note = f"{len(pool)} active tenancies matched — most-recent used"
         return pool[0], note
 
-    def search_lots(self, query: str) -> list[LotMatch]:
+    def search_lots(self, query: str, listing: str = "sale") -> list[LotMatch]:
         """Address search over the active-tenancy list.
 
         /v1/tenancies rows carry LotAddress, so one GET covers search (same

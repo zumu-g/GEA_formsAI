@@ -62,6 +62,22 @@ from .base import LotMatch, PropertyDataProvider
 _BUSINESS_PHONE_TYPES = ("Work", "Direct")
 _AFTER_HOURS_PHONE_TYPES = ("Home", "Mobile")
 
+# listing mode → (life-id field on the property detail, contacts sub-resource).
+# Sale lives link vendors via /owners; lease lives link landlords via
+# /landlords (swagger vaultre_v1_2.yaml, both confirmed present).
+_LISTING_SHAPE = {
+    "sale": ("saleLifeId", "owners"),
+    "lease": ("leaseLifeId", "landlords"),
+}
+
+
+def _listing_mode(value: Any) -> str:
+    listing = str(value or "sale").strip().lower()
+    if listing not in _LISTING_SHAPE:
+        raise ValueError(f"vaultre: unknown listing mode '{listing}' (sale|lease)")
+    return listing
+
+
 _RETRY_BACKOFFS = (0.5, 1.0)
 _MAX_SEARCH_RESULTS = 10
 _DEFAULT_BASE_URL = "https://ap-southeast-2.api.vaultre.com.au/api/v1.3"
@@ -94,16 +110,18 @@ class VaultreProvider(PropertyDataProvider):
         lot_id = str(identifiers.get("lot_id") or identifiers.get("property_id") or "").strip()
         if not lot_id:
             raise ValueError("vaultre: identifiers must include 'lot_id'")
+        listing = _listing_mode(identifiers.get("listing"))
+        life_key, contacts_segment = _LISTING_SHAPE[listing]
 
-        item = self._get_property(lot_id)
-        sale_life_id = item.get("saleLifeId")
-        if not sale_life_id:
+        item = self._get_property(lot_id, listing)
+        life_id = item.get(life_key)
+        if not life_id:
             raise TenancyNotFoundError(
-                f"vaultre: property {lot_id} has no saleLifeId — no vendor "
-                "to attach; use 'Add manually'"
+                f"vaultre: property {lot_id} has no {life_key} — no "
+                "owner/vendor to attach; use 'Add manually'"
             )
 
-        owners = self._get_owners(lot_id, sale_life_id)
+        owners = self._get_owners(lot_id, listing, life_id, contacts_segment)
         if not owners:
             raise TenancyNotFoundError(
                 f"vaultre: no owner/vendor linked to property {lot_id} — "
@@ -126,8 +144,8 @@ class VaultreProvider(PropertyDataProvider):
             meta=BundleMeta(lot_id=lot_id, source="vaultre", note=note),
         )
 
-    def _get_property(self, lot_id: str) -> dict[str, Any]:
-        resp = self._request(f"/properties/residential/sale/{lot_id}")
+    def _get_property(self, lot_id: str, listing: str) -> dict[str, Any]:
+        resp = self._request(f"/properties/residential/{listing}/{lot_id}")
         status = resp.status_code
         if status == 200:
             return resp.json()
@@ -139,8 +157,10 @@ class VaultreProvider(PropertyDataProvider):
             )
         raise UpstreamError(f"vaultre property {status}: {_err(resp)}")
 
-    def _get_owners(self, lot_id: str, sale_life_id: Any) -> list[dict[str, Any]]:
-        resp = self._request(f"/properties/{lot_id}/sale/{sale_life_id}/owners")
+    def _get_owners(
+        self, lot_id: str, listing: str, life_id: Any, contacts_segment: str
+    ) -> list[dict[str, Any]]:
+        resp = self._request(f"/properties/{lot_id}/{listing}/{life_id}/{contacts_segment}")
         status = resp.status_code
         if status == 404:
             return []
@@ -166,10 +186,10 @@ class VaultreProvider(PropertyDataProvider):
             )
         raise UpstreamError(f"vaultre contact {status}: {_err(resp)}")
 
-    def search_lots(self, query: str) -> list[LotMatch]:
-        """Address search over active residential-for-sale listings.
+    def search_lots(self, query: str, listing: str = "sale") -> list[LotMatch]:
+        """Address search over active residential listings (sale or lease book).
 
-        VaultRE's confirmed endpoint has no documented address-query
+        VaultRE's confirmed endpoints have no documented address-query
         parameter (GEA_crmAI's client fetches the full active-listing set),
         so matching is done client-side against the returned address fields.
         """
@@ -178,7 +198,7 @@ class VaultreProvider(PropertyDataProvider):
         if not q:
             raise ValueError("search query must not be empty")
 
-        items = self._list_residential_sale()
+        items = self._list_residential(_listing_mode(listing))
         matches: list[LotMatch] = []
         for item in items:
             label = _address_label(item)
@@ -188,8 +208,8 @@ class VaultreProvider(PropertyDataProvider):
                 )
         return matches[:_MAX_SEARCH_RESULTS]
 
-    def _list_residential_sale(self) -> list[dict[str, Any]]:
-        resp = self._request("/properties/residential/sale")
+    def _list_residential(self, listing: str) -> list[dict[str, Any]]:
+        resp = self._request(f"/properties/residential/{listing}")
         status = resp.status_code
         if status == 200:
             body = resp.json()

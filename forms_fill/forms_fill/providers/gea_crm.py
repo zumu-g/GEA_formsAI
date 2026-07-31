@@ -100,7 +100,7 @@ class GeaCrmProvider(PropertyDataProvider):
         raw = self._fetch_raw(identifiers)
         return self._to_bundle(raw)
 
-    def search_lots(self, query: str) -> list[LotMatch]:
+    def search_lots(self, query: str, listing: str = "sale") -> list[LotMatch]:
         """Address search against the CRM's tenancy-search endpoint (U2).
 
         Contract: docs/integrations/crm-data-contract-prompt.md
