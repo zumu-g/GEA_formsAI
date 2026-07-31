@@ -248,3 +248,80 @@ def test_tenancy_preview_defaults_blank_service_address_to_premises(client, monk
     assert resp.status_code == 200
     bundle = resp.json()["bundle"]
     assert bundle["renters"][0]["address_for_service"] == bundle["premises"]["address_line"]
+
+
+# ── listing mode pass-through (U3, plan 2026-07-31 property-autopopulate) ──────
+
+
+def test_tenancy_search_invalid_listing_rejected(client):
+    resp = client.get("/tenancy/search?q=example&provider=fixture&listing=banana", headers=AUTH)
+    assert resp.status_code == 400
+    assert resp.json()["error"] == "invalid_request"
+
+
+def test_tenancy_preview_invalid_listing_rejected(client):
+    resp = client.get("/tenancy/preview?lot_id=L-2002&provider=fixture&listing=banana", headers=AUTH)
+    assert resp.status_code == 400
+    assert resp.json()["error"] == "invalid_request"
+
+
+def test_tenancy_search_listing_reaches_provider(client, monkeypatch):
+    from forms_fill.providers import base as base_module
+    from forms_fill.providers.base import LotMatch, PropertyDataProvider
+
+    seen = {}
+
+    class _Spy(PropertyDataProvider):
+        name = "spy"
+
+        def fetch_bundle(self, identifiers):
+            raise AssertionError("not used")
+
+        def search_lots(self, query, listing="sale"):
+            seen["listing"] = listing
+            return [LotMatch(lot_id="L-9", address_label="9 Spy St")]
+
+    monkeypatch.setattr(base_module, "select_provider", lambda name=None: _Spy())
+    monkeypatch.setattr("forms_fill.providers.base.select_provider", lambda name=None: _Spy())
+    resp = client.get("/tenancy/search?q=spy&listing=lease", headers=AUTH)
+    assert resp.status_code == 200
+    assert seen["listing"] == "lease"
+
+
+def test_tenancy_preview_lease_listing_reaches_identifiers(client, monkeypatch):
+    from forms_fill.models import TenancyBundle
+    from forms_fill.providers import base as base_module
+    from forms_fill.providers.base import PropertyDataProvider
+
+    seen = {}
+
+    class _Spy(PropertyDataProvider):
+        name = "spy"
+
+        def fetch_bundle(self, identifiers):
+            seen["identifiers"] = identifiers
+            return TenancyBundle()
+
+    monkeypatch.setattr("forms_fill.providers.base.select_provider", lambda name=None: _Spy())
+    resp = client.get("/tenancy/preview?lot_id=7&listing=lease", headers=AUTH)
+    assert resp.status_code == 200
+    assert seen["identifiers"]["listing"] == "lease"
+
+
+def test_tenancy_preview_default_listing_absent_from_identifiers(client, monkeypatch):
+    from forms_fill.models import TenancyBundle
+    from forms_fill.providers.base import PropertyDataProvider
+
+    seen = {}
+
+    class _Spy(PropertyDataProvider):
+        name = "spy"
+
+        def fetch_bundle(self, identifiers):
+            seen["identifiers"] = identifiers
+            return TenancyBundle()
+
+    monkeypatch.setattr("forms_fill.providers.base.select_provider", lambda name=None: _Spy())
+    resp = client.get("/tenancy/preview?lot_id=7", headers=AUTH)
+    assert resp.status_code == 200
+    assert "listing" not in seen["identifiers"]

@@ -164,13 +164,18 @@ def agency(authorization: str = Header(default="")) -> Any:
 
 @app.get("/tenancy/search")
 def tenancy_search(
-    q: str = "", provider: str | None = None, authorization: str = Header(default="")
+    q: str = "",
+    provider: str | None = None,
+    listing: str = "sale",
+    authorization: str = Header(default=""),
 ) -> Any:
     """Address search across the selected data provider's lots (U2, R2/R4)."""
 
     _require_auth(authorization)
     if not q.strip():
         return _err(400, "invalid_request", "missing search query 'q'")
+    if listing not in ("sale", "lease"):
+        return _err(400, "invalid_request", f"invalid listing '{listing}' (sale|lease)")
     from dataclasses import asdict
 
     from .errors import SearchUnsupportedError
@@ -178,7 +183,7 @@ def tenancy_search(
 
     try:
         p = select_provider(provider)
-        matches = p.search_lots(q)
+        matches = p.search_lots(q, listing=listing)
     except SearchUnsupportedError as exc:
         return _err(400, "search_unsupported", str(exc))
     except ValueError as exc:
@@ -197,6 +202,7 @@ def tenancy_preview(
     lot_id: str = "",
     tenancy_id: str = "",
     provider: str | None = None,
+    listing: str = "sale",
     authorization: str = Header(default=""),
 ) -> Any:
     """Fetch and return the tenancy bundle for PM verification before filling
@@ -205,6 +211,8 @@ def tenancy_preview(
     _require_auth(authorization)
     if not lot_id.strip() and not tenancy_id.strip():
         return _err(400, "invalid_request", "provide at least one of lot_id, tenancy_id")
+    if listing not in ("sale", "lease"):
+        return _err(400, "invalid_request", f"invalid listing '{listing}' (sale|lease)")
     from .providers.base import select_provider
 
     identifiers = {}
@@ -212,6 +220,8 @@ def tenancy_preview(
         identifiers["lot_id"] = lot_id.strip()
     if tenancy_id.strip():
         identifiers["tenancy_id"] = tenancy_id.strip()
+    if listing != "sale":
+        identifiers["listing"] = listing
     from .errors import FetchUnsupportedError
 
     try:
