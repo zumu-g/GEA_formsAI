@@ -275,3 +275,16 @@ def test_default_listing_still_uses_sale_endpoints(provider, monkeypatch):
     monkeypatch.setattr(vr.httpx, "get", fake_get)
     provider.search_lots("anything")
     assert seen["urls"][0].endswith("/properties/residential/sale")
+
+
+def test_lease_multiple_landlords_note_says_landlords(provider, monkeypatch):
+    responses = {
+        "/properties/residential/lease/7": _FakeResp(200, {"id": 7, "leaseLifeId": 900, "address": {}}),
+        "/properties/7/lease/900/landlords": _FakeResp(200, [
+            {"displayName": "A One", "phoneNumbers": [], "emails": []},
+            {"displayName": "B Two", "phoneNumbers": [], "emails": []},
+        ]),
+    }
+    monkeypatch.setattr(vr.httpx, "get", _lease_fake_get(responses))
+    bundle = provider.fetch_bundle({"lot_id": "7", "listing": "lease"})
+    assert "2 landlords linked" in bundle.meta.note

@@ -227,6 +227,10 @@ def tenancy_preview(
     try:
         p = select_provider(provider)
         bundle = p.fetch_bundle(identifiers)
+    except ValueError as exc:
+        # e.g. vaultre needs a lot_id and can't use tenancy_id alone — same
+        # 400 shape /tenancy/search already returns for provider ValueErrors.
+        return _err(400, "invalid_request", str(exc))
     except (TenancyNotFoundError, FetchUnsupportedError) as exc:
         # Same UI path either way (R5): no match, or this provider simply
         # can't supply contact details — both mean "enter manually".

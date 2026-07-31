@@ -325,3 +325,24 @@ def test_tenancy_preview_default_listing_absent_from_identifiers(client, monkeyp
     resp = client.get("/tenancy/preview?lot_id=7", headers=AUTH)
     assert resp.status_code == 200
     assert "listing" not in seen["identifiers"]
+
+
+def test_tenancy_search_real_provider_ignores_listing(client):
+    resp = client.get("/tenancy/search?q=example&provider=fixture&listing=lease", headers=AUTH)
+    assert resp.status_code == 200
+    assert resp.json()["matches"][0]["lot_id"] == "L-2002"
+
+
+def test_tenancy_preview_provider_value_error_returns_400(client, monkeypatch):
+    from forms_fill.providers.base import PropertyDataProvider
+
+    class _Picky(PropertyDataProvider):
+        name = "picky"
+
+        def fetch_bundle(self, identifiers):
+            raise ValueError("picky: identifiers must include 'lot_id'")
+
+    monkeypatch.setattr("forms_fill.providers.base.select_provider", lambda name=None: _Picky())
+    resp = client.get("/tenancy/preview?tenancy_id=T-1", headers=AUTH)
+    assert resp.status_code == 400
+    assert resp.json()["error"] == "invalid_request"

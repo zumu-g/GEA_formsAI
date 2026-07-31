@@ -685,7 +685,10 @@
     fill('owner_address', joinParts([owner.service_address, owner.service_postcode]));
     fill('owner_phone', owner.phone_business_hours);
     fill('owner_email', owner.email);
-    fill('property_address', joinParts([premises.address_line, premises.suburb, premises.state, premises.postcode]));
+    // Don't clear the pick-time seed with an empty bundle address (R1) — a
+    // sparse listing record must not wipe the address the PM just picked.
+    const bundleAddr = joinParts([premises.address_line, premises.suburb, premises.state, premises.postcode]);
+    if (bundleAddr) fill('property_address', bundleAddr);
   }
 
   async function loadForms() {
@@ -867,6 +870,13 @@
   async function runSearch() {
     resultsList.innerHTML = '';
     previewBox.classList.remove('show');
+    // A new search invalidates any address seeded from a previous pick —
+    // otherwise a failed follow-up preview can leave property A's address on
+    // a form generated for property B (legal-document risk). Typed values
+    // are untouched (seedField's sticky rule).
+    if (fieldSource['property_address'] === 'search result') {
+      seedField('property_address', '', '');
+    }
     const q = queryInput.value.trim();
     if (!q) return;
     searchBtn.disabled = true;

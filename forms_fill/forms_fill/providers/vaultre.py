@@ -136,7 +136,7 @@ class VaultreProvider(PropertyDataProvider):
 
         note = None
         if len(owners) > 1:
-            note = f"{len(owners)} owners linked — only the first was used"
+            note = f"{len(owners)} {contacts_segment} linked — only the first was used"
 
         return TenancyBundle(
             premises=_premises_from_item(item),
