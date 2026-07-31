@@ -64,7 +64,16 @@ FORM_REGISTRY: dict[str, FormSpec] = {
 }
 
 
+# Workflow-facing aliases (GEA_PM_WF plan 2026-07-31-002 U2): stable short keys
+# for callers like the Hermes relay. Resolved in get_form_spec only, so the
+# catalogue/UI never shows duplicates.
+FORM_ALIASES: dict[str, str] = {
+    "lease": RENTAL_AGREEMENT_SPEC.key,
+}
+
+
 def get_form_spec(key: str) -> FormSpec:
+    key = FORM_ALIASES.get(key, key)
     try:
         return FORM_REGISTRY[key]
     except KeyError:
