@@ -8,8 +8,8 @@ Contract mocked here matches GEA_crmAI's own working client
 import pytest
 
 from forms_fill.errors import (
-    FetchUnsupportedError,
     ProviderConfigError,
+    TenancyNotFoundError,
     UpstreamError,
 )
 from forms_fill.providers import vaultre as vr
@@ -99,6 +99,88 @@ def test_search_5xx_raises_upstream_error(provider, monkeypatch):
         provider.search_lots("x")
 
 
-def test_fetch_bundle_raises_fetch_unsupported(provider):
-    with pytest.raises(FetchUnsupportedError):
+def test_fetch_bundle_maps_owner_to_rental_provider(provider, monkeypatch):
+    responses = {
+        "/properties/residential/sale/101": _FakeResp(200, {
+            "id": 101,
+            "saleLifeId": 555,
+            "address": {"streetAddress": "7 Example Ave", "suburb": "Berwick", "state": "VIC", "postcode": "3806"},
+        }),
+        "/properties/101/sale/555/owners": _FakeResp(200, [
+            {
+                "displayName": "Jane Vendor",
+                "address": {
+                    "unitNumber": "2", "streetNumber": "10", "street": "Owner St",
+                    "suburb": {"name": "Officer", "postcode": "3809", "state": {"abbreviation": "VIC"}},
+                },
+                "phoneNumbers": [{"type": "Mobile", "number": "0400111222"}],
+                "emails": ["jane@example.com"],
+            }
+        ]),
+    }
+
+    def fake_get(url, headers=None, timeout=None):
+        for path, resp in responses.items():
+            if url.endswith(path):
+                return resp
+        raise AssertionError(f"unexpected url {url}")
+
+    monkeypatch.setattr(vr.httpx, "get", fake_get)
+    bundle = provider.fetch_bundle({"lot_id": "101"})
+
+    assert bundle.premises.suburb == "Berwick"
+    assert bundle.rental_provider.full_name == "Jane Vendor"
+    assert bundle.rental_provider.service_postcode == "3809"
+    assert bundle.rental_provider.phone_business_hours == "0400111222"
+    assert bundle.rental_provider.phone_after_hours == "0400111222"
+    assert bundle.rental_provider.email == "jane@example.com"
+    assert bundle.meta.source == "vaultre"
+
+
+def test_fetch_bundle_resolves_owner_id_reference(provider, monkeypatch):
+    responses = {
+        "/properties/residential/sale/101": _FakeResp(200, {"id": 101, "saleLifeId": 555, "address": {}}),
+        "/properties/101/sale/555/owners": _FakeResp(200, {"items": [{"id": 9}]}),
+        "/contacts/9": _FakeResp(200, {"firstName": "Bob", "lastName": "Owner", "phoneNumbers": [], "emails": []}),
+    }
+
+    def fake_get(url, headers=None, timeout=None):
+        for path, resp in responses.items():
+            if url.endswith(path):
+                return resp
+        raise AssertionError(f"unexpected url {url}")
+
+    monkeypatch.setattr(vr.httpx, "get", fake_get)
+    bundle = provider.fetch_bundle({"lot_id": "101"})
+    assert bundle.rental_provider.full_name == "Bob Owner"
+
+
+def test_fetch_bundle_no_owners_raises_not_found(provider, monkeypatch):
+    responses = {
+        "/properties/residential/sale/101": _FakeResp(200, {"id": 101, "saleLifeId": 555, "address": {}}),
+        "/properties/101/sale/555/owners": _FakeResp(200, []),
+    }
+
+    def fake_get(url, headers=None, timeout=None):
+        for path, resp in responses.items():
+            if url.endswith(path):
+                return resp
+        raise AssertionError(f"unexpected url {url}")
+
+    monkeypatch.setattr(vr.httpx, "get", fake_get)
+    with pytest.raises(TenancyNotFoundError):
         provider.fetch_bundle({"lot_id": "101"})
+
+
+def test_fetch_bundle_no_sale_life_id_raises_not_found(provider, monkeypatch):
+    monkeypatch.setattr(
+        vr.httpx, "get",
+        lambda *a, **k: _FakeResp(200, {"id": 101, "address": {}}),
+    )
+    with pytest.raises(TenancyNotFoundError):
+        provider.fetch_bundle({"lot_id": "101"})
+
+
+def test_fetch_bundle_missing_lot_id_raises_value_error(provider):
+    with pytest.raises(ValueError):
+        provider.fetch_bundle({})
