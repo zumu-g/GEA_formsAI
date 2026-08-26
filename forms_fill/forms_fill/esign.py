@@ -60,9 +60,10 @@ def _account_id() -> str:
     if resp.status_code >= 400:
         raise EsignUpstreamError(f"Annature accounts {resp.status_code}: {resp.text[:300]}")
     accounts = resp.json() or []
-    if not accounts:
+    active = [a for a in accounts if a.get("active")]
+    if not (active or accounts):
         raise EsignUpstreamError("Annature org has no accounts to send from")
-    return accounts[0].get("id", "")
+    return (active or accounts)[0].get("id", "")
 
 
 def send_for_signing(
