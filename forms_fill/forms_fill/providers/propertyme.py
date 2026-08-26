@@ -190,7 +190,14 @@ class PropertyMeProvider(PropertyDataProvider):
                 "propertyme: provide at least one of lot_id, tenancy_id"
             )
 
-        tenancy, note = self._resolve_tenancy(lot_id, tenancy_id)
+        try:
+            tenancy, note = self._resolve_tenancy(lot_id, tenancy_id)
+        except TenancyNotFoundError:
+            if not lot_id:
+                raise
+            # ponytail: no active tenancy but lot exists — return owner+premises
+            # only (empty renters). Covers leasing authority pre-tenancy flow.
+            return self._owner_only_bundle(lot_id)
         tenancy_lot = _s(tenancy.get("LotId"))
         if not tenancy_lot:
             raise ProviderContractError("propertyme: tenancy record missing LotId")
@@ -218,6 +225,24 @@ class PropertyMeProvider(PropertyDataProvider):
             current_rent=current_rent,
             rent_period=rent_period,
             lease=self._lease_terms(tenancy, current_rent, rent_period),
+        )
+
+    def _owner_only_bundle(self, lot_id: str) -> TenancyBundle:
+        lot_detail = self._get(f"/v1/lots/{lot_id}/detail")
+        provider = self._owner(lot_detail)
+        premises = _parse_address(
+            _s(lot_detail.get("AddressText"))
+        )
+        return TenancyBundle(
+            premises=premises,
+            renters=[],
+            rental_provider=provider,
+            meta=BundleMeta(
+                lot_id=lot_id,
+                source="propertyme",
+                as_at=datetime.now(timezone.utc).isoformat(timespec="seconds"),
+                note="no active tenancy — owner and premises only",
+            ),
         )
 
     def _lease_terms(

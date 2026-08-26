@@ -35,8 +35,10 @@ GET /api/forms/tenancy-bundle?lotId=<id>&tenancyId=<id>
 - **Auth:** server-to-server only. Reuse the existing `x-sync-secret` / `SYNC_SECRET`
   pattern already used by `POST /api/admin/sync/propertyme`. No user session.
 - **Lookup:** accept `tenancyId` (preferred) and/or `lotId`. If only `lotId` is given,
-  resolve the **current active lease** for that property. Return `404` with a clear JSON
-  error if no active tenancy is found.
+  resolve the **current active lease** for that property. If no active tenancy exists but
+  the property does, return `200` with `"renters": []` and the owner/premises still
+  populated — do **not** `404`. This allows pre-tenancy forms (e.g. leasing authority) to
+  prefill owner details. Only `404` when the property itself is not found.
 - **Read-only.** No writes, no side effects.
 
 We pass whatever identifiers PropertyMe/GEA CRM key on. Today that's PropertyMe

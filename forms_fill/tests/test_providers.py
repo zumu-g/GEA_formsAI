@@ -129,10 +129,19 @@ def test_propertyme_multiple_active_tenancies_warns(monkeypatch):
     assert "most-recent" in (bundle.meta.note or "")
 
 
-def test_propertyme_no_tenancy_raises(monkeypatch):
+def test_propertyme_no_tenancy_returns_owner_only(monkeypatch):
+    _patch_get(monkeypatch, _routes([], tenancies=[]))
+    bundle = _provider().fetch_bundle({"lot_id": "L1"})
+    assert bundle.rental_provider.full_name == "Robert Owner & Mary Owner"
+    assert bundle.renters == []
+    assert bundle.premises.postcode == "3806"
+    assert "no active tenancy" in (bundle.meta.note or "")
+
+
+def test_propertyme_no_tenancy_no_lot_id_raises(monkeypatch):
     _patch_get(monkeypatch, _routes([], tenancies=[]))
     with pytest.raises(TenancyNotFoundError):
-        _provider().fetch_bundle({"lot_id": "L1"})
+        _provider().fetch_bundle({"tenancy_id": "T-gone"})
 
 
 def test_propertyme_tenancy_id_filter(monkeypatch):
@@ -184,11 +193,12 @@ def test_parse_address_splits_state_postcode():
     assert unparsed.postcode == ""
 
 
-def test_propertyme_inactive_only_tenancy_is_not_found(monkeypatch):
+def test_propertyme_inactive_only_tenancy_falls_back_to_owner(monkeypatch):
     vacated = {**TENANCY, "IsActive": False}
     _patch_get(monkeypatch, _routes([], tenancies=[vacated]))
-    with pytest.raises(TenancyNotFoundError):
-        _provider().fetch_bundle({"lot_id": "L1"})
+    bundle = _provider().fetch_bundle({"lot_id": "L1"})
+    assert bundle.rental_provider.full_name == "Robert Owner & Mary Owner"
+    assert bundle.renters == []
 
 
 # ── rent prefill mapping (U2) ────────────────────────────────────────────────
