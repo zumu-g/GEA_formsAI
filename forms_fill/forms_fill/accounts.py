@@ -11,6 +11,7 @@ first and falls back to a session token here.
 from __future__ import annotations
 
 import hashlib
+import json
 import hmac
 import os
 import secrets
@@ -250,8 +251,6 @@ _DEFAULT_VALUE_CAP = 500
 def save_defaults(agent_id: int, form_key: str, values: dict) -> dict:
     """Merge allowlisted string values into the agent's defaults; blank clears."""
 
-    import json
-
     clean = {
         k: v
         for k, v in values.items()
@@ -275,8 +274,6 @@ def save_defaults(agent_id: int, form_key: str, values: dict) -> dict:
 
 
 def get_defaults(agent_id: int, form_key: str) -> dict:
-    import json
-
     with _connect() as conn:
         row = conn.execute(
             'SELECT "values" FROM agent_defaults WHERE agent_id = ? AND form_key = ?',
