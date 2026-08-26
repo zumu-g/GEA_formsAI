@@ -1,9 +1,6 @@
-"""Auto-fill shared by both agreement specs (U5, KTD4).
+"""Auto-fill for the rental agreement spec (U5, KTD4).
 
-Form 1 (`residential_rental_agreement`) and Form 2 (`residential_rental_agreement_5yr`)
-share sections 1-4 and their lease/rent/bond fields verbatim (only table indices
-differ — see each spec's module docstring). Their auto-fill rule is the one
-rule, not two: a fetched/configured value seeds a field only when the caller
+The rule: a fetched/configured value seeds a field only when the caller
 supplied nothing for it (R7) — never overrides a caller value.
 
 ``handling_agent`` is a caller-suppliable *selector* field, not a printed one

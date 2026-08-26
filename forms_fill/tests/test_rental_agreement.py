@@ -2,12 +2,6 @@ from forms_fill.forms.residential_rental_agreement.spec import SPEC as FORM1_SPE
 from forms_fill.forms.residential_rental_agreement.spec import (
     build_context as form1_context,
 )
-from forms_fill.forms.residential_rental_agreement_5yr.spec import (
-    SPEC as FORM2_SPEC,
-)
-from forms_fill.forms.residential_rental_agreement_5yr.spec import (
-    build_context as form2_context,
-)
 from forms_fill.models import TenancyBundle
 from forms_fill.render import compute_blank_fields, render
 
@@ -101,42 +95,7 @@ def test_form1_fill_renders_docx(tmp_path, sample_bundle_dict):
     assert docx_path.exists()
 
 
-# ── Form 2 (residential_rental_agreement_5yr) ───────────────────────────────
-
-
-def test_form2_context_has_premises_renter_provider(sample_bundle_dict):
-    ctx = form2_context(_bundle(sample_bundle_dict), _base_fields())
-    assert ctx["premises_address"] == "12 Example Street, Richmond"
-    assert ctx["renter1_name"] == "Jane Alice Smith"
-
-
-def test_form2_has_no_term_type_selector():
-    # Form 2 is fixed-term-only; unlike Form 1 it has no periodic option.
-    assert "term_type" not in FORM2_SPEC.declared_fields
-    assert "term_type" not in FORM2_SPEC.selector_fields
-
-
-def test_form2_fixed_term_fields_render_verbatim(sample_bundle_dict):
-    ctx = form2_context(_bundle(sample_bundle_dict), _base_fields())
-    assert ctx["fixed_start_date"] == "2026-08-01"
-    assert ctx["fixed_end_date"] == "2027-08-01"
-
-
-def test_form2_leaves_additional_terms_and_signatures_undeclared():
-    joined = " ".join(FORM2_SPEC.declared_fields)
-    for forbidden in ("signature", "additional_term"):
-        assert forbidden not in joined
-
-
-def test_form2_fill_renders_docx(tmp_path, sample_bundle_dict):
-    ctx = form2_context(_bundle(sample_bundle_dict), _base_fields())
-    blanks = compute_blank_fields(FORM2_SPEC, ctx)
-    assert "renter1_name" not in blanks
-    docx_path, _, _ = render(FORM2_SPEC, ctx, tmp_path)
-    assert docx_path.exists()
-
-
-# ── U5: agent + lease auto-fill (shared across Form 1 / Form 2) ─────────────
+# ── U5: agent + lease auto-fill ─────────────────────────────────────────────
 
 
 def _bundle_with_lease(sample_bundle_dict, lease: dict):
@@ -205,32 +164,6 @@ def test_renter_current_address_stays_blank_even_with_known_premises(sample_bund
     assert ctx["renter1_current_address"] == ""
 
 
-def test_form2_matches_form1_agent_block_and_lease_for_same_inputs(sample_bundle_dict):
-    bundle = _bundle_with_lease(sample_bundle_dict, _FULL_LEASE)
-    ctx1 = form1_context(bundle, {})
-    ctx2 = form2_context(bundle, {})
-    for key in ("agent_name", "agent_address", "agent_postcode", "agent_phone", "agent_email"):
-        assert ctx1[key] == ctx2[key]
-    for key in (
-        "rent_amount",
-        "rent_period",
-        "rent_payment_day",
-        "first_rent_due_date",
-        "bond_amount",
-        "bond_due_date",
-    ):
-        assert ctx1[key] == ctx2[key]
-
-
-def test_form2_never_ticks_periodic_term(sample_bundle_dict):
-    bundle = _bundle_with_lease(sample_bundle_dict, {**_FULL_LEASE, "term_type": "periodic"})
-    ctx = form2_context(bundle, {})
-    # Form 2 has no term_type field at all — confirms it's simply absent, not
-    # accidentally ticked from the bundle's (fixed-only) term_type value.
-    assert "term_type" not in FORM2_SPEC.declared_fields
-    assert "term_type" not in ctx
-
-
 def test_blank_field_accounting_still_lists_negotiated_and_signature_sections(sample_bundle_dict):
     ctx = form1_context(_bundle(sample_bundle_dict), _base_fields())
     joined = " ".join(FORM1_SPEC.declared_fields)
@@ -283,23 +216,6 @@ def test_renewal_against_empty_lease_block_behaves_as_fresh_agreement(sample_bun
     assert ctx["rent_amount"] == ""
     assert ctx["bond_amount"] == ""
     assert ctx["fixed_start_date"] == ""
-
-
-def test_renewal_behaves_identically_on_both_forms_for_shared_fields(sample_bundle_dict):
-    bundle = _bundle_with_lease(sample_bundle_dict, _FULL_LEASE)
-    ctx1 = form1_context(bundle, {"is_renewal": "true"})
-    ctx2 = form2_context(bundle, {"is_renewal": "true"})
-    for key in (
-        "rent_amount",
-        "rent_period",
-        "rent_payment_day",
-        "first_rent_due_date",
-        "bond_amount",
-        "bond_due_date",
-    ):
-        assert ctx1[key] == ctx2[key]
-    assert ctx1["fixed_start_date"] == ctx2["fixed_start_date"] == ""
-    assert ctx1["fixed_end_date"] == ctx2["fixed_end_date"] == ""
 
 
 def test_is_renewal_never_appears_as_a_blank_field(sample_bundle_dict):

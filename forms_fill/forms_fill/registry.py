@@ -9,7 +9,6 @@ from __future__ import annotations
 
 from .errors import UnknownFormError
 from .formspec import FormSpec
-from .forms.allmain_letter_of_offer.spec import SPEC as LETTER_OF_OFFER_SPEC
 from .forms.breach_of_duty_notice.spec import SPEC as BREACH_SPEC
 from .forms.cav_rent_increase_notice.spec import SPEC as CAV_SPEC
 from .forms.condition_report.spec import SPEC as CONDITION_REPORT_SPEC
@@ -33,9 +32,6 @@ from .forms.reiv_exclusive_sale_authority.spec import SPEC as REIV_EXCLUSIVE_SPE
 from .forms.rental_application.spec import SPEC as RENTAL_APPLICATION_SPEC
 from .forms.request_repairs_inspection.spec import SPEC as REPAIRS_INSPECTION_SPEC
 from .forms.residential_rental_agreement.spec import SPEC as RENTAL_AGREEMENT_SPEC
-from .forms.residential_rental_agreement_5yr.spec import (
-    SPEC as RENTAL_AGREEMENT_5YR_SPEC,
-)
 from .forms.statement_of_information_applicants.spec import (
     SPEC as STATEMENT_OF_INFORMATION_SPEC,
 )
@@ -51,7 +47,6 @@ FORM_REGISTRY: dict[str, FormSpec] = {
     DEATH_SOLE_RENTER_SPEC.key: DEATH_SOLE_RENTER_SPEC,
     ADDITIONAL_BOND_SPEC.key: ADDITIONAL_BOND_SPEC,
     RENTAL_AGREEMENT_SPEC.key: RENTAL_AGREEMENT_SPEC,
-    RENTAL_AGREEMENT_5YR_SPEC.key: RENTAL_AGREEMENT_5YR_SPEC,
     RENTAL_APPLICATION_SPEC.key: RENTAL_APPLICATION_SPEC,
     CONDITION_REPORT_SPEC.key: CONDITION_REPORT_SPEC,
     STATEMENT_OF_INFORMATION_SPEC.key: STATEMENT_OF_INFORMATION_SPEC,
@@ -59,7 +54,6 @@ FORM_REGISTRY: dict[str, FormSpec] = {
     CONSENT_ELECTRONIC_SPEC.key: CONSENT_ELECTRONIC_SPEC,
     REPAIRS_INSPECTION_SPEC.key: REPAIRS_INSPECTION_SPEC,
     REIV_EXCLUSIVE_SPEC.key: REIV_EXCLUSIVE_SPEC,
-    LETTER_OF_OFFER_SPEC.key: LETTER_OF_OFFER_SPEC,
     PM_LEASING_AUTHORITY_SPEC.key: PM_LEASING_AUTHORITY_SPEC,
 }
 
@@ -90,9 +84,8 @@ def available_forms() -> list[str]:
 # Display metadata for the web UI dropdown — one reviewed place (KTD1).
 # ponytail: display map lives here, not on 19 FormSpec declarations; move onto
 # FormSpec if a non-UI consumer ever needs it.
-_SALES_KEYS = {"allmain_letter_of_offer", "reiv_exclusive_sale_authority"}
+_SALES_KEYS = {"reiv_exclusive_sale_authority"}
 _SHORT_TITLES = {
-    "allmain_letter_of_offer": "Letter of Offer / EOI (Allmain)",
     "breach_of_duty_notice": "Breach of duty notice",
     "cav_rent_increase_notice": "Rent increase to renter",
     "condition_report": "Condition report",
@@ -110,7 +103,6 @@ _SHORT_TITLES = {
     "rental_application": "Rental application",
     "request_repairs_inspection": "Repairs inspection / rent assessment",
     "residential_rental_agreement": "Rental agreement (Form 1)",
-    "residential_rental_agreement_5yr": "Rental agreement, 5yr+ fixed term (Form 2)",
     "statement_of_information_applicants": "Statement of information for applicants",
 }
 

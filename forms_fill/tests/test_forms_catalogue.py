@@ -44,7 +44,7 @@ def test_forms_carry_display_category_and_short_title(client):
         assert f["category"] in {"GEA Sales", "GEA PM"}
         assert f["short_title"]
     sales = {f["key"] for f in forms if f["category"] == "GEA Sales"}
-    assert sales == {"allmain_letter_of_offer", "reiv_exclusive_sale_authority"}
+    assert sales == {"reiv_exclusive_sale_authority"}
     rent = next(f for f in forms if f["key"] == "cav_rent_increase_notice")
     assert rent["short_title"] == "Rent increase to renter"
     assert "s 44" not in rent["short_title"]

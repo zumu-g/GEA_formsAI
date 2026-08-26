@@ -198,6 +198,14 @@
 
     <fieldset>
       <legend><span class="disc">2</span><span id="section-2-legend">Tenancy</span></legend>
+      <div id="lease-mode" style="display:none">
+        <label>Lease type</label>
+        <div class="row">
+          <label style="font-weight:normal"><input type="radio" name="lease-mode" value="new" /> New lease</label>
+          <label style="font-weight:normal"><input type="radio" name="lease-mode" value="renewal" /> Lease renewal</label>
+        </div>
+        <p class="hint">Choose before fetching the tenant — a renewal carries across the current lease's rent, bond and term type.</p>
+      </div>
       <label for="provider">Data source</label>
       <select id="provider">
         <option value="vaultre">VaultRE</option>
@@ -331,8 +339,48 @@
     // Route to the right data source by form type (sales → VaultRE, PM →
     // PropertyMe) — only when the PM hasn't already picked one themselves.
     if (typeof providerSelect !== 'undefined' && !providerTouched) {
-      providerSelect.value = sales ? 'vaultre' : 'propertyme';
+      providerSelect.value = spec.category === 'GEA Sales' ? 'vaultre' : 'propertyme';
     }
+    // Lease form: the new-lease vs renewal decision comes FIRST, before the
+    // tenant fetch — searching is gated on it (leaseModeChosen).
+    leaseModeBox.style.display = isLeaseForm(spec) ? '' : 'none';
+    // Re-render wipes the is_renewal checkbox — re-apply a made choice.
+    if (isLeaseForm(spec) && leaseModeChosen()) {
+      leaseModeBox.dispatchEvent(new Event('change'));
+    }
+  }
+
+  const leaseModeBox = document.getElementById('lease-mode');
+  const leaseModeRadios = () => leaseModeBox.querySelectorAll('input[name="lease-mode"]');
+
+  function isLeaseForm(spec) {
+    return !!spec && spec.key === 'residential_rental_agreement';
+  }
+
+  function leaseModeChosen() {
+    return Array.from(leaseModeRadios()).some((r) => r.checked);
+  }
+
+  // Radio → is_renewal checkbox (section 3). The existing checkbox listener
+  // handles the reverse direction so the two never disagree.
+  leaseModeBox.addEventListener('change', () => {
+    const renewal = leaseModeBox.querySelector('input[value="renewal"]').checked;
+    const el = inputEl('is_renewal');
+    if (el) {
+      el.checked = renewal;
+      fieldSource['is_renewal'] = renewal ? 'typed' : '';
+      updateSourceTag('is_renewal');
+      applyLeaseAutofill();
+    }
+  });
+
+  // Block the tenant lookup until the PM has made the lease-type call.
+  function requireLeaseMode() {
+    if (isLeaseForm(currentSpec()) && !leaseModeChosen()) {
+      showResult('Choose <strong>New lease</strong> or <strong>Lease renewal</strong> first (top of the Tenancy section).', false);
+      return false;
+    }
+    return true;
   }
 
   function getToken() {
@@ -640,7 +688,11 @@
       el.addEventListener(el.tagName === 'SELECT' || el.type === 'checkbox' ? 'change' : 'input', () => {
         fieldSource[name] = el.type === 'checkbox' && !el.checked ? '' : 'typed';
         updateSourceTag(name);
-        if (name === 'is_renewal') applyLeaseAutofill();
+        if (name === 'is_renewal') {
+          // Keep the section-2 lease-type radios agreeing with the checkbox.
+          leaseModeRadios().forEach((r) => { r.checked = r.value === (el.checked ? 'renewal' : 'new'); });
+          applyLeaseAutofill();
+        }
         if (name === 'handling_agent') applyAgentAutofill();
       });
     });
@@ -839,6 +891,7 @@
   }
 
   async function fetchPreview() {
+    if (!requireLeaseMode()) return;
     previewBox.classList.remove('show');
     const sales = !!currentSpec() && currentSpec().requires_identifiers === false;
     const params = new URLSearchParams({ provider: providerSelect.value, listing: listingMode() });
@@ -868,6 +921,7 @@
   previewBtn.addEventListener('click', fetchPreview);
 
   async function runSearch() {
+    if (!requireLeaseMode()) return;
     resultsList.innerHTML = '';
     previewBox.classList.remove('show');
     // A new search invalidates any address seeded from a previous pick —
