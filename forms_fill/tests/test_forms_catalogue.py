@@ -54,6 +54,13 @@ def test_forms_carry_display_category_and_short_title(client):
     assert "s 44" not in rent["short_title"]
 
 
+def test_is_renewal_stays_in_contract_as_hidden_kind(client):
+    forms = client.get("/forms", headers=AUTH).json()["forms"]
+    lease = next(f for f in forms if f["key"] == "residential_rental_agreement")
+    field = next(f for f in lease["caller_fields"] if f["name"] == "is_renewal")
+    assert field["kind"] == "hidden"  # machine callers still see the field (U4)
+
+
 def test_form_catalogue_helper_matches_endpoint():
     catalogue = form_catalogue()
     assert {c["key"] for c in catalogue} >= {"cav_rent_increase_notice", "notice_to_vacate"}
@@ -68,7 +75,7 @@ def test_declaring_form_publishes_kind_and_section(client):
     by_name = {f["name"]: f for f in agreement["caller_fields"]}
     assert by_name["agreement_date"]["kind"] == "date"
     assert by_name["agreement_date"]["section"] == "1. Date of agreement"
-    assert by_name["is_renewal"]["kind"] == "checkbox"
+    assert by_name["is_renewal"]["kind"] == "hidden"  # U4: radio is the visible control
 
 
 def test_non_declaring_form_falls_back_to_current_behaviour(client):

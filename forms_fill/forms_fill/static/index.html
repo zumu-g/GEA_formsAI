@@ -717,6 +717,20 @@
     let lastSection = null;
     let sectionCount = 0;
     (spec.caller_fields || []).forEach((f) => {
+      // U4: hidden-kind fields are invisible value carriers (kept as a
+      // checkbox so every .checked call site, drafts and /fill behave exactly
+      // as before) — no label, no section header, no visible control.
+      if ((f.kind || '') === 'hidden') {
+        const carrier = document.createElement('input');
+        carrier.type = 'checkbox';
+        carrier.id = 'cf-' + f.name;
+        carrier.dataset.field = f.name;
+        carrier.dataset.hidden = '1';
+        carrier.style.display = 'none';
+        fieldSource[f.name] = '';
+        callerFieldsBox.appendChild(carrier);
+        return;
+      }
       const section = f.section || '';
       if (section !== lastSection) {
         const h = document.createElement('div');
@@ -847,7 +861,8 @@
   // Live "N of M filled" + section jump links for long forms (Form details).
   function updateProgress() {
     const box = document.getElementById('cf-progress');
-    const fields = Array.from(callerFieldsBox.querySelectorAll('[data-field]'));
+    const fields = Array.from(callerFieldsBox.querySelectorAll('[data-field]'))
+      .filter((el) => el.dataset.hidden !== '1');
     const sections = Array.from(callerFieldsBox.querySelectorAll('.field-section-title'));
     if (fields.length < 8) { box.style.display = 'none'; return; } // short forms don't need it
     const filled = fields.filter((el) => el.type === 'checkbox' ? el.checked : el.value.trim()).length;
@@ -1611,8 +1626,14 @@
       lotInput.value = state.lot_id || '';
       tenancyInput.value = state.tenancy_id || '';
       queryInput.value = state.address_query || '';
-      if (state.lease_mode) {
-        leaseModeRadios().forEach((r) => { r.checked = r.value === state.lease_mode; });
+      // U4: the restored is_renewal value is authoritative for the radio —
+      // it is what /fill will receive; lease_mode is the fallback.
+      const restoredRenewal = (state.caller_fields || {}).is_renewal === 'true';
+      const mode = state.caller_fields && 'is_renewal' in state.caller_fields
+        ? (restoredRenewal ? 'renewal' : 'new')
+        : state.lease_mode;
+      if (mode) {
+        leaseModeRadios().forEach((r) => { r.checked = r.value === mode; });
       }
       fieldSource = state.field_source || {};
       Object.entries(state.caller_fields || {}).forEach(([name, value]) => {

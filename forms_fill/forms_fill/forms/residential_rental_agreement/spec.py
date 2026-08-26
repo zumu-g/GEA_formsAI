@@ -302,7 +302,10 @@ SPEC = FormSpec(
     # numbering (module docstring), so the review UI groups fields the way a
     # PM already reads the paper form.
     caller_field_kinds={
-        "is_renewal": "checkbox",
+        # U4 (lease-flow speed-up): the section-2 radio is the one visible
+        # lease-type control; this field stays in the API contract but renders
+        # as a hidden carrier.
+        "is_renewal": "hidden",
         "handling_agent": "select",  # options come live from /agency, not here
         "agreement_date": "date",
         "fixed_start_date": "date",
