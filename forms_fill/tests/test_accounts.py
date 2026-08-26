@@ -179,6 +179,50 @@ def test_machine_token_uses_shared_bucket(client):
     assert [d["id"] for d in listed] == [draft_id]
 
 
+# ── U3 (lease-flow speed-up): per-agent sticky defaults ─────────────────────
+
+
+def test_defaults_roundtrip_per_agent(client):
+    sess = _session(client)
+    resp = client.post(
+        "/defaults/residential_rental_agreement",
+        json={"emergency_contact_name": "Jim Fixit", "emergency_phone": "0400111222",
+              "agent_acn": "111 222 333"},
+        headers=_hdr(sess),
+    )
+    assert resp.status_code == 200
+    got = client.get("/defaults/residential_rental_agreement", headers=_hdr(sess)).json()
+    assert got["values"]["emergency_contact_name"] == "Jim Fixit"
+    # Another agent sees nothing.
+    sess_b = _session(client, email="bob@grantsea.com.au")
+    assert client.get("/defaults/residential_rental_agreement", headers=_hdr(sess_b)).json()["values"] == {}
+
+
+def test_defaults_allowlist_and_validation(client):
+    sess = _session(client)
+    client.post(
+        "/defaults/residential_rental_agreement",
+        json={"emergency_phone": "0400", "rent_amount": "700", "provider_acn": "999",
+              "emergency_email": "x" * 600, "agent_acn": 42},
+        headers=_hdr(sess),
+    )
+    values = client.get("/defaults/residential_rental_agreement", headers=_hdr(sess)).json()["values"]
+    assert values == {"emergency_phone": "0400"}  # non-allowlisted, oversized, non-string all dropped
+
+
+def test_defaults_blank_value_clears_key(client):
+    sess = _session(client)
+    client.post("/defaults/lease", json={"emergency_phone": "0400"}, headers=_hdr(sess))
+    client.post("/defaults/lease", json={"emergency_phone": ""}, headers=_hdr(sess))
+    assert client.get("/defaults/lease", headers=_hdr(sess)).json()["values"] == {}
+
+
+def test_defaults_are_signed_in_only(client):
+    # Machine token neither saves nor serves defaults (no shared NULL bucket here).
+    client.post("/defaults/lease", json={"emergency_phone": "0400"}, headers=MACHINE)
+    assert client.get("/defaults/lease", headers=MACHINE).json()["values"] == {}
+
+
 def test_sessions_persist_in_sqlite(client):
     resp = _invite(client)
     session = client.post(

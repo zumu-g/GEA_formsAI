@@ -262,6 +262,30 @@ def esign_send(payload: dict[str, Any], authorization: str = Header(default=""))
     return {"ok": True, **result, "signers": len(recipients)}
 
 
+# ── per-agent sticky defaults (U3) ───────────────────────────────────────────
+
+
+@app.get("/defaults/{form_key}")
+def defaults_get(form_key: str, authorization: str = Header(default="")) -> Any:
+    _require_auth(authorization)
+    agent_id = _draft_agent_id(authorization)
+    if agent_id is None:  # machine / dev bypass: defaults are signed-in-only
+        return {"ok": True, "values": {}}
+    return {"ok": True, "values": accounts.get_defaults(agent_id, form_key)}
+
+
+@app.post("/defaults/{form_key}")
+def defaults_save(
+    form_key: str, payload: dict[str, Any], authorization: str = Header(default="")
+) -> Any:
+    _require_auth(authorization)
+    agent_id = _draft_agent_id(authorization)
+    if agent_id is None:
+        return {"ok": True, "stored": False}
+    values = accounts.save_defaults(agent_id, form_key, payload)
+    return {"ok": True, "stored": True, "values": values}
+
+
 # ── in-progress form drafts ──────────────────────────────────────────────────
 
 

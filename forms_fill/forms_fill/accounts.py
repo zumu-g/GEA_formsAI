@@ -65,6 +65,13 @@ def init_db() -> None:
               agent_id INTEGER NOT NULL REFERENCES agents(id),
               expires_at TEXT NOT NULL
             );
+            CREATE TABLE IF NOT EXISTS agent_defaults (
+              agent_id INTEGER NOT NULL REFERENCES agents(id),
+              form_key TEXT NOT NULL,
+              "values" TEXT NOT NULL,
+              updated_at TEXT NOT NULL,
+              PRIMARY KEY (agent_id, form_key)
+            );
             CREATE TABLE IF NOT EXISTS drafts (
               id INTEGER PRIMARY KEY,
               agent_id INTEGER,
@@ -228,6 +235,54 @@ def session_agent(token: str) -> dict | None:
             (token,),
         ).fetchone()
         return dict(row) if row else None
+
+
+# ── per-agent sticky defaults (lease-flow speed-up U3) ──────────────────────
+# Signed-in agents only: the machine token / dev bypass have no row here by
+# design (invisible seeds must never cross callers). Blank value clears a key.
+
+DEFAULTS_ALLOWLIST = frozenset(
+    {"emergency_contact_name", "emergency_phone", "emergency_email", "agent_acn"}
+)
+_DEFAULT_VALUE_CAP = 500
+
+
+def save_defaults(agent_id: int, form_key: str, values: dict) -> dict:
+    """Merge allowlisted string values into the agent's defaults; blank clears."""
+
+    import json
+
+    clean = {
+        k: v
+        for k, v in values.items()
+        if k in DEFAULTS_ALLOWLIST and isinstance(v, str) and len(v) <= _DEFAULT_VALUE_CAP
+    }
+    with _connect() as conn:
+        current = get_defaults(agent_id, form_key)
+        for k, v in clean.items():
+            if v.strip():
+                current[k] = v
+            else:
+                current.pop(k, None)
+        conn.execute(
+            """INSERT INTO agent_defaults (agent_id, form_key, "values", updated_at)
+               VALUES (?, ?, ?, ?)
+               ON CONFLICT(agent_id, form_key) DO UPDATE SET "values" = excluded."values",
+               updated_at = excluded.updated_at""",
+            (agent_id, form_key, json.dumps(current), _now().isoformat()),
+        )
+    return current
+
+
+def get_defaults(agent_id: int, form_key: str) -> dict:
+    import json
+
+    with _connect() as conn:
+        row = conn.execute(
+            'SELECT "values" FROM agent_defaults WHERE agent_id = ? AND form_key = ?',
+            (agent_id, form_key),
+        ).fetchone()
+        return json.loads(row["values"]) if row else {}
 
 
 # ── in-progress form drafts ─────────────────────────────────────────────────

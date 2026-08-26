@@ -808,7 +808,40 @@
     }
     prefillRentFields();
     prefillSalesFields();
+    applyRememberedDefaults(spec);
     updateProgress();
+  }
+
+  // U3: per-agent sticky defaults — agent-side constants remembered from the
+  // last successful fill (server allowlist mirrors this set).
+  const REMEMBER_FIELDS = ['emergency_contact_name', 'emergency_phone', 'emergency_email', 'agent_acn'];
+
+  async function applyRememberedDefaults(spec) {
+    if (!spec || !getToken()) return;
+    if (!REMEMBER_FIELDS.some((n) => inputEl(n))) return;
+    try {
+      const resp = await fetch(API + '/defaults/' + encodeURIComponent(spec.key), { headers: authHeaders() });
+      if (!resp.ok) return;
+      const values = (await resp.json()).values || {};
+      Object.entries(values).forEach(([name, value]) => seedField(name, value, 'your defaults'));
+    } catch (err) { /* non-fatal — defaults just don't seed */ }
+  }
+
+  function captureDefaults() {
+    const spec = currentSpec();
+    if (!spec) return;
+    const payload = {};
+    REMEMBER_FIELDS.forEach((name) => {
+      const el = inputEl(name);
+      if (el) payload[name] = el.value;
+    });
+    if (!Object.keys(payload).length) return;
+    // Fire-and-forget: a failed capture never affects the fill's success UI.
+    fetch(API + '/defaults/' + encodeURIComponent(spec.key), {
+      method: 'POST',
+      headers: Object.assign({ 'Content-Type': 'application/json' }, authHeaders()),
+      body: JSON.stringify(payload),
+    }).catch(() => {});
   }
 
   // Live "N of M filled" + section jump links for long forms (Form details).
@@ -1340,6 +1373,7 @@
       }
       showResult(html, true);
       hideReviewScreen();
+      captureDefaults(); // U3: the successful fill is the defaults memory
       // The form is generated — its draft is no longer "in progress".
       if (activeDraftId) {
         fetch(API + '/drafts/' + activeDraftId, { method: 'DELETE', headers: authHeaders() });
