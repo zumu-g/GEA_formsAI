@@ -425,17 +425,31 @@
       updateSourceTag('is_renewal');
       applyLeaseAutofill();
     }
+    maybeAutoCrmFetch(); // U2: flipping to New lease after a preview still auto-fetches
   });
 
   // New lease: pull the NEW tenants from GEA CRM (which holds applicants/
   // incoming tenants) by re-searching the picked address there, and seed the
   // renter caller fields. PropertyMe's renters are the outgoing tenants and
   // are never used for a new lease (server enforces the same rule).
+  // U2: fires automatically once per picked address whenever (successful
+  // preview AND New lease selected) becomes true — on preview if the radio is
+  // already set, or on flipping the radio after a preview. New preview resets
+  // the guard; Renewal-and-back does not re-fire. Manual link stays as retry.
+  let crmAutoKey = null;
+  function maybeAutoCrmFetch() {
+    if (!isLeaseForm(currentSpec()) || isRenewalChecked() || !lastPreviewBundle) return;
+    const key = lastPreviewBundle.premises.address_line || '';
+    if (!key || crmAutoKey === key) return;
+    crmAutoKey = key;
+    fetchCrmTenants();
+  }
+
   async function fetchCrmTenants() {
     const out = document.getElementById('crm-tenants-result');
     const address = (lastPreviewBundle && lastPreviewBundle.premises.address_line) || queryInput.value.trim();
     if (!address) { out.textContent = ' — search a property first.'; return; }
-    out.textContent = ' — searching…';
+    out.textContent = ' — checking GEA CRM…';
     try {
       const sParams = new URLSearchParams({ q: address, provider: 'gea_crm', listing: 'lease' });
       const sResp = await fetch(API + '/tenancy/search?' + sParams, { headers: authHeaders() });
@@ -448,13 +462,13 @@
       if (!pResp.ok) { out.textContent = ' — GEA CRM has no tenancy for that property; enter tenants manually.'; return; }
       const crmRenters = ((await pResp.json()).bundle.renters || []);
       if (!crmRenters.length) { out.textContent = ' — no tenants recorded in GEA CRM; enter them manually.'; return; }
-      crmRenters.slice(0, 2).forEach((r, i) => {
+      crmRenters.slice(0, 4).forEach((r, i) => {
         const p = 'renter' + (i + 1);
         seedField(p + '_name', r.full_name || '', 'GEA CRM');
         seedField(p + '_phone', r.phone_business_hours || '', 'GEA CRM');
         seedField(p + '_email', r.email || '', 'GEA CRM');
       });
-      out.textContent = ' — seeded ' + Math.min(crmRenters.length, 2) + ' tenant(s) from GEA CRM (check section 4).';
+      out.textContent = ' — seeded ' + Math.min(crmRenters.length, 4) + ' renter(s) from GEA CRM (check section 4).';
     } catch (err) {
       out.textContent = ' — GEA CRM fetch failed: ' + err;
     }
@@ -1014,6 +1028,7 @@
     }
     previewBox.classList.add('show');
     lastPreviewBundle = bundle;
+    maybeAutoCrmFetch();
     lastPreviewProvider = PROVIDER_LABELS[provider] || provider || 'tenancy';
     cmaBtn.disabled = !bundle.premises.address_line;
     prefillRentFields();
@@ -1024,6 +1039,7 @@
 
   async function fetchPreview() {
     if (!requireLeaseMode()) return;
+    crmAutoKey = null; // a new preview re-arms the auto CRM fetch (U2)
     previewBox.classList.remove('show');
     const sales = !!currentSpec() && currentSpec().requires_identifiers === false;
     const params = new URLSearchParams({ provider: providerSelect.value, listing: listingMode() });
