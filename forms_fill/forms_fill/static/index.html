@@ -554,13 +554,16 @@
     const handlingEl = inputEl('handling_agent');
     const requested = ((handlingEl && handlingEl.value) || '').trim();
     const agents = officeData.agents || [];
-    const agent = agents.find((a) => a.full_name === requested) || agents[0] || {};
+    // U1: the signed-in agent (server-resolved "me") beats the first-listed
+    // agent as the default; an explicit pick still wins over both.
+    const agent = agents.find((a) => a.full_name === requested) || officeData.me || agents[0] || {};
     const office = officeData.office || {};
     seedField('agent_name', agent.full_name || '', 'GEA office');
     seedField('agent_address', office.address || '', 'GEA office');
     seedField('agent_postcode', office.postcode || '', 'GEA office');
     seedField('agent_phone', agent.mobile || '', 'GEA office');
     seedField('agent_email', agent.email || '', 'GEA office');
+    seedField('agent_acn', agent.acn || '', 'GEA office');
     // Echo the resolved choice (R5) — never blank once an agent exists.
     if (fieldSource.handling_agent !== 'typed') {
       const resolved = requested || agent.full_name || '';

@@ -354,20 +354,40 @@ def agency(authorization: str = Header(default="")) -> Any:
     except ProviderConfigError as exc:
         return _err(500, "fetch_failed", f"agency config: {exc}")
     agency_data = cfg["agency"]
+    agents = [
+        {
+            "full_name": a.get("full_name", ""),
+            "mobile": a.get("mobile", ""),
+            "email": a.get("email", ""),
+            "acn": a.get("acn") or agency_data.get("acn") or "",
+        }
+        for a in cfg["agents"]
+    ]
+    # U1 (lease-flow speed-up): the signed-in agent is the handling-agent
+    # default. Email match (case-insensitive, trimmed), then name; machine
+    # token / dev bypass have no session agent → no "me", old default stands.
+    me = None
+    session = accounts.session_agent(_bearer(authorization))
+    if session:
+        email = (session.get("email") or "").strip().lower()
+        name = (session.get("name") or "").strip().lower()
+        me = next((a for a in agents if a["email"].strip().lower() == email), None) or (
+            next((a for a in agents if name and a["full_name"].strip().lower() == name), None)
+        )
+        if me is None:
+            import logging
+
+            logging.getLogger("forms_fill").info(
+                "agency: session agent %s matched no configured agent", session.get("email")
+            )
     return {
         "office": {
             "name": agency_data.get("name", ""),
             "address": office_address(agency_data),
             "postcode": agency_data.get("postcode", ""),
         },
-        "agents": [
-            {
-                "full_name": a.get("full_name", ""),
-                "mobile": a.get("mobile", ""),
-                "email": a.get("email", ""),
-            }
-            for a in cfg["agents"]
-        ],
+        "agents": agents,
+        "me": me,
     }
 
 
