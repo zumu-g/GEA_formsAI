@@ -120,7 +120,7 @@ _SHORT_TITLES = {
     "pm_exclusive_leasing_authority": "Exclusive Leasing Authority",
     "reiv_exclusive_sale_authority": "Exclusive Sale Authority (REIV)",
     "request_repairs_inspection": "Repairs inspection / rent assessment",
-    "residential_rental_agreement": "Rental agreement (Form 1)",
+    "residential_rental_agreement": "Lease agreement (Form 1)",
     "statement_of_information_applicants": "Statement of information for applicants",
 }
 

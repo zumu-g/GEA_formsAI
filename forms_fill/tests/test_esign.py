@@ -16,8 +16,9 @@ REQ = "esigntest123"
 def _env(monkeypatch):
     monkeypatch.setenv("FORMS_API_TOKEN", TOKEN)
     monkeypatch.setenv("PUBLIC_BASE_URL", "http://testserver")
-    monkeypatch.setenv("ANNATURE_ID", "pub")
-    monkeypatch.setenv("ANNATURE_KEY", "priv")
+    monkeypatch.setenv("ANNATURE_API_ID", "pub")  # the names Railway actually has
+    monkeypatch.setenv("ANNATURE_API_KEY", "priv")
+    monkeypatch.setenv("ANNATURE_ACCOUNT_ID", "acct_1")  # skip the /accounts lookup
 
 
 @pytest.fixture()
@@ -81,7 +82,7 @@ def test_missing_or_bad_recipients_422(client, pdf_request, sent):
 
 
 def test_unconfigured_keys_503(client, pdf_request, monkeypatch):
-    monkeypatch.delenv("ANNATURE_ID")
+    monkeypatch.delenv("ANNATURE_API_ID")
     resp = _send(client)
     assert resp.status_code == 503
     assert "ANNATURE" in resp.json()["message"]

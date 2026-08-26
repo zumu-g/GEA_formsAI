@@ -15,7 +15,15 @@ from pathlib import Path
 
 import httpx
 
-ANNATURE_URL = "https://api.annature.com.au/v1/envelopes"
+ANNATURE_BASE = "https://api.annature.com.au/v1"
+
+
+def _keys() -> tuple[str, str]:
+    # Railway provisioned these as ANNATURE_API_ID/ANNATURE_API_KEY (2026-07);
+    # accept both spellings so the deployed vars work unchanged.
+    pub = os.environ.get("ANNATURE_ID") or os.environ.get("ANNATURE_API_ID") or ""
+    priv = os.environ.get("ANNATURE_KEY") or os.environ.get("ANNATURE_API_KEY") or ""
+    return pub, priv
 
 
 class EsignConfigError(RuntimeError):
@@ -26,21 +34,35 @@ class EsignUpstreamError(RuntimeError):
     """Annature rejected the request — api.py maps this to 502."""
 
 
+def _headers() -> dict:
+    pub, priv = _keys()
+    return {"X-Annature-Id": pub, "X-Annature-Key": priv}
+
+
 def _post_envelope(payload: dict) -> dict:
     """The single network call, factored out so tests can record it."""
 
     resp = httpx.post(
-        ANNATURE_URL,
-        headers={
-            "X-Annature-Id": os.environ["ANNATURE_ID"],
-            "X-Annature-Key": os.environ["ANNATURE_KEY"],
-        },
-        json=payload,
-        timeout=30.0,
+        f"{ANNATURE_BASE}/envelopes", headers=_headers(), json=payload, timeout=30.0
     )
     if resp.status_code >= 400:
         raise EsignUpstreamError(f"Annature {resp.status_code}: {resp.text[:300]}")
     return resp.json()
+
+
+def _account_id() -> str:
+    """Envelope sender: env override, else the org's first account."""
+
+    configured = os.environ.get("ANNATURE_ACCOUNT_ID")
+    if configured:
+        return configured
+    resp = httpx.get(f"{ANNATURE_BASE}/accounts", headers=_headers(), timeout=15.0)
+    if resp.status_code >= 400:
+        raise EsignUpstreamError(f"Annature accounts {resp.status_code}: {resp.text[:300]}")
+    accounts = resp.json() or []
+    if not accounts:
+        raise EsignUpstreamError("Annature org has no accounts to send from")
+    return accounts[0].get("id", "")
 
 
 def send_for_signing(
@@ -49,9 +71,10 @@ def send_for_signing(
     """Create a non-draft envelope; every recipient becomes a signer with one
     required signature field anchored to the document's "Signature" labels."""
 
-    if not (os.environ.get("ANNATURE_ID") and os.environ.get("ANNATURE_KEY")):
+    pub, priv = _keys()
+    if not (pub and priv):
         raise EsignConfigError(
-            "e-signature not configured: set ANNATURE_ID and ANNATURE_KEY"
+            "e-signature not configured: set ANNATURE_API_ID and ANNATURE_API_KEY"
         )
     payload: dict = {
         "name": title,
@@ -84,8 +107,6 @@ def send_for_signing(
             for r in recipients
         ],
     }
-    account_id = os.environ.get("ANNATURE_ACCOUNT_ID")
-    if account_id:
-        payload["account_id"] = account_id
+    payload["account_id"] = _account_id()
     body = _post_envelope(payload)
     return {"envelope_id": body.get("id", ""), "status": body.get("status", "sent")}

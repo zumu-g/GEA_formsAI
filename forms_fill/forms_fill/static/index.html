@@ -1521,6 +1521,12 @@
           + (d.label ? ' — ' + d.label : '') + ' · ' + relTime(d.updated_at);
         text.style.cursor = 'pointer';
         text.addEventListener('click', () => resumeDraft(d.id));
+        const edit = document.createElement('button');
+        edit.type = 'button';
+        edit.className = 'linklike';
+        edit.textContent = 'Edit';
+        edit.style.marginLeft = 'auto';
+        edit.addEventListener('click', () => resumeDraft(d.id));
         const del = document.createElement('button');
         del.type = 'button';
         del.className = 'linklike';
@@ -1533,6 +1539,7 @@
           refreshDrafts();
         });
         li.appendChild(text);
+        li.appendChild(edit);
         li.appendChild(del);
         draftsList.appendChild(li);
       });
