@@ -90,8 +90,24 @@ email) so the calling system can warn the PM.
 
 The engine contract the rent-review system is built against.
 
-- **Auth:** every route (except `GET /health`) requires `Authorization: Bearer
-  $FORMS_API_TOKEN`; missing/wrong → `401 {"ok":false,"error":"unauthorized"}`.
+- **Auth:** every route (except `GET /health` and the `/auth/*` login flow)
+  requires `Authorization: Bearer <token>` — either the machine
+  `$FORMS_API_TOKEN` or an agent session token; missing/wrong →
+  `401 {"ok":false,"error":"unauthorized"}`.
+- **Agent accounts:** admins invite via `POST /agents/invite` (UI has a form);
+  invites are restricted to `@grantsea.com.au`. The invite email goes out via
+  Resend when `RESEND_API_KEY` (+ `MAIL_FROM`) is set; otherwise the response's
+  `accept_url` is a copyable fallback link. Accounts/sessions persist in SQLite
+  at `$FORMS_DATA_DIR/accounts.db` (default `./data`) — **on Railway, mount a
+  volume at that path or accounts are wiped each deploy**. First invited agent
+  is automatically admin; the machine token always counts as admin.
+- **Drafts:** part-completed forms auto-save server-side per agent
+  (`/drafts` CRUD, same SQLite file); the UI lists them under "In progress"
+  and deletes the draft once the form is generated.
+- **E-signature:** `POST /esign/send {request_id, recipients:[{name,email}]}`
+  creates an Annature envelope from a generated PDF — Annature emails each
+  signer. Needs `ANNATURE_ID` + `ANNATURE_KEY` (already in Railway), optional
+  `ANNATURE_ACCOUNT_ID`; unset → 503.
 - **Fail-closed startup:** the app refuses to start unless `FORMS_API_TOKEN`
   **and** `PUBLIC_BASE_URL` are set (local dev:
   `PUBLIC_BASE_URL=http://localhost:8080`). Optional `FORMS_OUTPUT_DIR`

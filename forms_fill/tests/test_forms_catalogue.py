@@ -41,10 +41,14 @@ def test_forms_lists_registered_forms_with_groups(client):
 def test_forms_carry_display_category_and_short_title(client):
     forms = client.get("/forms", headers=AUTH).json()["forms"]
     for f in forms:
-        assert f["category"] in {"GEA Sales", "GEA PM"}
+        assert f["category"] in {"GEA Sales", "GEA PM", "Notices", "Bond"}
         assert f["short_title"]
     sales = {f["key"] for f in forms if f["category"] == "GEA Sales"}
     assert sales == {"reiv_exclusive_sale_authority"}
+    bond = {f["key"] for f in forms if f["category"] == "Bond"}
+    assert bond == {"notice_requesting_additional_bond"}
+    notices = {f["key"] for f in forms if f["category"] == "Notices"}
+    assert "notice_to_vacate" in notices and "cav_rent_increase_notice" in notices
     rent = next(f for f in forms if f["key"] == "cav_rent_increase_notice")
     assert rent["short_title"] == "Rent increase to renter"
     assert "s 44" not in rent["short_title"]

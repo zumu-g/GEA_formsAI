@@ -29,6 +29,7 @@ from fastapi import FastAPI, Header, HTTPException
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
+from . import accounts
 from .core import fill_form
 from .registry import form_catalogue
 from .errors import (
@@ -74,24 +75,46 @@ def _fail_closed() -> None:
             f"refusing to start: {', '.join(missing)} not set (fail-closed; "
             "for local dev set PUBLIC_BASE_URL=http://localhost:8080)"
         )
+    accounts.init_db()
+
+
+def _bearer(authorization: str) -> str:
+    scheme, _, supplied = authorization.partition(" ")
+    return supplied.strip() if scheme == "Bearer" else ""
+
+
+def _is_machine(supplied: str) -> bool:
+    token = os.environ.get("FORMS_API_TOKEN") or ""
+    return bool(token) and hmac.compare_digest(supplied.encode(), token.encode())
 
 
 def _require_auth(authorization: str) -> None:
     # ponytail: local-dev escape hatch only; Railway never sets this
     if os.environ.get("FORMS_DEV_NO_AUTH") == "1":
         return
-    token = os.environ.get("FORMS_API_TOKEN") or ""
-    scheme, _, supplied = authorization.partition(" ")
-    supplied = supplied.strip()
-    if (
-        scheme != "Bearer"
-        or not token
-        or not hmac.compare_digest(supplied.encode(), token.encode())
-    ):
-        raise HTTPException(
-            status_code=401,
-            detail={"error": "unauthorized", "message": "missing or invalid bearer token"},
-        )
+    supplied = _bearer(authorization)
+    # Machine token first (Hermes relay etc., unchanged), then agent session.
+    if supplied and (_is_machine(supplied) or accounts.session_agent(supplied)):
+        return
+    raise HTTPException(
+        status_code=401,
+        detail={"error": "unauthorized", "message": "missing or invalid bearer token"},
+    )
+
+
+def _require_admin(authorization: str) -> None:
+    if os.environ.get("FORMS_DEV_NO_AUTH") == "1":
+        return
+    supplied = _bearer(authorization)
+    if supplied and _is_machine(supplied):
+        return  # the machine token is trusted as admin
+    agent = accounts.session_agent(supplied) if supplied else None
+    if agent and agent["is_admin"]:
+        return
+    raise HTTPException(
+        status_code=403 if agent else 401,
+        detail={"error": "forbidden", "message": "admin access required"},
+    )
 
 
 def _err(status: int, code: str, message: str) -> JSONResponse:
@@ -110,6 +133,192 @@ async def _http_exc(request: Any, exc: HTTPException) -> JSONResponse:
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+# ── agent accounts (invite → accept → login) ────────────────────────────────
+
+
+@app.post("/auth/login")
+def auth_login(payload: dict[str, Any]) -> Any:
+    token = accounts.login(str(payload.get("email", "")), str(payload.get("password", "")))
+    if not token:
+        raise HTTPException(
+            status_code=401,
+            detail={"error": "unauthorized", "message": "wrong email or password"},
+        )
+    agent = accounts.session_agent(token)
+    return {"ok": True, "token": token, "name": agent["name"], "is_admin": bool(agent["is_admin"])}
+
+
+@app.post("/auth/accept")
+def auth_accept(payload: dict[str, Any]) -> Any:
+    try:
+        token = accounts.accept_invite(
+            str(payload.get("token", "")), str(payload.get("password", ""))
+        )
+    except accounts.AccountError as exc:
+        raise HTTPException(
+            status_code=400, detail={"error": "invalid_request", "message": str(exc)}
+        ) from None
+    agent = accounts.session_agent(token)
+    return {"ok": True, "token": token, "name": agent["name"], "is_admin": bool(agent["is_admin"])}
+
+
+@app.post("/auth/logout")
+def auth_logout(authorization: str = Header(default="")) -> Any:
+    accounts.logout(_bearer(authorization))
+    return {"ok": True}
+
+
+@app.get("/auth/me")
+def auth_me(authorization: str = Header(default="")) -> Any:
+    _require_auth(authorization)
+    supplied = _bearer(authorization)
+    if _is_machine(supplied) or os.environ.get("FORMS_DEV_NO_AUTH") == "1":
+        return {"ok": True, "machine": True, "is_admin": True}
+    agent = accounts.session_agent(supplied)
+    return {"ok": True, "machine": False, **{k: agent[k] for k in ("email", "name", "mobile")},
+            "is_admin": bool(agent["is_admin"])}
+
+
+@app.post("/agents/invite")
+def agents_invite(payload: dict[str, Any], authorization: str = Header(default="")) -> Any:
+    _require_admin(authorization)
+    try:
+        invite_token = accounts.create_invite(
+            str(payload.get("email", "")),
+            str(payload.get("name", "")),
+            str(payload.get("mobile", "")),
+            bool(payload.get("is_admin", False)),
+        )
+    except accounts.AccountError as exc:
+        raise HTTPException(
+            status_code=422, detail={"error": "invalid_request", "message": str(exc)}
+        ) from None
+    base = (os.environ.get("PUBLIC_BASE_URL") or "").rstrip("/")
+    accept_url = f"{base}/ui/#accept={invite_token}"
+    try:
+        emailed = accounts.send_invite_email(str(payload.get("email", "")), accept_url)
+    except Exception:
+        emailed = False  # email is best-effort; the copyable link below always works
+    return {"ok": True, "accept_url": accept_url, "emailed": emailed}
+
+
+@app.get("/agents")
+def agents_list(authorization: str = Header(default="")) -> Any:
+    _require_admin(authorization)
+    return {"ok": True, "agents": accounts.list_agents()}
+
+
+# ── e-signature (Annature) ───────────────────────────────────────────────────
+
+
+@app.post("/esign/send")
+def esign_send(payload: dict[str, Any], authorization: str = Header(default="")) -> Any:
+    _require_auth(authorization)
+    from . import esign
+
+    request_id = str(payload.get("request_id", ""))
+    if not request_id.isalnum():
+        raise HTTPException(
+            status_code=400,
+            detail={"error": "invalid_request", "message": "invalid request id"},
+        )
+    recipients = [
+        {"name": str(r.get("name", "")).strip(), "email": str(r.get("email", "")).strip()}
+        for r in payload.get("recipients", [])
+    ]
+    recipients = [r for r in recipients if r["name"] or r["email"]]
+    if not recipients or any(not r["name"] or "@" not in r["email"] for r in recipients):
+        raise HTTPException(
+            status_code=422,
+            detail={
+                "error": "invalid_request",
+                "message": "each signer needs a name and a valid email",
+            },
+        )
+    directory = OUTPUT_ROOT / request_id
+    matches = sorted(directory.glob("*.pdf")) if directory.exists() else []
+    if not matches:
+        raise HTTPException(
+            status_code=404,
+            detail={"error": "not_found", "message": "no generated PDF for that request id"},
+        )
+    try:
+        result = esign.send_for_signing(
+            matches[0],
+            str(payload.get("title", "")) or matches[0].stem,
+            recipients,
+            str(payload.get("message", "")),
+        )
+    except esign.EsignConfigError as exc:
+        raise HTTPException(
+            status_code=503, detail={"error": "not_configured", "message": str(exc)}
+        ) from None
+    except Exception as exc:  # upstream/network failures — Annature is a black box here
+        raise HTTPException(
+            status_code=502, detail={"error": "upstream_error", "message": str(exc)}
+        ) from None
+    return {"ok": True, **result, "signers": len(recipients)}
+
+
+# ── in-progress form drafts ──────────────────────────────────────────────────
+
+
+def _draft_agent_id(authorization: str) -> int | None:
+    """The draft bucket owner: the signed-in agent, or None for the machine
+    token / dev bypass (a shared bucket)."""
+
+    supplied = _bearer(authorization)
+    if os.environ.get("FORMS_DEV_NO_AUTH") == "1" or _is_machine(supplied):
+        return None
+    agent = accounts.session_agent(supplied)
+    return agent["id"] if agent else None
+
+
+@app.get("/drafts")
+def drafts_list(authorization: str = Header(default="")) -> Any:
+    _require_auth(authorization)
+    return {"ok": True, "drafts": accounts.list_drafts(_draft_agent_id(authorization))}
+
+
+@app.get("/drafts/{draft_id}")
+def drafts_get(draft_id: int, authorization: str = Header(default="")) -> Any:
+    _require_auth(authorization)
+    draft = accounts.get_draft(_draft_agent_id(authorization), draft_id)
+    if not draft:
+        raise HTTPException(
+            status_code=404, detail={"error": "not_found", "message": "no such draft"}
+        )
+    return {"ok": True, "draft": draft}
+
+
+@app.post("/drafts")
+def drafts_save(payload: dict[str, Any], authorization: str = Header(default="")) -> Any:
+    _require_auth(authorization)
+    form_key = str(payload.get("form_key", ""))
+    if not form_key:
+        raise HTTPException(
+            status_code=422, detail={"error": "invalid_request", "message": "form_key required"}
+        )
+    draft_id = accounts.save_draft(
+        _draft_agent_id(authorization),
+        payload.get("id"),
+        form_key,
+        str(payload.get("label", "")),
+        str(payload.get("state", "{}")),
+    )
+    return {"ok": True, "id": draft_id}
+
+
+@app.delete("/drafts/{draft_id}")
+def drafts_delete(draft_id: int, authorization: str = Header(default="")) -> Any:
+    _require_auth(authorization)
+    if not accounts.delete_draft(_draft_agent_id(authorization), draft_id):
+        raise HTTPException(
+            status_code=404, detail={"error": "not_found", "message": "no such draft"}
+        )
+    return {"ok": True}
 
 
 @app.get("/forms")

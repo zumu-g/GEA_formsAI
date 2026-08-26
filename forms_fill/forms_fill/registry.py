@@ -85,6 +85,27 @@ def available_forms() -> list[str]:
 # ponytail: display map lives here, not on 19 FormSpec declarations; move onto
 # FormSpec if a non-UI consumer ever needs it.
 _SALES_KEYS = {"reiv_exclusive_sale_authority"}
+_NOTICE_KEYS = {
+    "breach_of_duty_notice",
+    "cav_rent_increase_notice",
+    "general_notice",
+    "notice_of_entry",
+    "notice_of_goods_left_behind",
+    "notice_of_intention_to_sell",
+    "notice_to_vacate",
+    "notice_to_vacate_death_sole_renter",
+}
+_BOND_KEYS = {"notice_requesting_additional_bond"}
+
+
+def _category(key: str) -> str:
+    if key in _SALES_KEYS:
+        return "GEA Sales"
+    if key in _NOTICE_KEYS:
+        return "Notices"
+    if key in _BOND_KEYS:
+        return "Bond"
+    return "GEA PM"
 _SHORT_TITLES = {
     "breach_of_duty_notice": "Breach of duty notice",
     "cav_rent_increase_notice": "Rent increase to renter",
@@ -116,7 +137,7 @@ def form_catalogue() -> list[dict]:
             "key": spec.key,
             "title": spec.title or spec.key,
             "group": spec.group or "other",
-            "category": "GEA Sales" if key in _SALES_KEYS else "GEA PM",
+            "category": _category(key),
             "short_title": _SHORT_TITLES.get(key) or spec.title or spec.key,
             "engine": spec.engine,
             "requires_identifiers": spec.requires_bundle,
