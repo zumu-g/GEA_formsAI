@@ -79,6 +79,7 @@ def apply_agent_autofill(ctx: dict[str, str], fields: dict) -> None:
     _seed(ctx, fields, "agent_postcode", agency_data.get("postcode", ""))
     _seed(ctx, fields, "agent_phone", agent.get("mobile", ""))
     _seed(ctx, fields, "agent_email", agent.get("email", ""))
+    _seed(ctx, fields, "agent_acn", agent.get("acn") or agency_data.get("acn") or "")
 
     # Echo the resolved choice back (R5) — never blank once an agent exists,
     # whether the caller picked one explicitly or the default was used.

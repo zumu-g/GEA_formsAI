@@ -425,17 +425,31 @@
       updateSourceTag('is_renewal');
       applyLeaseAutofill();
     }
+    maybeAutoCrmFetch(); // U2: flipping to New lease after a preview still auto-fetches
   });
 
   // New lease: pull the NEW tenants from GEA CRM (which holds applicants/
   // incoming tenants) by re-searching the picked address there, and seed the
   // renter caller fields. PropertyMe's renters are the outgoing tenants and
   // are never used for a new lease (server enforces the same rule).
+  // U2: fires automatically once per picked address whenever (successful
+  // preview AND New lease selected) becomes true — on preview if the radio is
+  // already set, or on flipping the radio after a preview. New preview resets
+  // the guard; Renewal-and-back does not re-fire. Manual link stays as retry.
+  let crmAutoKey = null;
+  function maybeAutoCrmFetch() {
+    if (!isLeaseForm(currentSpec()) || isRenewalChecked() || !lastPreviewBundle) return;
+    const key = lastPreviewBundle.premises.address_line || '';
+    if (!key || crmAutoKey === key) return;
+    crmAutoKey = key;
+    fetchCrmTenants();
+  }
+
   async function fetchCrmTenants() {
     const out = document.getElementById('crm-tenants-result');
     const address = (lastPreviewBundle && lastPreviewBundle.premises.address_line) || queryInput.value.trim();
     if (!address) { out.textContent = ' — search a property first.'; return; }
-    out.textContent = ' — searching…';
+    out.textContent = ' — checking GEA CRM…';
     try {
       const sParams = new URLSearchParams({ q: address, provider: 'gea_crm', listing: 'lease' });
       const sResp = await fetch(API + '/tenancy/search?' + sParams, { headers: authHeaders() });
@@ -448,13 +462,13 @@
       if (!pResp.ok) { out.textContent = ' — GEA CRM has no tenancy for that property; enter tenants manually.'; return; }
       const crmRenters = ((await pResp.json()).bundle.renters || []);
       if (!crmRenters.length) { out.textContent = ' — no tenants recorded in GEA CRM; enter them manually.'; return; }
-      crmRenters.slice(0, 2).forEach((r, i) => {
+      crmRenters.slice(0, 4).forEach((r, i) => {
         const p = 'renter' + (i + 1);
         seedField(p + '_name', r.full_name || '', 'GEA CRM');
         seedField(p + '_phone', r.phone_business_hours || '', 'GEA CRM');
         seedField(p + '_email', r.email || '', 'GEA CRM');
       });
-      out.textContent = ' — seeded ' + Math.min(crmRenters.length, 2) + ' tenant(s) from GEA CRM (check section 4).';
+      out.textContent = ' — seeded ' + Math.min(crmRenters.length, 4) + ' renter(s) from GEA CRM (check section 4).';
     } catch (err) {
       out.textContent = ' — GEA CRM fetch failed: ' + err;
     }
@@ -554,13 +568,16 @@
     const handlingEl = inputEl('handling_agent');
     const requested = ((handlingEl && handlingEl.value) || '').trim();
     const agents = officeData.agents || [];
-    const agent = agents.find((a) => a.full_name === requested) || agents[0] || {};
+    // U1: the signed-in agent (server-resolved "me") beats the first-listed
+    // agent as the default; an explicit pick still wins over both.
+    const agent = agents.find((a) => a.full_name === requested) || officeData.me || agents[0] || {};
     const office = officeData.office || {};
     seedField('agent_name', agent.full_name || '', 'GEA office');
     seedField('agent_address', office.address || '', 'GEA office');
     seedField('agent_postcode', office.postcode || '', 'GEA office');
     seedField('agent_phone', agent.mobile || '', 'GEA office');
     seedField('agent_email', agent.email || '', 'GEA office');
+    seedField('agent_acn', agent.acn || '', 'GEA office');
     // Echo the resolved choice (R5) — never blank once an agent exists.
     if (fieldSource.handling_agent !== 'typed') {
       const resolved = requested || agent.full_name || '';
@@ -700,6 +717,20 @@
     let lastSection = null;
     let sectionCount = 0;
     (spec.caller_fields || []).forEach((f) => {
+      // U4: hidden-kind fields are invisible value carriers (kept as a
+      // checkbox so every .checked call site, drafts and /fill behave exactly
+      // as before) — no label, no section header, no visible control.
+      if ((f.kind || '') === 'hidden') {
+        const carrier = document.createElement('input');
+        carrier.type = 'checkbox';
+        carrier.id = 'cf-' + f.name;
+        carrier.dataset.field = f.name;
+        carrier.dataset.hidden = '1';
+        carrier.style.display = 'none';
+        fieldSource[f.name] = '';
+        callerFieldsBox.appendChild(carrier);
+        return;
+      }
       const section = f.section || '';
       if (section !== lastSection) {
         const h = document.createElement('div');
@@ -791,13 +822,47 @@
     }
     prefillRentFields();
     prefillSalesFields();
+    applyRememberedDefaults(spec);
     updateProgress();
+  }
+
+  // U3: per-agent sticky defaults — agent-side constants remembered from the
+  // last successful fill (server allowlist mirrors this set).
+  const REMEMBER_FIELDS = ['emergency_contact_name', 'emergency_phone', 'emergency_email', 'agent_acn'];
+
+  async function applyRememberedDefaults(spec) {
+    if (!spec || !getToken()) return;
+    if (!REMEMBER_FIELDS.some((n) => inputEl(n))) return;
+    try {
+      const resp = await fetch(API + '/defaults/' + encodeURIComponent(spec.key), { headers: authHeaders() });
+      if (!resp.ok) return;
+      const values = (await resp.json()).values || {};
+      Object.entries(values).forEach(([name, value]) => seedField(name, value, 'your defaults'));
+    } catch (err) { /* non-fatal — defaults just don't seed */ }
+  }
+
+  function captureDefaults() {
+    const spec = currentSpec();
+    if (!spec) return;
+    const payload = {};
+    REMEMBER_FIELDS.forEach((name) => {
+      const el = inputEl(name);
+      if (el) payload[name] = el.value;
+    });
+    if (!Object.keys(payload).length) return;
+    // Fire-and-forget: a failed capture never affects the fill's success UI.
+    fetch(API + '/defaults/' + encodeURIComponent(spec.key), {
+      method: 'POST',
+      headers: Object.assign({ 'Content-Type': 'application/json' }, authHeaders()),
+      body: JSON.stringify(payload),
+    }).catch(() => {});
   }
 
   // Live "N of M filled" + section jump links for long forms (Form details).
   function updateProgress() {
     const box = document.getElementById('cf-progress');
-    const fields = Array.from(callerFieldsBox.querySelectorAll('[data-field]'));
+    const fields = Array.from(callerFieldsBox.querySelectorAll('[data-field]'))
+      .filter((el) => el.dataset.hidden !== '1');
     const sections = Array.from(callerFieldsBox.querySelectorAll('.field-section-title'));
     if (fields.length < 8) { box.style.display = 'none'; return; } // short forms don't need it
     const filled = fields.filter((el) => el.type === 'checkbox' ? el.checked : el.value.trim()).length;
@@ -1011,6 +1076,7 @@
     }
     previewBox.classList.add('show');
     lastPreviewBundle = bundle;
+    maybeAutoCrmFetch();
     lastPreviewProvider = PROVIDER_LABELS[provider] || provider || 'tenancy';
     cmaBtn.disabled = !bundle.premises.address_line;
     prefillRentFields();
@@ -1021,6 +1087,7 @@
 
   async function fetchPreview() {
     if (!requireLeaseMode()) return;
+    crmAutoKey = null; // a new preview re-arms the auto CRM fetch (U2)
     previewBox.classList.remove('show');
     const sales = !!currentSpec() && currentSpec().requires_identifiers === false;
     const params = new URLSearchParams({ provider: providerSelect.value, listing: listingMode() });
@@ -1321,6 +1388,7 @@
       }
       showResult(html, true);
       hideReviewScreen();
+      captureDefaults(); // U3: the successful fill is the defaults memory
       // The form is generated — its draft is no longer "in progress".
       if (activeDraftId) {
         fetch(API + '/drafts/' + activeDraftId, { method: 'DELETE', headers: authHeaders() });
@@ -1558,8 +1626,14 @@
       lotInput.value = state.lot_id || '';
       tenancyInput.value = state.tenancy_id || '';
       queryInput.value = state.address_query || '';
-      if (state.lease_mode) {
-        leaseModeRadios().forEach((r) => { r.checked = r.value === state.lease_mode; });
+      // U4: the restored is_renewal value is authoritative for the radio —
+      // it is what /fill will receive; lease_mode is the fallback.
+      const restoredRenewal = (state.caller_fields || {}).is_renewal === 'true';
+      const mode = state.caller_fields && 'is_renewal' in state.caller_fields
+        ? (restoredRenewal ? 'renewal' : 'new')
+        : state.lease_mode;
+      if (mode) {
+        leaseModeRadios().forEach((r) => { r.checked = r.value === mode; });
       }
       fieldSource = state.field_source || {};
       Object.entries(state.caller_fields || {}).forEach(([name, value]) => {

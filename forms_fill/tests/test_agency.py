@@ -14,7 +14,7 @@ from forms_fill.errors import ProviderConfigError
 def test_loads_configured_office_and_agents():
     cfg = load_agency_config()
     assert cfg["agency"]["name"] == "Grants Estate Agents"
-    assert len(cfg["agents"]) == 1
+    assert len(cfg["agents"]) == 3  # Stuart + Geoff + Siobhan
     assert cfg["agents"][0]["full_name"] == "Stuart Grant"
 
 

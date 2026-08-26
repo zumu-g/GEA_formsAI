@@ -270,6 +270,12 @@ SPEC = FormSpec(
         "renter2_name": "Renter 2 full name",
         "renter2_phone": "Renter 2 phone",
         "renter2_email": "Renter 2 email",
+        "renter3_name": "Renter 3 full name",
+        "renter3_phone": "Renter 3 phone",
+        "renter3_email": "Renter 3 email",
+        "renter4_name": "Renter 4 full name",
+        "renter4_phone": "Renter 4 phone",
+        "renter4_email": "Renter 4 email",
         "renter1_current_address": "Renter 1 current address (before this tenancy)",
         "renter1_current_postcode": "Renter 1 current postcode",
         "renter2_current_address": "Renter 2 current address",
@@ -296,7 +302,10 @@ SPEC = FormSpec(
     # numbering (module docstring), so the review UI groups fields the way a
     # PM already reads the paper form.
     caller_field_kinds={
-        "is_renewal": "checkbox",
+        # U4 (lease-flow speed-up): the section-2 radio is the one visible
+        # lease-type control; this field stays in the API contract but renders
+        # as a hidden carrier.
+        "is_renewal": "hidden",
         "handling_agent": "select",  # options come live from /agency, not here
         "agreement_date": "date",
         "fixed_start_date": "date",
@@ -323,6 +332,12 @@ SPEC = FormSpec(
         "renter2_name": "4. Renters — details (new lease)",
         "renter2_phone": "4. Renters — details (new lease)",
         "renter2_email": "4. Renters — details (new lease)",
+        "renter3_name": "4. Renters — details (new lease)",
+        "renter3_phone": "4. Renters — details (new lease)",
+        "renter3_email": "4. Renters — details (new lease)",
+        "renter4_name": "4. Renters — details (new lease)",
+        "renter4_phone": "4. Renters — details (new lease)",
+        "renter4_email": "4. Renters — details (new lease)",
         "renter1_current_address": "4. Renters — current address",
         "renter1_current_postcode": "4. Renters — current address",
         "renter2_current_address": "4. Renters — current address",
