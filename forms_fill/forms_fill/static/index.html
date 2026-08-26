@@ -174,7 +174,9 @@
 </style>
 </head>
 <body>
-<header class="hero">
+<header class="hero" style="position:relative">
+  <button type="button" id="settings-btn" title="Settings" aria-label="Settings"
+    style="display:none; position:absolute; top:1rem; right:1rem; background:none; border:none; font-size:1.4rem; cursor:pointer; line-height:1; padding:0.5rem">&#9881;</button>
   <img src="logo.png" alt="Grants Estate Agents" />
   <h1>Forms Fill</h1>
   <hr class="gold-rule" />
@@ -277,6 +279,9 @@
     <fieldset id="caller-fields">
       <legend><span class="disc">3</span>Form details</legend>
       <p class="hint">Rendered verbatim — this tool never computes dates, notice periods, or legal grounds.</p>
+      <div id="cf-progress" class="hint" style="display:none; margin-bottom:0.5rem">
+        <strong id="cf-progress-count"></strong> <span id="cf-progress-links"></span>
+      </div>
       <div id="caller-fields-inputs"></div>
     </fieldset>
 
@@ -422,6 +427,39 @@
     }
   });
 
+  // New lease: pull the NEW tenants from GEA CRM (which holds applicants/
+  // incoming tenants) by re-searching the picked address there, and seed the
+  // renter caller fields. PropertyMe's renters are the outgoing tenants and
+  // are never used for a new lease (server enforces the same rule).
+  async function fetchCrmTenants() {
+    const out = document.getElementById('crm-tenants-result');
+    const address = (lastPreviewBundle && lastPreviewBundle.premises.address_line) || queryInput.value.trim();
+    if (!address) { out.textContent = ' — search a property first.'; return; }
+    out.textContent = ' — searching…';
+    try {
+      const sParams = new URLSearchParams({ q: address, provider: 'gea_crm', listing: 'lease' });
+      const sResp = await fetch(API + '/tenancy/search?' + sParams, { headers: authHeaders() });
+      const matches = sResp.ok ? (await sResp.json()).matches || [] : [];
+      if (!matches.length) { out.textContent = ' — no match in GEA CRM; enter tenants manually.'; return; }
+      const pParams = new URLSearchParams({ provider: 'gea_crm' });
+      if (matches[0].lot_id) pParams.set('lot_id', matches[0].lot_id);
+      if (matches[0].tenancy_id) pParams.set('tenancy_id', matches[0].tenancy_id);
+      const pResp = await fetch(API + '/tenancy/preview?' + pParams, { headers: authHeaders() });
+      if (!pResp.ok) { out.textContent = ' — GEA CRM has no tenancy for that property; enter tenants manually.'; return; }
+      const crmRenters = ((await pResp.json()).bundle.renters || []);
+      if (!crmRenters.length) { out.textContent = ' — no tenants recorded in GEA CRM; enter them manually.'; return; }
+      crmRenters.slice(0, 2).forEach((r, i) => {
+        const p = 'renter' + (i + 1);
+        seedField(p + '_name', r.full_name || '', 'GEA CRM');
+        seedField(p + '_phone', r.phone_business_hours || '', 'GEA CRM');
+        seedField(p + '_email', r.email || '', 'GEA CRM');
+      });
+      out.textContent = ' — seeded ' + Math.min(crmRenters.length, 2) + ' tenant(s) from GEA CRM (check section 4).';
+    } catch (err) {
+      out.textContent = ' — GEA CRM fetch failed: ' + err;
+    }
+  }
+
   // Block the tenant lookup until the PM has made the lease-type call.
   function requireLeaseMode() {
     if (isLeaseForm(currentSpec()) && !leaseModeChosen()) {
@@ -475,6 +513,7 @@
     if (el.type === 'checkbox') el.checked = !!value && value !== 'false';
     else el.value = value == null ? '' : value;
     updateSourceTag(name);
+    updateProgress();
   }
 
   function updateSourceTag(name) {
@@ -659,12 +698,14 @@
     callerFieldsBox.innerHTML = '';
     fieldSource = {};
     let lastSection = null;
+    let sectionCount = 0;
     (spec.caller_fields || []).forEach((f) => {
       const section = f.section || '';
       if (section !== lastSection) {
         const h = document.createElement('div');
         h.className = 'field-section-title';
         h.textContent = section || 'Details';
+        h.id = 'cf-sect-' + sectionCount++;
         callerFieldsBox.appendChild(h);
         lastSection = section;
       }
@@ -750,6 +791,31 @@
     }
     prefillRentFields();
     prefillSalesFields();
+    updateProgress();
+  }
+
+  // Live "N of M filled" + section jump links for long forms (Form details).
+  function updateProgress() {
+    const box = document.getElementById('cf-progress');
+    const fields = Array.from(callerFieldsBox.querySelectorAll('[data-field]'));
+    const sections = Array.from(callerFieldsBox.querySelectorAll('.field-section-title'));
+    if (fields.length < 8) { box.style.display = 'none'; return; } // short forms don't need it
+    const filled = fields.filter((el) => el.type === 'checkbox' ? el.checked : el.value.trim()).length;
+    document.getElementById('cf-progress-count').textContent = filled + ' of ' + fields.length + ' fields filled';
+    const links = document.getElementById('cf-progress-links');
+    links.innerHTML = '';
+    if (sections.length > 1) {
+      links.appendChild(document.createTextNode(' · '));
+      sections.forEach((h, i) => {
+        if (i) links.appendChild(document.createTextNode(' · '));
+        const a = document.createElement('a');
+        a.href = '#' + h.id;
+        a.textContent = h.textContent;
+        a.addEventListener('click', (e) => { e.preventDefault(); h.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+        links.appendChild(a);
+      });
+    }
+    box.style.display = '';
   }
 
   function prefillRentFields() {
@@ -922,14 +988,27 @@
       '<dl>' +
       '<dt>Premises</dt><dd>' + esc(bundle.premises.address_line) +
       (bundle.premises.postcode ? ' ' + esc(bundle.premises.postcode) : '') + '</dd>';
+    const outgoing = isLeaseForm(currentSpec()) && !isRenewalChecked();
     if (!sales) {
-      html += '<dt>Renter' + (renters.length === 1 ? '' : 's') + '</dt><dd>' + (esc(renters.join(', ')) || '—') + '</dd>';
+      html += '<dt>' + (outgoing ? 'Current renter' : 'Renter') + (renters.length === 1 ? '' : 's') + '</dt><dd>'
+        + (esc(renters.join(', ')) || '—')
+        + (outgoing && renters.length ? ' <span class="hint">(outgoing — not carried to a new lease)</span>' : '')
+        + '</dd>';
     }
     html +=
       '<dt>' + (sales ? 'Vendor (owner)' : 'Rental provider (owner)') + '</dt><dd>' + esc(bundle.rental_provider.full_name) + '</dd>' +
       '</dl>' +
       (note ? '<div class="warn">' + esc(note) + '</div>' : '');
+    if (outgoing) {
+      html += '<div class="hint" style="margin-top:0.5rem">New lease — enter the new tenants under '
+        + '<strong>4. Renters — details</strong> below, or '
+        + '<button type="button" class="linklike" id="crm-tenants-btn">autopopulate from GEA CRM</button>'
+        + '<span id="crm-tenants-result"></span></div>';
+    }
     previewBox.innerHTML = html;
+    if (outgoing) {
+      document.getElementById('crm-tenants-btn').addEventListener('click', fetchCrmTenants);
+    }
     previewBox.classList.add('show');
     lastPreviewBundle = bundle;
     lastPreviewProvider = PROVIDER_LABELS[provider] || provider || 'tenancy';
@@ -1488,7 +1567,7 @@
 
   // Any edit in the form area queues a save; tenancy inputs count too.
   ['input', 'change'].forEach((evt) => {
-    document.getElementById('fill-form').addEventListener(evt, queueDraftSave);
+    document.getElementById('fill-form').addEventListener(evt, () => { queueDraftSave(); updateProgress(); });
   });
 
   // Admins (and the machine token) get the invite block once authed.
@@ -1497,9 +1576,19 @@
       const resp = await fetch(API + '/auth/me', { headers: authHeaders() });
       if (!resp.ok) return;
       const me = await resp.json();
-      inviteBanner.style.display = me.is_admin ? '' : 'none';
-    } catch (err) { /* non-fatal — invite block just stays hidden */ }
+      // Admins get the header gear; the settings panel itself stays hidden
+      // until the gear is clicked.
+      settingsBtn.style.display = me.is_admin ? '' : 'none';
+      if (!me.is_admin) inviteBanner.style.display = 'none';
+    } catch (err) { /* non-fatal — settings gear just stays hidden */ }
   }
+
+  const settingsBtn = document.getElementById('settings-btn');
+  settingsBtn.addEventListener('click', () => {
+    const open = inviteBanner.style.display !== 'none';
+    inviteBanner.style.display = open ? 'none' : '';
+    if (!open) inviteBanner.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  });
 
   document.getElementById('invite-btn').addEventListener('click', async () => {
     const out = document.getElementById('invite-result');

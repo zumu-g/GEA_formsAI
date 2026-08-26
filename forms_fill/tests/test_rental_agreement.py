@@ -41,7 +41,9 @@ def test_form1_context_has_premises_renter_provider(sample_bundle_dict):
     fields = dict(_base_fields(), term_type="fixed")
     ctx = form1_context(_bundle(sample_bundle_dict), fields)
     assert ctx["premises_address"] == "12 Example Street, Richmond"
-    assert ctx["renter1_name"] == "Jane Alice Smith"
+    # U9: without is_renewal the fetched renters are the OUTGOING tenants —
+    # never seeded. Renewal seeding is covered in the U9 tests below.
+    assert ctx["renter1_name"] == ""
     assert ctx["provider_name"] == "Robert James Owner"
 
 
@@ -216,6 +218,38 @@ def test_renewal_against_empty_lease_block_behaves_as_fresh_agreement(sample_bun
     assert ctx["rent_amount"] == ""
     assert ctx["bond_amount"] == ""
     assert ctx["fixed_start_date"] == ""
+
+
+# ── U9: new-lease renters never come from the fetched (outgoing) tenancy ────
+
+
+def test_new_lease_never_seeds_renters_from_bundle(sample_bundle_dict):
+    ctx = form1_context(_bundle(sample_bundle_dict), {})
+    assert ctx["renter1_name"] == ""  # bundle holds Jane Smith — the OUTGOING tenant
+    assert ctx["renter1_phone"] == ""
+    assert ctx["renter1_email"] == ""
+
+
+def test_new_lease_uses_caller_supplied_renters(sample_bundle_dict):
+    ctx = form1_context(
+        _bundle(sample_bundle_dict),
+        {"renter1_name": "New Tenant", "renter1_email": "new@x.com"},
+    )
+    assert ctx["renter1_name"] == "New Tenant"
+    assert ctx["renter1_email"] == "new@x.com"
+
+
+def test_renewal_seeds_renters_from_bundle(sample_bundle_dict):
+    ctx = form1_context(_bundle(sample_bundle_dict), {"is_renewal": "true"})
+    assert ctx["renter1_name"] == "Jane Alice Smith"
+    assert ctx["renter2_name"] == "John Peter Smith"
+
+
+def test_renewal_caller_renter_still_overrides_bundle(sample_bundle_dict):
+    ctx = form1_context(
+        _bundle(sample_bundle_dict), {"is_renewal": "true", "renter1_name": "Corrected Name"}
+    )
+    assert ctx["renter1_name"] == "Corrected Name"
 
 
 def test_is_renewal_never_appears_as_a_blank_field(sample_bundle_dict):

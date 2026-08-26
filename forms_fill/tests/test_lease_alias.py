@@ -18,6 +18,9 @@ from forms_fill.registry import get_form_spec
 def _lease_fields() -> dict:
     # Dates deliberately dd/mm/yyyy — the renderer must pass them verbatim.
     return {
+        # U9: renters seed from the fetched tenancy only on a renewal —
+        # machine callers filling for the sitting tenants must send this.
+        "is_renewal": "true",
         "agreement_date": "01/08/2026",
         "renter1_current_address": "5 Old St",
         "renter1_current_postcode": "3122",

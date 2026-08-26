@@ -205,14 +205,20 @@ def build_context(bundle: TenancyBundle, fields: dict) -> dict[str, str]:
         "provider_email": _s(bundle.rental_provider.email),
     }
 
+    # Renters: on a renewal the fetched tenancy's renters ARE the signatories,
+    # so the bundle seeds them. On a new lease the fetched renters are the
+    # OUTGOING tenants — never seed those; the caller supplies the new
+    # tenants (typed, or client-side from a GEA CRM fetch). A caller-supplied
+    # value always wins either way (R7).
+    renewal = str(fields.get("is_renewal", "")).strip().lower() in ("true", "1", "yes", "on")
     for i in range(4):
-        r = renter(i)
+        r = renter(i) if renewal else None
         prefix = f"renter{i + 1}"
-        ctx[f"{prefix}_name"] = _s(r.full_name) if r else ""
-        ctx[f"{prefix}_phone"] = _s(r.phone_business_hours) if r else ""
-        ctx[f"{prefix}_email"] = _s(r.email) if r else ""
+        ctx[f"{prefix}_name"] = _s(fields.get(f"{prefix}_name")) or (_s(r.full_name) if r else "")
+        ctx[f"{prefix}_phone"] = _s(fields.get(f"{prefix}_phone")) or (_s(r.phone_business_hours) if r else "")
+        ctx[f"{prefix}_email"] = _s(fields.get(f"{prefix}_email")) or (_s(r.email) if r else "")
 
-    if len(renters) > 4:
+    if renewal and len(renters) > 4:
         extra = ", ".join(_s(r.full_name) for r in renters[4:])
         ctx["renter4_name"] = (
             f"{ctx['renter4_name']} (plus additional renters on extra page: {extra})"
@@ -255,6 +261,15 @@ SPEC = FormSpec(
         "agent_phone": "Agent phone number",
         "agent_acn": "Agent ACN (if applicable)",
         "agent_email": "Agent email",
+        # New-lease tenants (U9): typed or seeded client-side from a GEA CRM
+        # fetch. On a renewal these stay blank and the fetched tenancy's
+        # renters fill the form instead (build_context's renewal gate).
+        "renter1_name": "Renter 1 full name",
+        "renter1_phone": "Renter 1 phone",
+        "renter1_email": "Renter 1 email",
+        "renter2_name": "Renter 2 full name",
+        "renter2_phone": "Renter 2 phone",
+        "renter2_email": "Renter 2 email",
         "renter1_current_address": "Renter 1 current address (before this tenancy)",
         "renter1_current_postcode": "Renter 1 current postcode",
         "renter2_current_address": "Renter 2 current address",
@@ -302,6 +317,12 @@ SPEC = FormSpec(
         "agent_phone": "3. Rental provider & agent",
         "agent_acn": "3. Rental provider & agent",
         "agent_email": "3. Rental provider & agent",
+        "renter1_name": "4. Renters — details (new lease)",
+        "renter1_phone": "4. Renters — details (new lease)",
+        "renter1_email": "4. Renters — details (new lease)",
+        "renter2_name": "4. Renters — details (new lease)",
+        "renter2_phone": "4. Renters — details (new lease)",
+        "renter2_email": "4. Renters — details (new lease)",
         "renter1_current_address": "4. Renters — current address",
         "renter1_current_postcode": "4. Renters — current address",
         "renter2_current_address": "4. Renters — current address",
