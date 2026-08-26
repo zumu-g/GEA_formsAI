@@ -7,10 +7,6 @@ from forms_fill.forms.consent_electronic_service.spec import (
 from forms_fill.forms.mandatory_disclosure_checklist.spec import (
     SPEC as MANDATORY_SPEC,
 )
-from forms_fill.forms.rental_application.spec import SPEC as APPLICATION_SPEC
-from forms_fill.forms.rental_application.spec import (
-    build_context as application_context,
-)
 from forms_fill.forms.request_repairs_inspection.spec import SPEC as REPAIRS_SPEC
 from forms_fill.forms.request_repairs_inspection.spec import (
     build_context as repairs_context,
@@ -26,26 +22,6 @@ def _bundle(d):
     return TenancyBundle.model_validate(d)
 
 
-# ── rental_application ──────────────────────────────────────────────────────
-
-
-def test_application_prefills_premises_and_provider(sample_bundle_dict):
-    ctx = application_context(_bundle(sample_bundle_dict), {"provider_acn": "123", "provider_state": "Victoria"})
-    assert ctx["premises_address"] == "12 Example Street, Richmond"
-    assert ctx["provider_name"] == "Robert James Owner"
-    assert ctx["provider_acn"] == "123"
-
-
-def test_application_leaves_applicant_sections_undeclared():
-    joined = " ".join(APPLICATION_SPEC.declared_fields)
-    for forbidden in ("employer", "referee", "signature", "tenancy_database"):
-        assert forbidden not in joined
-
-
-def test_application_fill_renders_docx(tmp_path, sample_bundle_dict):
-    ctx = application_context(_bundle(sample_bundle_dict), {})
-    docx_path, _, _ = render(APPLICATION_SPEC, ctx, tmp_path)
-    assert docx_path.exists()
 
 
 # ── condition_report ─────────────────────────────────────────────────────────

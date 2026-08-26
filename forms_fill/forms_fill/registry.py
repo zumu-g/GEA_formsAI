@@ -29,7 +29,6 @@ from .forms.pm_exclusive_leasing_authority.spec import (
     SPEC as PM_LEASING_AUTHORITY_SPEC,
 )
 from .forms.reiv_exclusive_sale_authority.spec import SPEC as REIV_EXCLUSIVE_SPEC
-from .forms.rental_application.spec import SPEC as RENTAL_APPLICATION_SPEC
 from .forms.request_repairs_inspection.spec import SPEC as REPAIRS_INSPECTION_SPEC
 from .forms.residential_rental_agreement.spec import SPEC as RENTAL_AGREEMENT_SPEC
 from .forms.statement_of_information_applicants.spec import (
@@ -47,7 +46,6 @@ FORM_REGISTRY: dict[str, FormSpec] = {
     DEATH_SOLE_RENTER_SPEC.key: DEATH_SOLE_RENTER_SPEC,
     ADDITIONAL_BOND_SPEC.key: ADDITIONAL_BOND_SPEC,
     RENTAL_AGREEMENT_SPEC.key: RENTAL_AGREEMENT_SPEC,
-    RENTAL_APPLICATION_SPEC.key: RENTAL_APPLICATION_SPEC,
     CONDITION_REPORT_SPEC.key: CONDITION_REPORT_SPEC,
     STATEMENT_OF_INFORMATION_SPEC.key: STATEMENT_OF_INFORMATION_SPEC,
     MANDATORY_DISCLOSURE_SPEC.key: MANDATORY_DISCLOSURE_SPEC,
@@ -121,7 +119,6 @@ _SHORT_TITLES = {
     "notice_to_vacate_death_sole_renter": "Notice to vacate — death of sole renter",
     "pm_exclusive_leasing_authority": "Exclusive Leasing Authority",
     "reiv_exclusive_sale_authority": "Exclusive Sale Authority (REIV)",
-    "rental_application": "Rental application",
     "request_repairs_inspection": "Repairs inspection / rent assessment",
     "residential_rental_agreement": "Rental agreement (Form 1)",
     "statement_of_information_applicants": "Statement of information for applicants",

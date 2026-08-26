@@ -206,17 +206,6 @@
     </div>
   </fieldset>
 
-  <fieldset id="invite-banner" style="display:none">
-    <legend>Invite agent</legend>
-    <div class="row">
-      <div><label for="invite-email">Email (@grantsea.com.au)</label><input id="invite-email" type="email" /></div>
-      <div><label for="invite-name">Name</label><input id="invite-name" /></div>
-      <div><label for="invite-mobile">Mobile</label><input id="invite-mobile" /></div>
-      <button type="button" id="invite-btn" class="secondary" style="flex:0 0 auto; align-self:end">Invite</button>
-    </div>
-    <p class="hint" id="invite-result"></p>
-  </fieldset>
-
   <fieldset id="drafts-banner" style="display:none">
     <legend>In progress</legend>
     <ul class="matches" id="drafts-list"></ul>
@@ -293,6 +282,20 @@
 
     <button type="submit" id="submit-btn">Review before filling</button>
   </form>
+
+  <fieldset id="invite-banner" style="display:none">
+    <legend>Settings</legend>
+    <details>
+      <summary style="cursor:pointer">Invite agent (admin)</summary>
+      <div class="row" style="margin-top:0.6rem">
+        <div><label for="invite-email">Email (@grantsea.com.au)</label><input id="invite-email" type="email" /></div>
+        <div><label for="invite-name">Name</label><input id="invite-name" /></div>
+        <div><label for="invite-mobile">Mobile</label><input id="invite-mobile" /></div>
+        <button type="button" id="invite-btn" class="secondary" style="flex:0 0 auto; align-self:end">Invite</button>
+      </div>
+      <p class="hint" id="invite-result"></p>
+    </details>
+  </fieldset>
 
   <div id="review-screen">
     <fieldset>
