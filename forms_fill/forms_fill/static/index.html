@@ -280,6 +280,9 @@
     <li><button type="button" data-stage="3">3. Review</button></li>
   </ol>
 
+  <!-- U5 (R12): resume note — sits above whichever stage the draft restores -->
+  <p class="hint" id="last-saved" style="display:none"></p>
+
   <form id="fill-form">
     <div id="stage-start">
     <fieldset>
@@ -360,6 +363,9 @@
     <div id="gap-nav" class="hint">
       <strong id="gap-count"></strong>
       <button type="button" id="next-gap-btn" class="secondary">Next gap</button>
+      <!-- U5 (R9): mouse path to Review once every gap is filled — type=submit
+           rides the existing submit → review handler -->
+      <button type="submit" id="go-review-btn" class="secondary" style="display:none">Go to Review</button>
     </div>
     <fieldset id="caller-fields">
       <legend><span class="disc">3</span>Form details</legend>
@@ -848,6 +854,27 @@
   }
   document.getElementById('next-gap-btn').addEventListener('click', focusNextGap);
 
+  function countGaps() {
+    return Array.from(callerFieldsBox.querySelectorAll('[data-field]'))
+      .filter((el) => el.dataset.hidden !== '1'
+        && !(el.type === 'checkbox' ? el.checked : el.value.trim())).length;
+  }
+
+  // ── U5 (R9): Enter advances gap-to-gap in Fill. Delegated on the caller
+  // fields only, so review-screen mirror inputs and every other input keep
+  // their native Enter; textareas keep their newline. Invalid dates block
+  // the advance (R8) — the message shows instead. Enter on the LAST gap
+  // rides the existing submit → review path.
+  callerFieldsBox.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' || !isGuided(currentSpec())) return;
+    const el = e.target.closest('[data-field]');
+    if (!el || el.tagName === 'TEXTAREA') return;
+    e.preventDefault();
+    if (el.type === 'date' && !validateDateField(el.dataset.field)) return;
+    if (countGaps() === 0) { form.requestSubmit(); return; }
+    focusNextGap();
+  });
+
   // ── U3 (R6): manual edits always win — diff chip instead of overwrite ─────
   function dismissDiffChip(name) {
     const chip = callerFieldsBox.querySelector('.diff-chip[data-diff-for="' + name + '"]');
@@ -1271,8 +1298,11 @@
     // U3 (R3): "N to go" + next-gap jump, guided forms only
     const gapNav = document.getElementById('gap-nav');
     const gaps = fields.length - filled;
-    document.getElementById('gap-count').textContent = gaps + ' to go';
-    gapNav.classList.toggle('show', isGuided(currentSpec()) && gaps > 0);
+    document.getElementById('gap-count').textContent = gaps > 0 ? gaps + ' to go' : 'All filled';
+    // U5 (R9): zero gaps flips the nav to a "Go to Review" affordance.
+    document.getElementById('next-gap-btn').style.display = gaps > 0 ? '' : 'none';
+    document.getElementById('go-review-btn').style.display = gaps > 0 ? 'none' : '';
+    gapNav.classList.toggle('show', isGuided(currentSpec()));
     if (fields.length < 8) { box.style.display = 'none'; return; } // short forms don't need it
     document.getElementById('cf-progress-count').textContent = filled + ' of ' + fields.length + ' fields filled';
     const links = document.getElementById('cf-progress-links');
@@ -1720,6 +1750,7 @@
     reviewConfirmCheck.checked = false;
     reviewConfirmBtn.disabled = true;
     if (isGuided(currentSpec())) setStage(3); // stepper reflects Review (R1)
+    reviewConfirmCheck.focus(); // U5 (R9): Space ticks, then Enter generates
   }
 
   function hideReviewScreen() {
@@ -1731,6 +1762,7 @@
   reviewBackBtn.addEventListener('click', hideReviewScreen);
   reviewConfirmCheck.addEventListener('change', () => {
     reviewConfirmBtn.disabled = !reviewConfirmCheck.checked; // R11: submission blocked until confirmed
+    if (reviewConfirmCheck.checked) reviewConfirmBtn.focus(); // U5 (R9): Enter now generates
   });
 
   form.addEventListener('submit', (e) => {
@@ -1972,6 +2004,11 @@
       tenancy_id: tenancyInput.value,
       address_query: queryInput.value,
       lease_mode: mode ? mode.value : '',
+      // U5 (R12/KTD6): stage + focused field inside the same opaque blob —
+      // the server never inspects these (no schema change).
+      stage: stage,
+      focus: (document.activeElement && document.activeElement.dataset
+        && document.activeElement.dataset.field) || '',
       caller_fields: fields,
       field_source: fieldSource,
     };
@@ -2058,7 +2095,8 @@
   async function resumeDraft(id) {
     const resp = await fetch(API + '/drafts/' + id, { headers: authHeaders() });
     if (!resp.ok) return;
-    const state = JSON.parse((await resp.json()).draft.state || '{}');
+    const draft = (await resp.json()).draft;
+    const state = JSON.parse(draft.state || '{}');
     restoringDraft = true;
     try {
       formSelect.value = state.form_key || formSelect.value;
@@ -2084,7 +2122,21 @@
       restoringDraft = false;
     }
     activeDraftId = id;
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    // U5 (R12): land the PM on the exact stage and field they left, with a
+    // "last saved …" note from the draft's server-side timestamp.
+    const lastSaved = document.getElementById('last-saved');
+    lastSaved.textContent = 'Last saved ' + relTime(draft.updated_at);
+    lastSaved.style.display = '';
+    if (isGuided(currentSpec()) && state.stage) setStage(Math.min(state.stage, 2)); // Review only via submit
+    const focusEl = state.focus ? inputEl(state.focus) : null;
+    if (focusEl) {
+      expandedManually[state.focus] = true;
+      refreshFieldPresentation(state.focus);
+      focusEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      focusEl.focus({ preventScroll: true });
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   }
 
   // Any edit in the form area queues a save; tenancy inputs count too.

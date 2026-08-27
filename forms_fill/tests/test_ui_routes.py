@@ -282,3 +282,41 @@ def test_ui_review_splits_blank_fields_blocking_vs_informational(client):
     assert 'id="review-blank-informational"' in text
     assert "Needed to complete the agreement" in text
     assert "Commonly left blank" in text
+
+
+# ── Wizard U5: keyboard flow and resume-to-field ─────────────────────────────
+
+
+def test_ui_enter_advances_gap_and_blocks_on_invalid(client):
+    text = client.get("/ui/").text
+    # Delegated Enter handler on the Fill fields only (review mirrors live
+    # outside callerFieldsBox, textareas keep their newline behaviour).
+    fn = text.split("callerFieldsBox.addEventListener('keydown'")[1].split("\n  //")[0]
+    assert "TEXTAREA" in fn
+    assert "validateDateField" in fn  # invalid input blocks the advance (R8)
+    assert "focusNextGap()" in fn
+
+
+def test_ui_last_gap_enter_reaches_review_with_mouse_affordance(client):
+    text = client.get("/ui/").text
+    assert 'id="go-review-btn"' in text  # mouse path when gaps hit zero
+    assert "Go to Review" in text
+    assert "form.requestSubmit()" in text  # last gap Enter → existing submit→review
+
+
+def test_ui_review_confirm_and_generate_keyboard_reachable(client):
+    text = client.get("/ui/").text
+    assert "reviewConfirmCheck.focus()" in text  # entering Review focuses the checkbox
+    assert "reviewConfirmBtn.focus()" in text  # ticking moves focus so Enter generates
+
+
+def test_ui_draft_saves_stage_and_focus_and_resume_restores_them(client):
+    text = client.get("/ui/").text
+    state_fn = text.split("function draftState")[1].split("\n  function ")[0]
+    assert "stage: stage" in state_fn  # KTD6 — inside the opaque blob
+    assert "focus:" in state_fn
+    resume_fn = text.split("async function resumeDraft")[1].split("\n  async function ")[0]
+    assert "state.stage" in resume_fn and "setStage(" in resume_fn
+    assert "state.focus" in resume_fn
+    assert 'id="last-saved"' in text
+    assert "Last saved " in text  # from the draft's updated_at

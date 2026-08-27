@@ -233,3 +233,18 @@ def test_sessions_persist_in_sqlite(client):
     assert agent["email"] == "jane@grantsea.com.au"
     accounts.logout(session)
     assert accounts.session_agent(session) is None
+
+
+def test_draft_state_blob_with_stage_and_focus_is_server_opaque(client):
+    # KTD6: the wizard's stage/focus keys live INSIDE the opaque state blob —
+    # the server stores and returns them verbatim, no schema change.
+    sess = _session(client)
+    state = '{"stage":2,"focus":"rent_amount","caller_fields":{"rent_amount":"700"}}'
+    draft_id = client.post(
+        "/drafts",
+        json={"form_key": "residential_rental_agreement", "state": state},
+        headers=_hdr(sess),
+    ).json()["id"]
+    got = client.get(f"/drafts/{draft_id}", headers=_hdr(sess)).json()["draft"]
+    assert got["state"] == state
+    assert got["updated_at"]  # resume's "last saved …" line reads this
