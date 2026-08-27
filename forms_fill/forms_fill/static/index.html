@@ -681,6 +681,8 @@
   let seededValue = {};
   // U3: fields the PM explicitly expanded — stay expanded until re-render.
   let expandedManually = {};
+  // Lookup cache: field name → .cf-field wrap element (built in renderCallerFields).
+  let fieldWraps = {};
 
   function inputEl(name) {
     return callerFieldsBox.querySelector('[data-field="' + name + '"]');
@@ -704,14 +706,20 @@
     tag.className = 'source-tag' + (source === 'typed' ? ' typed' : '');
   }
 
+  // U3/KTD5 baseline bookkeeping shared by seedField, forceFetchField and
+  // the diff chip's "Use" button.
+  function setSeeded(name, value, source) {
+    if (value && source) seededValue[name] = value;
+    else delete seededValue[name];
+  }
+
   // Seed a field's value UNLESS the PM already typed something into it — the
   // sticky rule above. Passing value='' with a truthy source still counts as
   // "seeded" (a real fetched blank); passing source='' clears the tag.
   function seedField(name, value, source) {
     if (fieldSource[name] === 'typed') return;
     fieldSource[name] = value ? source : '';
-    if (value && source) seededValue[name] = value; // U3/KTD5 baseline
-    else delete seededValue[name];
+    setSeeded(name, value, source);
     setFieldDom(name, value || '');
   }
 
@@ -721,8 +729,8 @@
   // hand-edited fields render expanded. Presentation only — the real input
   // always stays in the DOM (KTD1).
   function refreshFieldPresentation(name) {
-    const wrap = callerFieldsBox.querySelector('.cf-field[data-wrap-for="' + name + '"]');
-    if (!wrap) return;
+    const wrap = fieldWraps[name];
+    if (!wrap) return; // checkbox/hidden fields have no wrap
     const el = inputEl(name);
     const src = fieldSource[name] || '';
     const collapsed = isGuided(currentSpec()) && !!src && src !== 'typed'
@@ -752,8 +760,9 @@
   const RENEWAL_CRITICAL = /^(rent_amount|bond_amount|renter\d+_name)$/;
 
   function updateRenewalMark(name) {
-    const note = callerFieldsBox.querySelector('.verify-note[data-note-for="' + name + '"]');
-    if (!note) return;
+    const wrap = fieldWraps[name];
+    const note = wrap ? wrap.querySelector('.verify-note[data-note-for="' + name + '"]') : null;
+    if (!note) return; // checkbox/hidden fields have no wrap/note
     const el = inputEl(name);
     const seeded = seededValue[name];
     if (!isRenewalChecked() || !RENEWAL_CRITICAL.test(name) || !seeded || !el) {
@@ -906,7 +915,7 @@
     use.textContent = 'Use ' + seed.value;
     use.addEventListener('click', () => {
       fieldSource[name] = seed.value ? seed.source : '';
-      if (seed.value && seed.source) seededValue[name] = seed.value;
+      setSeeded(name, seed.value, seed.source);
       setFieldDom(name, seed.value);
       dismissDiffChip(name);
     });
@@ -1062,7 +1071,7 @@
     }
     dismissDiffChip(name);
     fieldSource[name] = seed.value ? seed.source : '';
-    if (seed.value && seed.source) seededValue[name] = seed.value;
+    setSeeded(name, seed.value, seed.source);
     setFieldDom(name, seed.value);
   }
 
@@ -1095,6 +1104,7 @@
     fieldSource = {};
     seededValue = {};
     expandedManually = {};
+    fieldWraps = {};
     let lastSection = null;
     let sectionCount = 0;
     (spec.caller_fields || []).forEach((f) => {
@@ -1172,6 +1182,7 @@
       wrap.className = 'cf-field';
       wrap.dataset.wrapFor = f.name;
       wrap.dataset.label = f.label;
+      fieldWraps[f.name] = wrap;
       const collapsedBtn = document.createElement('button');
       collapsedBtn.type = 'button'; // focusable, keyboard reachable
       collapsedBtn.className = 'cf-collapsed-row';
@@ -1294,10 +1305,10 @@
     const fields = Array.from(callerFieldsBox.querySelectorAll('[data-field]'))
       .filter((el) => el.dataset.hidden !== '1');
     const sections = Array.from(callerFieldsBox.querySelectorAll('.field-section-title'));
-    const filled = fields.filter((el) => el.type === 'checkbox' ? el.checked : el.value.trim()).length;
     // U3 (R3): "N to go" + next-gap jump, guided forms only
     const gapNav = document.getElementById('gap-nav');
-    const gaps = fields.length - filled;
+    const gaps = countGaps();
+    const filled = fields.length - gaps;
     document.getElementById('gap-count').textContent = gaps > 0 ? gaps + ' to go' : 'All filled';
     // U5 (R9): zero gaps flips the nav to a "Go to Review" affordance.
     document.getElementById('next-gap-btn').style.display = gaps > 0 ? '' : 'none';
