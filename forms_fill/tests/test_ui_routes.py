@@ -162,3 +162,42 @@ def test_ui_page_contains_stage_containers_and_stepper(client):
     assert 'id="stepper"' in text
     assert "setStage" in text
     assert "aria-current" in text
+
+
+# ── Wizard U2: Start stage ───────────────────────────────────────────────────
+
+
+def test_ui_lease_mode_has_plain_english_helper(client):
+    text = client.get("/ui/").text
+    near = text.split('id="lease-mode"')[1].split("Data source")[0]
+    assert 'id="lease-mode-help"' in near
+    assert "same renters" in near
+
+
+def test_ui_start_stage_has_continue_without_crm_action(client):
+    text = client.get("/ui/").text
+    start = text.split('id="stage-start"')[1].split('id="stage-fill"')[0]
+    assert 'id="skip-crm-btn"' in start
+    assert "Continue without CRM data" in start
+    assert "skip-crm-btn" in text.split("<script>")[1]  # wired, not just markup
+
+
+def test_ui_preview_success_auto_advances_to_fill(client):
+    # renderPreview() must advance a guided form to Fill (setStage(2)) after
+    # maybeAutoCrmFetch fires; failure paths return before renderPreview.
+    text = client.get("/ui/").text
+    render_preview = text.split("function renderPreview")[1].split("async function fetchPreview")[0]
+    assert "maybeAutoCrmFetch" in render_preview
+    assert "setStage(2)" in render_preview
+
+
+def test_ui_last_used_form_persisted_in_local_storage(client):
+    text = client.get("/ui/").text
+    assert text.count("forms_fill_last_form") >= 2  # write on change + read on load
+
+
+def test_ui_reseed_guard_confirms_before_overwriting_fill(client):
+    text = client.get("/ui/").text
+    assert "confirmReseed" in text
+    # address pick and lease-type change both route through the guard
+    assert text.count("confirmReseed(") >= 3  # definition + 2 call sites

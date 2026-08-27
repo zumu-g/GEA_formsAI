@@ -250,7 +250,7 @@
           <label style="font-weight:normal"><input type="radio" name="lease-mode" value="new" /> New lease</label>
           <label style="font-weight:normal"><input type="radio" name="lease-mode" value="renewal" /> Lease renewal</label>
         </div>
-        <p class="hint">Choose before fetching the tenant — a renewal carries across the current lease's rent, bond and term type.</p>
+        <p class="hint" id="lease-mode-help">Renewal = the same renters signing again for the same property. Anything else — new renters, or a different property — is a new lease.</p>
       </div>
       <label for="provider">Data source</label>
       <select id="provider">
@@ -289,6 +289,9 @@
         <button type="button" id="cma-btn" class="secondary" disabled>Request comparables report</button>
         <p class="hint">Opens GEA St CMA in a new tab — you must already be logged in there, or it'll bounce to its login page.</p>
       </div>
+
+      <!-- U2 (R2): today's fully manual path — always available on Start -->
+      <button type="button" class="linklike" id="skip-crm-btn">Continue without CRM data</button>
 
       <button type="button" class="linklike" id="manual-add-btn">Property not listed? Add it manually</button>
       <div id="manual-add-note" style="display:none">
@@ -482,9 +485,29 @@
     return Array.from(leaseModeRadios()).some((r) => r.checked);
   }
 
+  // U2 (R6): changing the address or lease type once Fill already holds data
+  // re-seeds fetched fields — ask first. 'typed' fields survive regardless
+  // (seedField's sticky rule), so only fetched/derived values can change.
+  function fillHasData() {
+    return Object.keys(fieldSource).some((k) => fieldSource[k]);
+  }
+  function confirmReseed(what) {
+    if (!isGuided(currentSpec()) || stage === 1 || !fillHasData()) return true;
+    return confirm('Changing the ' + what + ' will re-seed fetched values on the Fill screen. Fields you edited yourself are kept. Continue?');
+  }
+
   // Radio → is_renewal checkbox (section 3). The existing checkbox listener
   // handles the reverse direction so the two never disagree.
-  leaseModeBox.addEventListener('change', () => {
+  let lastLeaseMode = ''; // last accepted radio value, for reverting a declined change
+  leaseModeBox.addEventListener('change', (e) => {
+    const picked = leaseModeBox.querySelector('input[name="lease-mode"]:checked');
+    const value = picked ? picked.value : '';
+    // e.isTrusted: programmatic re-applies (applyFormModeUI) never prompt.
+    if (e.isTrusted && value !== lastLeaseMode && !confirmReseed('lease type')) {
+      leaseModeRadios().forEach((r) => { r.checked = r.value === lastLeaseMode; });
+      return;
+    }
+    lastLeaseMode = value;
     const renewal = leaseModeBox.querySelector('input[value="renewal"]').checked;
     const el = inputEl('is_renewal');
     if (el) {
@@ -1024,10 +1047,15 @@
         delete groups[g];
       });
       if (catalogue.length) {
+        // U2 (R2): preselect the last-used form if it's still in the catalogue;
+        // the shared render/mode path below is the same as firing 'change'.
+        const remembered = localStorage.getItem('forms_fill_last_form');
+        if (remembered && catalogue.some((f) => f.key === remembered)) formSelect.value = remembered;
         const first = catalogue.find((f) => f.key === formSelect.value) || catalogue[0];
         renderCallerFields(first);
         legalTitle.textContent = first.title;
         applyFormModeUI(first);
+        if (isGuided(first)) queryInput.focus(); // U2 (R2): address search ready to type
       }
     } catch (e) {
       showResult('Could not reach the forms-fill API: ' + esc(e), false);
@@ -1036,9 +1064,11 @@
 
   formSelect.addEventListener('change', () => {
     const spec = currentSpec();
+    localStorage.setItem('forms_fill_last_form', formSelect.value); // U2 (R2)
     legalTitle.textContent = spec ? spec.title : '';
     if (spec) renderCallerFields(spec);
     applyFormModeUI(spec);
+    if (isGuided(spec)) queryInput.focus();
   });
 
   // ── address search → pick → tenancy preview ──────────────────────────────
@@ -1108,6 +1138,10 @@
       if (addressField) addressField.focus();
     }
   }
+  // U2 (R2): "Continue without CRM data" — always advances to Fill with the
+  // fields as blanks; today's fully manual entry path, one click away.
+  document.getElementById('skip-crm-btn').addEventListener('click', () => setStage(2));
+
   manualAddBtn.addEventListener('click', () => setManualAddMode(true));
   manualAddBackBtn.addEventListener('click', () => setManualAddMode(false));
 
@@ -1151,6 +1185,12 @@
     prefillSalesFields();
     applyAgentAutofill(); // office data may already be loaded from a prior render
     applyLeaseAutofill(); // U5/U6 — lease/rent/bond fields for the agreement forms
+    // U2 (R2): a usable preview auto-advances a guided form to Fill. A renewal
+    // whose bundle has no renters is unusable — stay on Start with the summary
+    // (and its outgoing-tenant note) shown inline. Runs after maybeAutoCrmFetch
+    // above so new-lease CRM seeding is already in flight.
+    const usable = !isRenewalChecked() || (bundle.renters || []).length > 0;
+    if (isGuided(currentSpec()) && stage === 1 && usable) setStage(2);
   }
 
   async function fetchPreview() {
@@ -1221,6 +1261,7 @@
         li.tabIndex = 0;
         li.textContent = m.address_label;
         function pick() {
+          if (!confirmReseed('address')) return; // U2 (R6)
           clearTimeout(searchTimer); // pending type-ahead would re-list the picked address
           lotInput.value = m.lot_id || '';
           tenancyInput.value = m.tenancy_id || '';
