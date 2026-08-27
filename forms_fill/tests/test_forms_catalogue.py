@@ -102,3 +102,19 @@ def test_agreement_fields_group_under_form_sections_in_order():
     assert "3. Rental provider & agent" in sections
     assert "6. Rent" in sections
     assert "10. Urgent repairs contact" in sections
+
+
+# ── Wizard U1: guided flag ───────────────────────────────────────────────────
+
+
+def test_catalogue_publishes_guided_for_rental_agreement():
+    catalogue = form_catalogue()
+    agreement = next(c for c in catalogue if c["key"] == "residential_rental_agreement")
+    assert agreement["guided"] is True
+
+
+def test_non_declaring_forms_are_not_guided():
+    catalogue = form_catalogue()
+    for c in catalogue:
+        if c["key"] != "residential_rental_agreement":
+            assert not c.get("guided")

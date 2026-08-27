@@ -314,6 +314,7 @@ SPEC = FormSpec(
         "first_rent_due_date": "date",
         "bond_due_date": "date",
     },
+    guided=True,
     caller_field_sections={
         "is_renewal": "Renewal",
         "agreement_date": "1. Date of agreement",

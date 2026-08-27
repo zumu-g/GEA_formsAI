@@ -152,6 +152,19 @@
   .linklike:hover { background: none; }
   .fetch-btn:disabled { opacity: 0.4; cursor: default; }
 
+  /* Wizard U1: guided stage framework (R1/R13) */
+  #stepper { display: none; list-style: none; margin: 0 0 1rem; padding: 0; gap: 0.5rem; }
+  #stepper.show { display: flex; }
+  #stepper li { flex: 1; }
+  #stepper button {
+    width: 100%; min-height: 44px; padding: 0.4rem 0.6rem;
+    background: transparent; border: 1px solid var(--rule); border-radius: 0.5rem;
+    color: var(--muted); font-size: 0.85rem; font-weight: 600; cursor: pointer;
+  }
+  #stepper button[aria-current="step"] { border-color: var(--gold); color: var(--ink); }
+  #stepper button:disabled { opacity: 0.45; cursor: default; }
+  .stage-hidden { display: none !important; }
+
   /* U8: review screen */
   #review-screen { display: none; }
   #review-screen.show { display: block; }
@@ -213,7 +226,15 @@
     <ul class="matches" id="drafts-list"></ul>
   </fieldset>
 
+  <!-- Wizard U1 (R1): stepper for guided forms — hidden for single-page forms (R13) -->
+  <ol id="stepper" aria-label="Progress">
+    <li><button type="button" data-stage="1">1. Start</button></li>
+    <li><button type="button" data-stage="2">2. Fill</button></li>
+    <li><button type="button" data-stage="3">3. Review</button></li>
+  </ol>
+
   <form id="fill-form">
+    <div id="stage-start">
     <fieldset>
       <legend><span class="disc">1</span>Form</legend>
       <label for="form-key">Form type</label>
@@ -275,7 +296,9 @@
         <button type="button" class="linklike" id="manual-add-back-btn">Use property search instead</button>
       </div>
     </fieldset>
+    </div>
 
+    <div id="stage-fill">
     <fieldset id="caller-fields">
       <legend><span class="disc">3</span>Form details</legend>
       <p class="hint">Rendered verbatim — this tool never computes dates, notice periods, or legal grounds.</p>
@@ -286,6 +309,7 @@
     </fieldset>
 
     <button type="submit" id="submit-btn">Review before filling</button>
+    </div>
   </form>
 
   <fieldset id="invite-banner" style="display:none">
@@ -302,6 +326,7 @@
     </details>
   </fieldset>
 
+  <div id="stage-review">
   <div id="review-screen">
     <fieldset>
       <legend>Review — check every value before generating</legend>
@@ -316,6 +341,7 @@
         <button type="button" id="review-confirm-btn" disabled>Confirm &amp; fill</button>
       </div>
     </fieldset>
+  </div>
   </div>
 
   <div id="result" style="display:none"></div>
@@ -373,9 +399,51 @@
     return spec.category === 'GEA Sales' ? 'sale' : 'lease';
   }
 
+  // ── Wizard U1: guided stage framework (R1/R13) ────────────────────────────
+  // Stage switching is show/hide only — every input stays in the DOM at all
+  // times, so autosave, drafts and /fill submission are untouched (KTD1).
+  const stepper = document.getElementById('stepper');
+  const stageContainers = [
+    document.getElementById('stage-start'),
+    document.getElementById('stage-fill'),
+    document.getElementById('stage-review'),
+  ];
+  let stage = 1;
+
+  function isGuided(spec) {
+    return !!spec && !!spec.guided;
+  }
+
+  function setStage(n) {
+    stage = n;
+    const guided = isGuided(currentSpec());
+    stepper.classList.toggle('show', guided);
+    stageContainers.forEach((el, i) => {
+      el.classList.toggle('stage-hidden', guided && i + 1 !== n);
+    });
+    stepper.querySelectorAll('button[data-stage]').forEach((btn) => {
+      if (Number(btn.dataset.stage) === n) btn.setAttribute('aria-current', 'step');
+      else btn.removeAttribute('aria-current');
+    });
+  }
+
+  stepper.addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-stage]');
+    if (!btn) return;
+    const target = Number(btn.dataset.stage);
+    // Back-navigation always allowed (R1); Start→Fill is clickable too so
+    // the flow is usable before auto-advance lands (U2). Review is reached
+    // only through the existing submit → review path.
+    if (target === 3 && stage < 3) return;
+    if (target >= stage && !(stage === 1 && target === 2)) return;
+    if (stage === 3) hideReviewScreen(); // restores the form; sets stage 2
+    if (target !== stage) setStage(target);
+  });
+
   // Sales forms (KTD8) have no tenancy — relabel the section so "tenancy"
   // framing doesn't confuse a PM filling in a vendor's details (U1).
   function applyFormModeUI(spec) {
+    setStage(isGuided(spec) ? stage : 1); // R13: non-guided forms show everything, no stepper
     const sales = !!spec && spec.requires_identifiers === false;
     section2Legend.textContent = sales ? 'Property / Vendor' : 'Tenancy';
     tenancyIdLabel.textContent = sales ? 'Property ID (optional)' : 'Tenancy ID (preferred)';
@@ -1280,11 +1348,13 @@
     reviewScreen.classList.add('show');
     reviewConfirmCheck.checked = false;
     reviewConfirmBtn.disabled = true;
+    if (isGuided(currentSpec())) setStage(3); // stepper reflects Review (R1)
   }
 
   function hideReviewScreen() {
     reviewScreen.classList.remove('show');
     form.classList.remove('hide-for-review');
+    if (isGuided(currentSpec())) setStage(2); // back to Fill
   }
 
   reviewBackBtn.addEventListener('click', hideReviewScreen);

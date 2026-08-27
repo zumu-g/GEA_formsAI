@@ -149,3 +149,16 @@ def test_ui_approval_uses_separate_credential_not_generation_token(client):
     assert "authHeaders()" not in fetch_call
     assert "approveToken" in fetch_call
     assert "approve-token" in approve_handler
+
+
+# ── Wizard U1: stage framework + stepper ─────────────────────────────────────
+
+
+def test_ui_page_contains_stage_containers_and_stepper(client):
+    text = client.get("/ui/").text
+    assert 'id="stage-start"' in text
+    assert 'id="stage-fill"' in text
+    assert 'id="stage-review"' in text
+    assert 'id="stepper"' in text
+    assert "setStage" in text
+    assert "aria-current" in text

@@ -121,6 +121,10 @@ class FormSpec:
     caller_field_kinds: dict[str, str] = field(default_factory=dict)
     caller_field_options: dict[str, tuple[str, ...]] = field(default_factory=dict)
     caller_field_sections: dict[str, str] = field(default_factory=dict)
+    # Wizard U1 (R1/R13): opt the form into the guided three-stage flow
+    # (Start / Fill / Review) in the web UI. Forms that don't declare this
+    # keep the current single-page behaviour unchanged.
+    guided: bool = False
     # --- pdf_overlay engine (KTD7, U9) ---------------------------------------
     # ``engine`` selects the renderer: "docx" (text_ops/checkbox_ops above) or
     # "pdf_overlay" (stamp values onto a scanned-PDF template).
