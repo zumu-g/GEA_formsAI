@@ -409,7 +409,7 @@
       </div>
       <div class="row">
         <button type="button" id="review-back-btn" class="secondary">Back to edit</button>
-        <button type="button" id="review-confirm-btn" disabled>Confirm &amp; fill</button>
+        <button type="button" id="review-confirm-btn" disabled>Generate PDF — nothing is sent to anyone yet</button>
       </div>
     </fieldset>
   </div>
@@ -424,7 +424,7 @@
     <button type="button" class="linklike" id="esign-add-btn">Add another signer</button>
     <label for="esign-message">Message (optional)</label>
     <input id="esign-message" placeholder="e.g. Please sign by Friday" />
-    <button type="button" id="esign-btn" style="margin-top:0.85rem">Send for signing</button>
+    <button type="button" id="esign-btn" style="margin-top:0.85rem">Send for e-signing — emails the renters immediately</button>
     <div id="esign-result" class="hint" style="margin-top:0.6rem"></div>
   </div>
 
@@ -1859,6 +1859,10 @@
       if (body.warnings && body.warnings.length) {
         html += '<div class="warn">' + body.warnings.map(esc).join('<br>') + '</div>';
       }
+      // U6 (R11): one action from this result to typing the next address.
+      if (isGuided(currentSpec())) {
+        html += '<div style="margin-top:0.75rem"><button type="button" id="start-next-btn" class="secondary">Start next lease</button></div>';
+      }
       showResult(html, true);
       hideReviewScreen();
       captureDefaults(); // U3: the successful fill is the defaults memory
@@ -1881,6 +1885,59 @@
     } finally {
       reviewConfirmBtn.disabled = false;
     }
+  });
+
+  // ── U6 (R11): "Start next" — finished lease → fresh Start stage ──────────
+  // Kept across the loop: form key, lease mode (the is_renewal carrier +
+  // radios), handling-agent selection and the whole agent block, remembered
+  // defaults. Everything else — premises/tenancy/renter/lease values, preview
+  // and search state, seeded baselines and renewal markers — is cleared.
+  const AGENT_BLOCK_FIELDS = new Set([
+    'agent_name', 'agent_address', 'agent_postcode', 'agent_phone',
+    'agent_email', 'agent_acn', 'handling_agent',
+  ]);
+
+  function startNextLease() {
+    // Coverage guard: iterate the RENDERED fields, not a hardcoded name list,
+    // so a field added to the spec later can't be silently missed.
+    callerFieldsBox.querySelectorAll('[data-field]').forEach((el) => {
+      const name = el.dataset.field;
+      if (name === 'is_renewal') return; // lease-type carrier — kept (R11)
+      if (AGENT_BLOCK_FIELDS.has(name)) return; // agent selection kept
+      if (REMEMBER_FIELDS.includes(name)) return; // sticky defaults kept
+      fieldSource[name] = '';
+      delete seededValue[name]; // U3 baselines/markers reset with the value
+      delete expandedManually[name];
+      dismissDiffChip(name);
+      setFieldDom(name, ''); // tag + presentation + progress refresh
+      updateDateEcho(name);
+    });
+    // Preview / search state
+    lastPreviewBundle = null;
+    lastPreviewProvider = '';
+    crmAutoKey = null;
+    queryInput.value = '';
+    resultsList.innerHTML = '';
+    previewBox.classList.remove('show');
+    previewBox.innerHTML = '';
+    lotInput.value = '';
+    tenancyInput.value = '';
+    document.getElementById('crm-tenants-result').textContent = '';
+    // Result / review / e-sign UI
+    resultBox.style.display = 'none';
+    approveBox.classList.remove('show');
+    esignBox.style.display = 'none';
+    lastFill = null;
+    hideReviewScreen();
+    updateContextStrip();
+    applyRememberedDefaults(currentSpec()); // emergency contact / ACN re-seed
+    setStage(1);
+    queryInput.focus();
+  }
+
+  // The button lives inside resultBox's innerHTML — delegate the click.
+  resultBox.addEventListener('click', (e) => {
+    if (e.target.id === 'start-next-btn') startNextLease();
   });
 
   // ── agent accounts: login / invite-accept / admin invite ─────────────────

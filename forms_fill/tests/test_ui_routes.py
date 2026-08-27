@@ -320,3 +320,30 @@ def test_ui_draft_saves_stage_and_focus_and_resume_restores_them(client):
     assert "state.focus" in resume_fn
     assert 'id="last-saved"' in text
     assert "Last saved " in text  # from the draft's updated_at
+
+
+def test_ui_review_actions_carry_consequence_labels(client):
+    # R10: each action states its consequence on the button itself.
+    text = client.get("/ui/").text
+    assert "Generate PDF — nothing is sent to anyone yet" in text
+    assert "Send for e-signing — emails the renters immediately" in text
+
+
+def test_ui_start_next_button_loops_to_a_fresh_start_stage(client):
+    # R11: one action from a finished lease to typing the next address.
+    text = client.get("/ui/").text
+    assert 'id="start-next-btn"' in text
+    fn = text.split("function startNextLease")[1].split("\n  }\n")[0]
+    # Coverage guard: clearing derives from the rendered fields, not a
+    # hardcoded name list — new fields can't be silently missed.
+    assert "querySelectorAll('[data-field]')" in fn
+    assert "AGENT_BLOCK_FIELDS" in fn  # agent block survives
+    assert "REMEMBER_FIELDS" in fn  # sticky defaults survive
+    assert "applyRememberedDefaults" in fn  # ...and re-seed
+    assert "setStage(1)" in fn  # back to Start
+    assert "queryInput.focus()" in fn  # cursor in address search
+    # Preserved: form key, lease mode, handling agent — the handler never
+    # touches the form selector or the lease-mode radios.
+    assert "formSelect" not in fn
+    assert "lease-mode" not in fn
+    assert "is_renewal" in fn  # lease-mode carrier explicitly skipped
