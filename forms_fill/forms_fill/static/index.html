@@ -165,6 +165,41 @@
   #stepper button:disabled { opacity: 0.45; cursor: default; }
   .stage-hidden { display: none !important; }
 
+  /* U3: Fill stage — collapsed seeded rows, context strip, gap nav, renewal marks */
+  .cf-field.cf-collapsed > label, .cf-field.cf-collapsed > .field-input-row { display: none; }
+  .cf-collapsed-row { display: none; }
+  .cf-field.cf-collapsed > .cf-collapsed-row {
+    display: flex; gap: 0.6rem; align-items: baseline; width: 100%;
+    margin-top: 0.5rem; padding: 0.55rem 1rem; min-height: 44px;
+    background: var(--paper); border: 1px solid var(--rule); border-radius: 0.5rem;
+    color: var(--ink); font-weight: 400; text-align: left; font-size: 0.9rem;
+  }
+  .cf-collapsed-row:hover { background: var(--paper); border-color: var(--gold); }
+  .cf-collapsed-row .cf-cr-label { color: var(--muted); font-size: 0.8rem; flex: 0 0 auto; }
+  .cf-collapsed-row .cf-cr-value { font-family: var(--font-mono); font-size: 0.85rem; }
+  .cf-collapsed-row .cf-cr-source { color: var(--muted); font-size: 0.72rem; }
+  .cf-collapsed-row .cf-cr-edit { margin-left: auto; color: var(--muted); font-size: 0.78rem; text-decoration: underline; }
+  .verify-note { font-size: 0.8rem; margin-top: 0.3rem; }
+  .verify-note.verify-prompt { color: var(--muted); }
+  .verify-note.changed-marker { color: var(--status-rejected); font-weight: 500; }
+  .diff-chip {
+    display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center;
+    margin-top: 0.4rem; padding: 0.55rem 0.75rem; font-size: 0.85rem;
+    border: 1px solid var(--gold-soft); border-radius: 8px; background: var(--paper);
+  }
+  .diff-chip button { min-height: 36px; padding: 0.3rem 0.8rem; font-size: 0.82rem; }
+  #context-strip {
+    position: sticky; top: 0; z-index: 5;
+    display: none; flex-wrap: wrap; gap: 0.3rem 1.4rem;
+    margin-bottom: 1rem; padding: 0.6rem 1rem; font-size: 0.85rem;
+    background: var(--surface); border: 1px solid var(--rule); border-radius: 0.75rem;
+  }
+  #context-strip.show { display: flex; }
+  #context-strip .ctx-label { color: var(--muted); font-size: 0.75rem; margin-right: 0.3rem; }
+  #context-strip .ctx-value { font-family: var(--font-mono); font-size: 0.82rem; }
+  #gap-nav { display: none; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem; }
+  #gap-nav.show { display: flex; }
+
   /* U8: review screen */
   #review-screen { display: none; }
   #review-screen.show { display: block; }
@@ -302,6 +337,18 @@
     </div>
 
     <div id="stage-fill">
+    <!-- U3 (R4): pinned context strip — date/money questions never answered blind -->
+    <div id="context-strip" aria-label="Lease context">
+      <span><span class="ctx-label">Premises</span><span class="ctx-value" data-ctx="premises">—</span></span>
+      <span><span class="ctx-label">Rent</span><span class="ctx-value" data-ctx="rent">—</span></span>
+      <span><span class="ctx-label">Term</span><span class="ctx-value" data-ctx="term">—</span></span>
+      <span><span class="ctx-label">Renters</span><span class="ctx-value" data-ctx="renters">—</span></span>
+    </div>
+    <!-- U3 (R3): "N to go" + next-gap jump -->
+    <div id="gap-nav" class="hint">
+      <strong id="gap-count"></strong>
+      <button type="button" id="next-gap-btn" class="secondary">Next gap</button>
+    </div>
     <fieldset id="caller-fields">
       <legend><span class="disc">3</span>Form details</legend>
       <p class="hint">Rendered verbatim — this tool never computes dates, notice periods, or legal grounds.</p>
@@ -515,6 +562,7 @@
       fieldSource['is_renewal'] = renewal ? 'typed' : '';
       updateSourceTag('is_renewal');
       applyLeaseAutofill();
+      refreshAllFieldPresentation(); // U3: verify prompts follow the lease type
     }
     maybeAutoCrmFetch(); // U2: flipping to New lease after a preview still auto-fetches
   });
@@ -607,6 +655,11 @@
   // KTD4 mirrored client-side, same rule the server's build_context uses).
   let fieldSource = {}; // name -> '' | 'typed' | display source label
   let officeData = null; // { office, agents } from GET /agency
+  // U3: last value a fetch/default seeder wrote per field — the baseline for
+  // the renewal was/now marker (KTD5) and the collapsed-row display.
+  let seededValue = {};
+  // U3: fields the PM explicitly expanded — stay expanded until re-render.
+  let expandedManually = {};
 
   function inputEl(name) {
     return callerFieldsBox.querySelector('[data-field="' + name + '"]');
@@ -618,6 +671,7 @@
     if (el.type === 'checkbox') el.checked = !!value && value !== 'false';
     else el.value = value == null ? '' : value;
     updateSourceTag(name);
+    refreshFieldPresentation(name);
     updateProgress();
   }
 
@@ -635,7 +689,140 @@
   function seedField(name, value, source) {
     if (fieldSource[name] === 'typed') return;
     fieldSource[name] = value ? source : '';
+    if (value && source) seededValue[name] = value; // U3/KTD5 baseline
+    else delete seededValue[name];
     setFieldDom(name, value || '');
+  }
+
+  // ── U3: stable skeleton — collapsed seeded rows + renewal marking ─────────
+  // A field whose value came from fetch/defaults renders as a compact
+  // collapsed row (label + value + source + expand-to-edit); blank or
+  // hand-edited fields render expanded. Presentation only — the real input
+  // always stays in the DOM (KTD1).
+  function refreshFieldPresentation(name) {
+    const wrap = callerFieldsBox.querySelector('.cf-field[data-wrap-for="' + name + '"]');
+    if (!wrap) return;
+    const el = inputEl(name);
+    const src = fieldSource[name] || '';
+    const collapsed = isGuided(currentSpec()) && !!src && src !== 'typed'
+      && !!(el && el.value) && !expandedManually[name];
+    wrap.classList.toggle('cf-collapsed', collapsed);
+    const btn = wrap.querySelector('.cf-collapsed-row');
+    if (btn && collapsed) {
+      btn.innerHTML = '';
+      const parts = [
+        ['cf-cr-label', wrap.dataset.label],
+        ['cf-cr-value', el.value],
+        ['cf-cr-source', 'from ' + src],
+        ['cf-cr-edit', 'Edit'],
+      ];
+      parts.forEach(([cls, text]) => {
+        const s = document.createElement('span');
+        s.className = cls;
+        s.textContent = text;
+        btn.appendChild(s);
+      });
+    }
+    updateRenewalMark(name);
+  }
+
+  // U3/KTD5 (R5): renewal-critical fields — verify prompt while untouched,
+  // persistent text-badged was/now marker once edited. New lease: nothing.
+  const RENEWAL_CRITICAL = /^(rent_amount|bond_amount|renter\d+_name)$/;
+
+  function updateRenewalMark(name) {
+    const note = callerFieldsBox.querySelector('.verify-note[data-note-for="' + name + '"]');
+    if (!note) return;
+    const el = inputEl(name);
+    const seeded = seededValue[name];
+    if (!isRenewalChecked() || !RENEWAL_CRITICAL.test(name) || !seeded || !el) {
+      note.style.display = 'none';
+      note.textContent = '';
+      return;
+    }
+    if (el.value === seeded) {
+      note.className = 'verify-note verify-prompt';
+      note.textContent = 'VERIFY — check this value against the new agreement';
+    } else {
+      note.className = 'verify-note changed-marker';
+      note.textContent = 'CHANGED — was ' + seeded + ', now ' + (el.value || '(blank)');
+    }
+    note.style.display = '';
+  }
+
+  function refreshAllFieldPresentation() {
+    callerFieldsBox.querySelectorAll('.cf-field').forEach((w) => refreshFieldPresentation(w.dataset.wrapFor));
+  }
+
+  // U3 (R4): pinned context strip — premises, rent, term, renters, live.
+  function updateContextStrip() {
+    const strip = document.getElementById('context-strip');
+    if (!isGuided(currentSpec())) { strip.classList.remove('show'); return; }
+    const val = (n) => { const el = inputEl(n); return el && el.value ? el.value.trim() : ''; };
+    const set = (key, text) => {
+      strip.querySelector('[data-ctx="' + key + '"]').textContent = text || '—';
+    };
+    const bundleAddr = lastPreviewBundle ? lastPreviewBundle.premises.address_line : '';
+    set('premises', val('property_address') || bundleAddr || queryInput.value.trim());
+    const rent = val('rent_amount');
+    set('rent', rent ? rent + (val('rent_period') ? ' / ' + val('rent_period') : '') : '');
+    const start = val('fixed_start_date') || val('periodic_start_date');
+    set('term', start ? start + (val('fixed_end_date') ? ' → ' + val('fixed_end_date') : '') : '');
+    set('renters', [1, 2, 3, 4].map((i) => val('renter' + i + '_name')).filter(Boolean).join(', '));
+    strip.classList.add('show');
+  }
+
+  // U3 (R3): jump to the next expanded blank field, wrapping around.
+  function focusNextGap() {
+    const blanks = Array.from(callerFieldsBox.querySelectorAll('.cf-field:not(.cf-collapsed) [data-field]'))
+      .filter((el) => el.dataset.hidden !== '1' && el.type !== 'checkbox' && !el.value.trim());
+    if (!blanks.length) return;
+    const idx = blanks.indexOf(document.activeElement);
+    const next = blanks[(idx + 1) % blanks.length];
+    next.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    next.focus({ preventScroll: true });
+  }
+  document.getElementById('next-gap-btn').addEventListener('click', focusNextGap);
+
+  // ── U3 (R6): manual edits always win — diff chip instead of overwrite ─────
+  function dismissDiffChip(name) {
+    const chip = callerFieldsBox.querySelector('.diff-chip[data-diff-for="' + name + '"]');
+    if (chip) chip.remove();
+  }
+
+  function showDiffChip(name, entered, seed) {
+    dismissDiffChip(name);
+    const wrap = callerFieldsBox.querySelector('.cf-field[data-wrap-for="' + name + '"]');
+    if (!wrap) return;
+    const chip = document.createElement('div');
+    chip.className = 'diff-chip';
+    chip.dataset.diffFor = name;
+    const msg = document.createElement('span');
+    msg.textContent = (seed.source || 'The source') + ' says ' + seed.value + ' — you entered ' + entered + '.';
+    chip.appendChild(msg);
+    const keep = document.createElement('button');
+    keep.type = 'button';
+    keep.className = 'secondary';
+    keep.textContent = 'Keep ' + entered;
+    keep.addEventListener('click', () => {
+      fieldSource[name] = 'typed';
+      updateSourceTag(name);
+      dismissDiffChip(name);
+    });
+    const use = document.createElement('button');
+    use.type = 'button';
+    use.className = 'secondary';
+    use.textContent = 'Use ' + seed.value;
+    use.addEventListener('click', () => {
+      fieldSource[name] = seed.value ? seed.source : '';
+      if (seed.value && seed.source) seededValue[name] = seed.value;
+      setFieldDom(name, seed.value);
+      dismissDiffChip(name);
+    });
+    chip.appendChild(keep);
+    chip.appendChild(use);
+    wrap.appendChild(chip);
+    keep.focus();
   }
 
   function isRenewalChecked() {
@@ -774,7 +961,17 @@
   function forceFetchField(name) {
     const seed = computeSeed(name);
     if (!seed) return;
+    // U3 (R6): never silently overwrite a hand-edited value — show a diff
+    // chip with both values and let the PM pick.
+    const el = inputEl(name);
+    const entered = el ? el.value : '';
+    if (fieldSource[name] === 'typed' && entered && seed.value && seed.value !== entered) {
+      showDiffChip(name, entered, seed);
+      return;
+    }
+    dismissDiffChip(name);
     fieldSource[name] = seed.value ? seed.source : '';
+    if (seed.value && seed.source) seededValue[name] = seed.value;
     setFieldDom(name, seed.value);
   }
 
@@ -805,6 +1002,8 @@
   function renderCallerFields(spec) {
     callerFieldsBox.innerHTML = '';
     fieldSource = {};
+    seededValue = {};
+    expandedManually = {};
     let lastSection = null;
     let sectionCount = 0;
     (spec.caller_fields || []).forEach((f) => {
@@ -874,7 +1073,24 @@
       }
       input.id = 'cf-' + f.name;
       input.dataset.field = f.name;
-      callerFieldsBox.appendChild(label);
+
+      // U3: per-field wrapper carrying the collapsed compact row (seeded
+      // fields) and the renewal verify/changed note — presentation only,
+      // the real input stays in the DOM at all times (KTD1).
+      const wrap = document.createElement('div');
+      wrap.className = 'cf-field';
+      wrap.dataset.wrapFor = f.name;
+      wrap.dataset.label = f.label;
+      const collapsedBtn = document.createElement('button');
+      collapsedBtn.type = 'button'; // focusable, keyboard reachable
+      collapsedBtn.className = 'cf-collapsed-row';
+      collapsedBtn.addEventListener('click', () => {
+        expandedManually[f.name] = true;
+        refreshFieldPresentation(f.name);
+        input.focus();
+      });
+      wrap.appendChild(collapsedBtn);
+      wrap.appendChild(label);
 
       const inputRow = document.createElement('div');
       inputRow.className = 'field-input-row';
@@ -890,7 +1106,13 @@
         fetchBtn.addEventListener('click', () => forceFetchField(f.name));
         inputRow.appendChild(fetchBtn);
       }
-      callerFieldsBox.appendChild(inputRow);
+      wrap.appendChild(inputRow);
+      const note = document.createElement('div');
+      note.className = 'verify-note';
+      note.dataset.noteFor = f.name;
+      note.style.display = 'none';
+      wrap.appendChild(note);
+      callerFieldsBox.appendChild(wrap);
     });
 
     // Any manual edit is sticky (KTD4) and marks the field 'typed'.
@@ -899,6 +1121,8 @@
       el.addEventListener(el.tagName === 'SELECT' || el.type === 'checkbox' ? 'change' : 'input', () => {
         fieldSource[name] = el.type === 'checkbox' && !el.checked ? '' : 'typed';
         updateSourceTag(name);
+        refreshFieldPresentation(name); // U3: expand + renewal was/now marker
+        if (name === 'is_renewal') refreshAllFieldPresentation(); // prompts follow the lease type
         if (name === 'is_renewal') {
           // Keep the section-2 lease-type radios agreeing with the checkbox.
           leaseModeRadios().forEach((r) => { r.checked = r.value === (el.checked ? 'renewal' : 'new'); });
@@ -951,12 +1175,18 @@
 
   // Live "N of M filled" + section jump links for long forms (Form details).
   function updateProgress() {
+    updateContextStrip(); // U3 (R4): strip tracks every value change
     const box = document.getElementById('cf-progress');
     const fields = Array.from(callerFieldsBox.querySelectorAll('[data-field]'))
       .filter((el) => el.dataset.hidden !== '1');
     const sections = Array.from(callerFieldsBox.querySelectorAll('.field-section-title'));
-    if (fields.length < 8) { box.style.display = 'none'; return; } // short forms don't need it
     const filled = fields.filter((el) => el.type === 'checkbox' ? el.checked : el.value.trim()).length;
+    // U3 (R3): "N to go" + next-gap jump, guided forms only
+    const gapNav = document.getElementById('gap-nav');
+    const gaps = fields.length - filled;
+    document.getElementById('gap-count').textContent = gaps + ' to go';
+    gapNav.classList.toggle('show', isGuided(currentSpec()) && gaps > 0);
+    if (fields.length < 8) { box.style.display = 'none'; return; } // short forms don't need it
     document.getElementById('cf-progress-count').textContent = filled + ' of ' + fields.length + ' fields filled';
     const links = document.getElementById('cf-progress-links');
     links.innerHTML = '';

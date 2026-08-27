@@ -201,3 +201,56 @@ def test_ui_reseed_guard_confirms_before_overwriting_fill(client):
     assert "confirmReseed" in text
     # address pick and lease-type change both route through the guard
     assert text.count("confirmReseed(") >= 3  # definition + 2 call sites
+
+
+# ── Wizard U3: Fill stage — skeleton, gaps, context strip, renewal diffs ─────
+
+
+def test_ui_fill_stage_has_collapsed_row_machinery(client):
+    text = client.get("/ui/").text
+    assert "cf-collapsed-row" in text
+    assert "refreshFieldPresentation" in text
+    # collapse applies only to seeded (fetched/defaults) fields, never typed
+    assert "src !== 'typed'" in text
+    # collapsed rows are real buttons — keyboard reachable
+    assert "collapsedBtn.type = 'button'" in text
+
+
+def test_ui_fill_stage_has_context_strip(client):
+    text = client.get("/ui/").text
+    assert 'id="context-strip"' in text
+    assert "updateContextStrip" in text
+    # pinned inside the Fill stage, above the caller fields
+    fill = text.split('id="stage-fill"')[1].split('id="caller-fields"')[0]
+    assert "context-strip" in fill
+
+
+def test_ui_fill_stage_has_gap_navigation(client):
+    text = client.get("/ui/").text
+    assert 'id="gap-count"' in text
+    assert 'id="next-gap-btn"' in text
+    assert "focusNextGap" in text
+    assert "to go" in text
+
+
+def test_ui_renewal_verify_prompt_and_was_now_marker(client):
+    text = client.get("/ui/").text
+    assert "RENEWAL_CRITICAL" in text
+    assert "seededValue" in text
+    # untouched seeded value → verify prompt; edited → text-badged was/now marker
+    assert "against the new agreement" in text
+    assert "CHANGED — was " in text
+    mark_fn = text.split("function updateRenewalMark")[1].split("\n  function ")[0]
+    assert "isRenewalChecked()" in mark_fn  # new lease: no prompts or markers
+
+
+def test_ui_force_fetch_shows_diff_chip_instead_of_overwriting_typed(client):
+    text = client.get("/ui/").text
+    fetch_fn = text.split("function forceFetchField")[1].split("\n  function ")[0]
+    assert "fieldSource[name] === 'typed'" in fetch_fn
+    assert "showDiffChip" in fetch_fn
+    assert "diff-chip" in text
+    # two keyboard-focusable choices, either dismisses the chip
+    assert "'Keep " in text or '"Keep ' in text
+    assert "'Use " in text or '"Use ' in text
+    assert "dismissDiffChip" in text
