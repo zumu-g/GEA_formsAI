@@ -254,3 +254,31 @@ def test_ui_force_fetch_shows_diff_chip_instead_of_overwriting_typed(client):
     assert "'Keep " in text or '"Keep ' in text
     assert "'Use " in text or '"Use ' in text
     assert "dismissDiffChip" in text
+
+
+# ── Wizard U4: field help, date validation, blocking/informational review ────
+
+
+def test_ui_renders_field_help_under_expanded_fields(client):
+    text = client.get("/ui/").text
+    assert "cf-help" in text  # help line element class
+    assert "f.help" in text  # driven by the catalogue's help text, not hardcoded
+
+
+def test_ui_date_validation_blocks_and_echoes(client):
+    text = client.get("/ui/").text
+    fn = text.split("function validateDateField")[1].split("\n  function ")[0]
+    assert "cf-invalid" in fn  # visible invalid state, usable by U5 to block Enter
+    assert "must be after" in fn  # end-after-start message
+    assert "date-echo" in text  # plain-words advisory echo element
+    # compliance: the echo never writes a value back into any field
+    echo_fn = text.split("function updateDateEcho")[1].split("\n  function ")[0]
+    assert ".value =" not in echo_fn
+
+
+def test_ui_review_splits_blank_fields_blocking_vs_informational(client):
+    text = client.get("/ui/").text
+    assert 'id="review-blank-blocking"' in text
+    assert 'id="review-blank-informational"' in text
+    assert "Needed to complete the agreement" in text
+    assert "Commonly left blank" in text

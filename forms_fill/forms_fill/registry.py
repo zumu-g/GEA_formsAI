@@ -146,6 +146,8 @@ def form_catalogue() -> list[dict]:
                     "kind": _caller_field_kind(spec, name),
                     "options": _caller_field_options(spec, name),
                     "section": spec.caller_field_sections.get(name) or "",
+                    "help": spec.caller_field_help.get(name) or "",
+                    "required": spec.caller_field_required.get(name) or "",
                 }
                 for name, label in spec.caller_field_labels.items()
             ],

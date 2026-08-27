@@ -200,6 +200,18 @@
   #gap-nav { display: none; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem; }
   #gap-nav.show { display: flex; }
 
+  /* U4: field help, date validation + advisory echo */
+  .cf-help { color: var(--muted); font-size: 0.78rem; margin-top: 0.25rem; }
+  .cf-field.cf-collapsed > .cf-help { display: none; }
+  .date-echo { color: var(--muted); font-size: 0.78rem; margin-top: 0.25rem; font-style: italic; }
+  .date-error { color: var(--status-rejected); font-size: 0.8rem; font-weight: 500; margin-top: 0.25rem; }
+  .cf-field.cf-invalid input { border-color: var(--status-rejected); }
+  #review-blank-blocking, #review-blank-informational { display: none; margin-top: 1rem; padding: 0.75rem 1rem; border-radius: 8px; font-size: 0.85rem; }
+  #review-blank-blocking.show, #review-blank-informational.show { display: block; }
+  #review-blank-blocking { border: 1px solid var(--status-rejected); color: var(--status-rejected); }
+  #review-blank-informational { border: 1px solid var(--rule); color: var(--muted); }
+  #review-blank-blocking strong, #review-blank-informational strong { display: block; margin-bottom: 0.25rem; }
+
   /* U8: review screen */
   #review-screen { display: none; }
   #review-screen.show { display: block; }
@@ -382,6 +394,9 @@
       <legend>Review — check every value before generating</legend>
       <p class="hint">Auto-filled values are tagged with where they came from. Edit anything that's wrong; blank fields are shown so you know what the printed form will leave empty.</p>
       <div id="review-rows"></div>
+      <!-- U4 (R10): blank fields split by consequence -->
+      <div id="review-blank-blocking"><strong>Needed to complete the agreement</strong><span></span></div>
+      <div id="review-blank-informational"><strong>Commonly left blank — check these are meant to be empty</strong><span></span></div>
       <div id="review-confirm-row">
         <input type="checkbox" id="review-confirm-check" />
         <label for="review-confirm-check">I've checked every value above</label>
@@ -750,6 +765,55 @@
     note.style.display = '';
   }
 
+  // ── U4 (R8): date validation + advisory echo ──────────────────────────────
+  // The echo RESTATES what the user typed in plain words; it never computes
+  // or writes a date into any field (compliance: no computed dates).
+  function parseDateValue(v) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) return null;
+    const d = new Date(v + 'T00:00:00');
+    return isNaN(d.getTime()) ? null : d;
+  }
+
+  function plainWordsDate(d) {
+    return d.toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+  }
+
+  function updateDateEcho(name) {
+    const echo = callerFieldsBox.querySelector('[data-echo-for="' + name + '"]');
+    const el = inputEl(name);
+    if (!echo || !el) return;
+    const d = parseDateValue(el.value);
+    echo.textContent = d ? plainWordsDate(d) : '';
+  }
+
+  // Returns true when valid; marks the field invalid with a visible message
+  // otherwise. U5 reads .cf-invalid to block Enter-advance.
+  function validateDateField(name) {
+    const el = inputEl(name);
+    const wrap = callerFieldsBox.querySelector('.cf-field[data-wrap-for="' + name + '"]');
+    const err = callerFieldsBox.querySelector('[data-error-for="' + name + '"]');
+    if (!el || !wrap || !err) return true;
+    let message = '';
+    const d = parseDateValue(el.value);
+    if (!el.value && el.validity && el.validity.badInput) {
+      message = 'Enter a complete date, e.g. 08/09/2026.';
+    } else if (el.value && !d) {
+      message = 'Not a real date — check day, month and year.';
+    } else if (d && name.includes('end_date')) {
+      const start = parseDateValue((inputEl(name.replace('end_date', 'start_date')) || {}).value || '');
+      if (start && d <= start) message = 'End date must be after the start date (' + plainWordsDate(start) + ').';
+    }
+    wrap.classList.toggle('cf-invalid', !!message);
+    err.textContent = message;
+    err.style.display = message ? '' : 'none';
+    if (!message && name.includes('start_date')) {
+      // A corrected start date can clear (or create) the end date's error.
+      const endName = name.replace('start_date', 'end_date');
+      if (inputEl(endName) && inputEl(endName).value) validateDateField(endName);
+    }
+    return !message;
+  }
+
   function refreshAllFieldPresentation() {
     callerFieldsBox.querySelectorAll('.cf-field').forEach((w) => refreshFieldPresentation(w.dataset.wrapFor));
   }
@@ -1107,6 +1171,29 @@
         inputRow.appendChild(fetchBtn);
       }
       wrap.appendChild(inputRow);
+      // U4 (R7): one-line help from the catalogue, under the expanded field.
+      if (f.help) {
+        const help = document.createElement('div');
+        help.className = 'cf-help';
+        help.id = 'cf-help-' + f.name;
+        help.textContent = f.help;
+        wrap.appendChild(help);
+      }
+      // U4 (R8): date fields get an advisory echo + validation message slot.
+      if (kind === 'date') {
+        const echo = document.createElement('div');
+        echo.className = 'date-echo';
+        echo.dataset.echoFor = f.name;
+        wrap.appendChild(echo);
+        const err = document.createElement('div');
+        err.className = 'date-error';
+        err.dataset.errorFor = f.name;
+        err.style.display = 'none';
+        wrap.appendChild(err);
+        input.addEventListener('input', () => updateDateEcho(f.name));
+        input.addEventListener('blur', () => validateDateField(f.name));
+        input.addEventListener('keydown', (e) => { if (e.key === 'Enter') validateDateField(f.name); });
+      }
       const note = document.createElement('div');
       note.className = 'verify-note';
       note.dataset.noteFor = f.name;
@@ -1576,12 +1663,18 @@
     reviewRows.innerHTML = '';
     const summary = buildFetchedSummaryRow();
     if (summary) reviewRows.appendChild(summary);
+    // U4 (R10): blank fields split by consequence — blocking (agreement
+    // incomplete) vs informational (commonly blank). No classification
+    // published (non-declaring forms) → informational, today's behaviour.
+    const blankBlocking = [];
+    const blankInformational = [];
     (spec.caller_fields || []).forEach((f) => {
       const orig = inputEl(f.name);
       if (!orig) return;
       const isCheckbox = orig.type === 'checkbox';
       const value = isCheckbox ? (orig.checked ? 'Yes' : 'No') : orig.value;
       const isBlank = !isCheckbox && !value;
+      if (isBlank) (f.required === 'blocking' ? blankBlocking : blankInformational).push(f.label);
       const row = document.createElement('div');
       row.className = 'review-row' + (isBlank ? ' blank' : '');
       const label = document.createElement('div');
@@ -1611,6 +1704,13 @@
       row.appendChild(valCol);
       reviewRows.appendChild(row);
     });
+    const fillList = (id, names) => {
+      const box = document.getElementById(id);
+      box.querySelector('span').textContent = names.join(', ');
+      box.classList.toggle('show', names.length > 0);
+    };
+    fillList('review-blank-blocking', blankBlocking);
+    fillList('review-blank-informational', blankInformational);
   }
 
   function showReviewScreen() {

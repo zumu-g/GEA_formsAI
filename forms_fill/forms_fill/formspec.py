@@ -121,6 +121,14 @@ class FormSpec:
     caller_field_kinds: dict[str, str] = field(default_factory=dict)
     caller_field_options: dict[str, tuple[str, ...]] = field(default_factory=dict)
     caller_field_sections: dict[str, str] = field(default_factory=dict)
+    # Wizard U4 (R7/R10, KTD7) — per-field one-line help with a real format
+    # example, and a blank-field classification for the review screen:
+    #   "blocking" — the agreement is incomplete without it
+    #   "informational" — commonly left blank on real agreements
+    # A field with no entry publishes "" and the UI treats its blank as
+    # informational (today's behaviour).
+    caller_field_help: dict[str, str] = field(default_factory=dict)
+    caller_field_required: dict[str, str] = field(default_factory=dict)
     # Wizard U1 (R1/R13): opt the form into the guided three-stage flow
     # (Start / Fill / Review) in the web UI. Forms that don't declare this
     # keep the current single-page behaviour unchanged.
