@@ -480,6 +480,11 @@
     document.getElementById('stage-review'),
   ];
   let stage = 1;
+  let visitedFill = false; // Fill stage has been shown for the current lease
+  // Async generation guard: any state reset (form switch, Start-next, new
+  // search/preview cycle, skip-CRM) bumps this; in-flight fetches captured
+  // an older value and bail before applying stale results.
+  let fetchGen = 0;
 
   function isGuided(spec) {
     return !!spec && !!spec.guided;
@@ -487,6 +492,7 @@
 
   function setStage(n) {
     stage = n;
+    if (n === 2) visitedFill = true;
     const guided = isGuided(currentSpec());
     stepper.classList.toggle('show', guided);
     stageContainers.forEach((el, i) => {
@@ -507,14 +513,23 @@
     // only through the existing submit → review path.
     if (target === 3 && stage < 3) return;
     if (target >= stage && !(stage === 1 && target === 2)) return;
+    // Forward to Fill obeys the same lease-type gate as the search path.
+    if (stage === 1 && target === 2 && !requireLeaseMode()) return;
     if (stage === 3) hideReviewScreen(); // restores the form; sets stage 2
     if (target !== stage) setStage(target);
   });
 
   // Sales forms (KTD8) have no tenancy — relabel the section so "tenancy"
   // framing doesn't confuse a PM filling in a vendor's details (U1).
+  let lastAppliedFormKey = null; // detect a real form switch vs a same-form re-apply
   function applyFormModeUI(spec) {
-    setStage(isGuided(spec) ? stage : 1); // R13: non-guided forms show everything, no stepper
+    const switched = !spec || spec.key !== lastAppliedFormKey;
+    lastAppliedFormKey = spec ? spec.key : null;
+    if (switched) { visitedFill = false; fetchGen++; }
+    // R13: non-guided forms show everything, no stepper. Switching TO a
+    // guided form starts at Start — never a stale stage from the previous
+    // form (resumeDraft re-applies its saved stage afterwards).
+    setStage(isGuided(spec) && !switched ? stage : 1);
     const sales = !!spec && spec.requires_identifiers === false;
     section2Legend.textContent = sales ? 'Property / Vendor' : 'Tenancy';
     tenancyIdLabel.textContent = sales ? 'Property ID (optional)' : 'Tenancy ID (preferred)';
@@ -560,7 +575,7 @@
     return Object.keys(fieldSource).some((k) => fieldSource[k]);
   }
   function confirmReseed(what) {
-    if (!isGuided(currentSpec()) || stage === 1 || !fillHasData()) return true;
+    if (!isGuided(currentSpec()) || !visitedFill || !fillHasData()) return true;
     return confirm('Changing the ' + what + ' will re-seed fetched values on the Fill screen. Fields you edited yourself are kept. Continue?');
   }
 
@@ -606,6 +621,7 @@
   }
 
   async function fetchCrmTenants() {
+    const gen = fetchGen; // bail if the lease/form context resets mid-flight
     const out = document.getElementById('crm-tenants-result');
     const address = (lastPreviewBundle && lastPreviewBundle.premises.address_line) || queryInput.value.trim();
     if (!address) { out.textContent = ' — search a property first.'; return; }
@@ -613,12 +629,14 @@
     try {
       const sParams = new URLSearchParams({ q: address, provider: 'gea_crm', listing: 'lease' });
       const sResp = await fetch(API + '/tenancy/search?' + sParams, { headers: authHeaders() });
+      if (gen !== fetchGen) return; // stale — context changed while fetching
       const matches = sResp.ok ? (await sResp.json()).matches || [] : [];
       if (!matches.length) { out.textContent = ' — no match in GEA CRM; enter tenants manually.'; return; }
       const pParams = new URLSearchParams({ provider: 'gea_crm' });
       if (matches[0].lot_id) pParams.set('lot_id', matches[0].lot_id);
       if (matches[0].tenancy_id) pParams.set('tenancy_id', matches[0].tenancy_id);
       const pResp = await fetch(API + '/tenancy/preview?' + pParams, { headers: authHeaders() });
+      if (gen !== fetchGen) return; // stale — never seed renters into a new lease context
       if (!pResp.ok) { out.textContent = ' — GEA CRM has no tenancy for that property; enter tenants manually.'; return; }
       const crmRenters = ((await pResp.json()).bundle.renters || []);
       if (!crmRenters.length) { out.textContent = ' — no tenants recorded in GEA CRM; enter them manually.'; return; }
@@ -1250,7 +1268,8 @@
         if (name === 'is_renewal') refreshAllFieldPresentation(); // prompts follow the lease type
         if (name === 'is_renewal') {
           // Keep the section-2 lease-type radios agreeing with the checkbox.
-          leaseModeRadios().forEach((r) => { r.checked = r.value === (el.checked ? 'renewal' : 'new'); });
+          lastLeaseMode = el.checked ? 'renewal' : 'new';
+          leaseModeRadios().forEach((r) => { r.checked = r.value === lastLeaseMode; });
           applyLeaseAutofill();
         }
         if (name === 'handling_agent') applyAgentAutofill();
@@ -1498,7 +1517,12 @@
   }
   // U2 (R2): "Continue without CRM data" — always advances to Fill with the
   // fields as blanks; today's fully manual entry path, one click away.
-  document.getElementById('skip-crm-btn').addEventListener('click', () => setStage(2));
+  document.getElementById('skip-crm-btn').addEventListener('click', () => {
+    if (!isGuided(currentSpec())) return;
+    if (!requireLeaseMode()) return; // same lease-type gate as search/preview
+    fetchGen++; // an in-flight preview must not seed after opting out
+    setStage(2);
+  });
 
   manualAddBtn.addEventListener('click', () => setManualAddMode(true));
   manualAddBackBtn.addEventListener('click', () => setManualAddMode(false));
@@ -1553,6 +1577,7 @@
 
   async function fetchPreview() {
     if (!requireLeaseMode()) return;
+    const gen = ++fetchGen; // a new cycle invalidates any in-flight fetch
     crmAutoKey = null; // a new preview re-arms the auto CRM fetch (U2)
     previewBox.classList.remove('show');
     const sales = !!currentSpec() && currentSpec().requires_identifiers === false;
@@ -1561,6 +1586,7 @@
     if (tenancyInput.value.trim()) params.set('tenancy_id', tenancyInput.value.trim());
     try {
       const resp = await fetch(API + '/tenancy/preview?' + params, { headers: authHeaders() });
+      if (gen !== fetchGen) return; // stale — a newer cycle owns the UI now
       const body = await resp.json();
       if (!resp.ok) {
         if (sales && body.error === 'no_current_tenancy') {
@@ -1584,6 +1610,7 @@
 
   async function runSearch() {
     if (!requireLeaseMode()) return;
+    const gen = ++fetchGen; // a new cycle invalidates any in-flight fetch
     resultsList.innerHTML = '';
     previewBox.classList.remove('show');
     // A new search invalidates any address seeded from a previous pick —
@@ -1599,6 +1626,7 @@
     try {
       const params = new URLSearchParams({ q: q, provider: providerSelect.value, listing: listingMode() });
       const resp = await fetch(API + '/tenancy/search?' + params, { headers: authHeaders() });
+      if (gen !== fetchGen) return; // stale — a newer cycle owns the UI now
       const body = await resp.json();
       if (body.error === 'search_unsupported') {
         resultsList.innerHTML = '<li style="cursor:default">' + esc(body.message) + '</li>';
@@ -1727,10 +1755,13 @@
         valCol.textContent = value;
       } else {
         const mirror = document.createElement('input');
+        if (orig.type === 'date') mirror.type = 'date'; // date fields keep date UI/validation in Review
         mirror.value = value;
         mirror.addEventListener('input', () => {
           orig.value = mirror.value;
           fieldSource[f.name] = 'typed';
+          updateSourceTag(f.name); // Fill-screen tag stays truthful
+          queueDraftSave(); // mirrors live outside the form's autosave listener
         });
         valCol.appendChild(mirror);
       }
@@ -1782,6 +1813,20 @@
     const requiresIdentifiers = !spec || spec.requires_identifiers !== false;
     if (requiresIdentifiers && !lotInput.value.trim() && !tenancyInput.value.trim()) {
       showResult('Select a property first — search by address above, or enter a Lot/Tenancy ID manually.', false);
+      return;
+    }
+    // R8: invalid dates never reach Review — validate every visible date field.
+    let firstInvalid = null;
+    callerFieldsBox.querySelectorAll('input[type=date][data-field]').forEach((el) => {
+      if (el.dataset.hidden === '1') return;
+      if (!validateDateField(el.dataset.field) && !firstInvalid) firstInvalid = el;
+    });
+    if (firstInvalid) {
+      const name = firstInvalid.dataset.field;
+      expandedManually[name] = true;
+      refreshFieldPresentation(name);
+      firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      firstInvalid.focus({ preventScroll: true });
       return;
     }
     resultBox.style.display = 'none';
@@ -1909,6 +1954,7 @@
   ]);
 
   function startNextLease() {
+    fetchGen++; // in-flight fetches from the finished lease must not seed the next
     // Coverage guard: iterate the RENDERED fields, not a hardcoded name list,
     // so a field added to the spec later can't be silently missed.
     callerFieldsBox.querySelectorAll('[data-field]').forEach((el) => {
@@ -1943,6 +1989,7 @@
     updateContextStrip();
     applyRememberedDefaults(currentSpec()); // emergency contact / ACN re-seed
     setStage(1);
+    visitedFill = false; // fresh lease — reseed prompts start over (after hideReviewScreen's setStage(2))
     queryInput.focus();
   }
 
@@ -2079,6 +2126,7 @@
         && document.activeElement.dataset.field) || '',
       caller_fields: fields,
       field_source: fieldSource,
+      seeded_values: seededValue, // U3 baselines — renewal VERIFY/CHANGED markers survive resume
     };
   }
 
@@ -2181,11 +2229,14 @@
         : state.lease_mode;
       if (mode) {
         leaseModeRadios().forEach((r) => { r.checked = r.value === mode; });
+        lastLeaseMode = mode; // a later declined change reverts to the restored mode
       }
       fieldSource = state.field_source || {};
+      seededValue = state.seeded_values || {};
       Object.entries(state.caller_fields || {}).forEach(([name, value]) => {
         setFieldDom(name, value);
       });
+      refreshAllFieldPresentation(); // renewal VERIFY/CHANGED markers reappear
     } finally {
       restoringDraft = false;
     }

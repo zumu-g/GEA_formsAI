@@ -115,7 +115,7 @@ def test_ui_submit_shows_review_before_posting_fill(client):
     # The submit handler must call showReviewScreen(), not POST /fill directly
     # — the actual POST only fires from the review-confirm button (R11).
     text = client.get("/ui/").text
-    submit_handler = text.split("form.addEventListener('submit'")[1].split("});")[0]
+    submit_handler = text.split("form.addEventListener('submit'")[1].split("\n  });")[0]
     assert "showReviewScreen" in submit_handler
     assert "/fill" not in submit_handler
     assert "reviewConfirmBtn.addEventListener('click'" in text
@@ -201,6 +201,33 @@ def test_ui_reseed_guard_confirms_before_overwriting_fill(client):
     assert "confirmReseed" in text
     # address pick and lease-type change both route through the guard
     assert text.count("confirmReseed(") >= 3  # definition + 2 call sites
+    # lease-mode change handler: accept path records the choice, decline
+    # path reverts the radios to the last accepted value
+    handler = text.split("leaseModeBox.addEventListener('change'")[1].split("\n  });")[0]
+    assert "lastLeaseMode = " in handler  # accept path
+    assert "r.checked = r.value === lastLeaseMode" in handler  # revert path
+    # guard is reachable once Fill has been visited, not keyed on stage
+    guard = text.split("function confirmReseed")[1].split("\n  }")[0]
+    assert "!visitedFill" in guard
+
+
+def test_ui_submit_gates_on_date_validation(client):
+    # Invalid dates must block the submit → Review transition, not just Enter.
+    text = client.get("/ui/").text
+    handler = text.split("form.addEventListener('submit'")[1].split("\n  });")[0]
+    assert "validateDateField" in handler
+    assert "showReviewScreen()" in handler
+    assert handler.index("validateDateField") < handler.index("showReviewScreen()")
+
+
+def test_ui_async_fetches_guarded_by_generation_counter(client):
+    # Stale previews / CRM tenant fetches must not seed after a form switch,
+    # Start-next, skip-CRM, or a newer search/preview cycle.
+    text = client.get("/ui/").text
+    assert "let fetchGen = 0" in text
+    assert text.count("gen !== fetchGen") >= 4  # search, preview, CRM (x2) bails
+    crm = text.split("async function fetchCrmTenants")[1].split("\n  }")[0]
+    assert "fetchGen" in crm
 
 
 # ── Wizard U3: Fill stage — skeleton, gaps, context strip, renewal diffs ─────
