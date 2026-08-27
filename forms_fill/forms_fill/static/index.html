@@ -152,6 +152,66 @@
   .linklike:hover { background: none; }
   .fetch-btn:disabled { opacity: 0.4; cursor: default; }
 
+  /* Wizard U1: guided stage framework (R1/R13) */
+  #stepper { display: none; list-style: none; margin: 0 0 1rem; padding: 0; gap: 0.5rem; }
+  #stepper.show { display: flex; }
+  #stepper li { flex: 1; }
+  #stepper button {
+    width: 100%; min-height: 44px; padding: 0.4rem 0.6rem;
+    background: transparent; border: 1px solid var(--rule); border-radius: 0.5rem;
+    color: var(--muted); font-size: 0.85rem; font-weight: 600; cursor: pointer;
+  }
+  #stepper button[aria-current="step"] { border-color: var(--gold); color: var(--ink); }
+  #stepper button:disabled { opacity: 0.45; cursor: default; }
+  .stage-hidden { display: none !important; }
+
+  /* U3: Fill stage — collapsed seeded rows, context strip, gap nav, renewal marks */
+  .cf-field.cf-collapsed > label, .cf-field.cf-collapsed > .field-input-row { display: none; }
+  .cf-collapsed-row { display: none; }
+  .cf-field.cf-collapsed > .cf-collapsed-row {
+    display: flex; gap: 0.6rem; align-items: baseline; width: 100%;
+    margin-top: 0.5rem; padding: 0.55rem 1rem; min-height: 44px;
+    background: var(--paper); border: 1px solid var(--rule); border-radius: 0.5rem;
+    color: var(--ink); font-weight: 400; text-align: left; font-size: 0.9rem;
+  }
+  .cf-collapsed-row:hover { background: var(--paper); border-color: var(--gold); }
+  .cf-collapsed-row .cf-cr-label { color: var(--muted); font-size: 0.8rem; flex: 0 0 auto; }
+  .cf-collapsed-row .cf-cr-value { font-family: var(--font-mono); font-size: 0.85rem; }
+  .cf-collapsed-row .cf-cr-source { color: var(--muted); font-size: 0.72rem; }
+  .cf-collapsed-row .cf-cr-edit { margin-left: auto; color: var(--muted); font-size: 0.78rem; text-decoration: underline; }
+  .verify-note { font-size: 0.8rem; margin-top: 0.3rem; }
+  .verify-note.verify-prompt { color: var(--muted); }
+  .verify-note.changed-marker { color: var(--status-rejected); font-weight: 500; }
+  .diff-chip {
+    display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center;
+    margin-top: 0.4rem; padding: 0.55rem 0.75rem; font-size: 0.85rem;
+    border: 1px solid var(--gold-soft); border-radius: 8px; background: var(--paper);
+  }
+  .diff-chip button { min-height: 36px; padding: 0.3rem 0.8rem; font-size: 0.82rem; }
+  #context-strip {
+    position: sticky; top: 0; z-index: 5;
+    display: none; flex-wrap: wrap; gap: 0.3rem 1.4rem;
+    margin-bottom: 1rem; padding: 0.6rem 1rem; font-size: 0.85rem;
+    background: var(--surface); border: 1px solid var(--rule); border-radius: 0.75rem;
+  }
+  #context-strip.show { display: flex; }
+  #context-strip .ctx-label { color: var(--muted); font-size: 0.75rem; margin-right: 0.3rem; }
+  #context-strip .ctx-value { font-family: var(--font-mono); font-size: 0.82rem; }
+  #gap-nav { display: none; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem; }
+  #gap-nav.show { display: flex; }
+
+  /* U4: field help, date validation + advisory echo */
+  .cf-help { color: var(--muted); font-size: 0.78rem; margin-top: 0.25rem; }
+  .cf-field.cf-collapsed > .cf-help { display: none; }
+  .date-echo { color: var(--muted); font-size: 0.78rem; margin-top: 0.25rem; font-style: italic; }
+  .date-error { color: var(--status-rejected); font-size: 0.8rem; font-weight: 500; margin-top: 0.25rem; }
+  .cf-field.cf-invalid input { border-color: var(--status-rejected); }
+  #review-blank-blocking, #review-blank-informational { display: none; margin-top: 1rem; padding: 0.75rem 1rem; border-radius: 8px; font-size: 0.85rem; }
+  #review-blank-blocking.show, #review-blank-informational.show { display: block; }
+  #review-blank-blocking { border: 1px solid var(--status-rejected); color: var(--status-rejected); }
+  #review-blank-informational { border: 1px solid var(--rule); color: var(--muted); }
+  #review-blank-blocking strong, #review-blank-informational strong { display: block; margin-bottom: 0.25rem; }
+
   /* U8: review screen */
   #review-screen { display: none; }
   #review-screen.show { display: block; }
@@ -213,7 +273,18 @@
     <ul class="matches" id="drafts-list"></ul>
   </fieldset>
 
+  <!-- Wizard U1 (R1): stepper for guided forms — hidden for single-page forms (R13) -->
+  <ol id="stepper" aria-label="Progress">
+    <li><button type="button" data-stage="1">1. Start</button></li>
+    <li><button type="button" data-stage="2">2. Fill</button></li>
+    <li><button type="button" data-stage="3">3. Review</button></li>
+  </ol>
+
+  <!-- U5 (R12): resume note — sits above whichever stage the draft restores -->
+  <p class="hint" id="last-saved" style="display:none"></p>
+
   <form id="fill-form">
+    <div id="stage-start">
     <fieldset>
       <legend><span class="disc">1</span>Form</legend>
       <label for="form-key">Form type</label>
@@ -229,7 +300,7 @@
           <label style="font-weight:normal"><input type="radio" name="lease-mode" value="new" /> New lease</label>
           <label style="font-weight:normal"><input type="radio" name="lease-mode" value="renewal" /> Lease renewal</label>
         </div>
-        <p class="hint">Choose before fetching the tenant — a renewal carries across the current lease's rent, bond and term type.</p>
+        <p class="hint" id="lease-mode-help">Renewal = the same renters signing again for the same property. Anything else — new renters, or a different property — is a new lease.</p>
       </div>
       <label for="provider">Data source</label>
       <select id="provider">
@@ -269,13 +340,33 @@
         <p class="hint">Opens GEA St CMA in a new tab — you must already be logged in there, or it'll bounce to its login page.</p>
       </div>
 
+      <!-- U2 (R2): today's fully manual path — always available on Start -->
+      <button type="button" class="linklike" id="skip-crm-btn">Continue without CRM data</button>
+
       <button type="button" class="linklike" id="manual-add-btn">Property not listed? Add it manually</button>
       <div id="manual-add-note" style="display:none">
         <p class="hint">Skipped the lookup — enter the property and vendor details directly in <strong>3. Form details</strong> below.</p>
         <button type="button" class="linklike" id="manual-add-back-btn">Use property search instead</button>
       </div>
     </fieldset>
+    </div>
 
+    <div id="stage-fill">
+    <!-- U3 (R4): pinned context strip — date/money questions never answered blind -->
+    <div id="context-strip" aria-label="Lease context">
+      <span><span class="ctx-label">Premises</span><span class="ctx-value" data-ctx="premises">—</span></span>
+      <span><span class="ctx-label">Rent</span><span class="ctx-value" data-ctx="rent">—</span></span>
+      <span><span class="ctx-label">Term</span><span class="ctx-value" data-ctx="term">—</span></span>
+      <span><span class="ctx-label">Renters</span><span class="ctx-value" data-ctx="renters">—</span></span>
+    </div>
+    <!-- U3 (R3): "N to go" + next-gap jump -->
+    <div id="gap-nav" class="hint">
+      <strong id="gap-count"></strong>
+      <button type="button" id="next-gap-btn" class="secondary">Next gap</button>
+      <!-- U5 (R9): mouse path to Review once every gap is filled — type=submit
+           rides the existing submit → review handler -->
+      <button type="submit" id="go-review-btn" class="secondary" style="display:none">Go to Review</button>
+    </div>
     <fieldset id="caller-fields">
       <legend><span class="disc">3</span>Form details</legend>
       <p class="hint">Rendered verbatim — this tool never computes dates, notice periods, or legal grounds.</p>
@@ -286,6 +377,7 @@
     </fieldset>
 
     <button type="submit" id="submit-btn">Review before filling</button>
+    </div>
   </form>
 
   <fieldset id="invite-banner" style="display:none">
@@ -302,20 +394,25 @@
     </details>
   </fieldset>
 
+  <div id="stage-review">
   <div id="review-screen">
     <fieldset>
       <legend>Review — check every value before generating</legend>
       <p class="hint">Auto-filled values are tagged with where they came from. Edit anything that's wrong; blank fields are shown so you know what the printed form will leave empty.</p>
       <div id="review-rows"></div>
+      <!-- U4 (R10): blank fields split by consequence -->
+      <div id="review-blank-blocking"><strong>Needed to complete the agreement</strong><span></span></div>
+      <div id="review-blank-informational"><strong>Commonly left blank — check these are meant to be empty</strong><span></span></div>
       <div id="review-confirm-row">
         <input type="checkbox" id="review-confirm-check" />
         <label for="review-confirm-check">I've checked every value above</label>
       </div>
       <div class="row">
         <button type="button" id="review-back-btn" class="secondary">Back to edit</button>
-        <button type="button" id="review-confirm-btn" disabled>Confirm &amp; fill</button>
+        <button type="button" id="review-confirm-btn" disabled>Generate PDF — nothing is sent to anyone yet</button>
       </div>
     </fieldset>
+  </div>
   </div>
 
   <div id="result" style="display:none"></div>
@@ -327,7 +424,7 @@
     <button type="button" class="linklike" id="esign-add-btn">Add another signer</button>
     <label for="esign-message">Message (optional)</label>
     <input id="esign-message" placeholder="e.g. Please sign by Friday" />
-    <button type="button" id="esign-btn" style="margin-top:0.85rem">Send for signing</button>
+    <button type="button" id="esign-btn" style="margin-top:0.85rem">Send for e-signing — emails the renters immediately</button>
     <div id="esign-result" class="hint" style="margin-top:0.6rem"></div>
   </div>
 
@@ -373,9 +470,66 @@
     return spec.category === 'GEA Sales' ? 'sale' : 'lease';
   }
 
+  // ── Wizard U1: guided stage framework (R1/R13) ────────────────────────────
+  // Stage switching is show/hide only — every input stays in the DOM at all
+  // times, so autosave, drafts and /fill submission are untouched (KTD1).
+  const stepper = document.getElementById('stepper');
+  const stageContainers = [
+    document.getElementById('stage-start'),
+    document.getElementById('stage-fill'),
+    document.getElementById('stage-review'),
+  ];
+  let stage = 1;
+  let visitedFill = false; // Fill stage has been shown for the current lease
+  // Async generation guard: any state reset (form switch, Start-next, new
+  // search/preview cycle, skip-CRM) bumps this; in-flight fetches captured
+  // an older value and bail before applying stale results.
+  let fetchGen = 0;
+
+  function isGuided(spec) {
+    return !!spec && !!spec.guided;
+  }
+
+  function setStage(n) {
+    stage = n;
+    if (n === 2) visitedFill = true;
+    const guided = isGuided(currentSpec());
+    stepper.classList.toggle('show', guided);
+    stageContainers.forEach((el, i) => {
+      el.classList.toggle('stage-hidden', guided && i + 1 !== n);
+    });
+    stepper.querySelectorAll('button[data-stage]').forEach((btn) => {
+      if (Number(btn.dataset.stage) === n) btn.setAttribute('aria-current', 'step');
+      else btn.removeAttribute('aria-current');
+    });
+  }
+
+  stepper.addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-stage]');
+    if (!btn) return;
+    const target = Number(btn.dataset.stage);
+    // Back-navigation always allowed (R1); Start→Fill is clickable too so
+    // the flow is usable before auto-advance lands (U2). Review is reached
+    // only through the existing submit → review path.
+    if (target === 3 && stage < 3) return;
+    if (target >= stage && !(stage === 1 && target === 2)) return;
+    // Forward to Fill obeys the same lease-type gate as the search path.
+    if (stage === 1 && target === 2 && !requireLeaseMode()) return;
+    if (stage === 3) hideReviewScreen(); // restores the form; sets stage 2
+    if (target !== stage) setStage(target);
+  });
+
   // Sales forms (KTD8) have no tenancy — relabel the section so "tenancy"
   // framing doesn't confuse a PM filling in a vendor's details (U1).
+  let lastAppliedFormKey = null; // detect a real form switch vs a same-form re-apply
   function applyFormModeUI(spec) {
+    const switched = !spec || spec.key !== lastAppliedFormKey;
+    lastAppliedFormKey = spec ? spec.key : null;
+    if (switched) { visitedFill = false; fetchGen++; }
+    // R13: non-guided forms show everything, no stepper. Switching TO a
+    // guided form starts at Start — never a stale stage from the previous
+    // form (resumeDraft re-applies its saved stage afterwards).
+    setStage(isGuided(spec) && !switched ? stage : 1);
     const sales = !!spec && spec.requires_identifiers === false;
     section2Legend.textContent = sales ? 'Property / Vendor' : 'Tenancy';
     tenancyIdLabel.textContent = sales ? 'Property ID (optional)' : 'Tenancy ID (preferred)';
@@ -414,9 +568,29 @@
     return Array.from(leaseModeRadios()).some((r) => r.checked);
   }
 
+  // U2 (R6): changing the address or lease type once Fill already holds data
+  // re-seeds fetched fields — ask first. 'typed' fields survive regardless
+  // (seedField's sticky rule), so only fetched/derived values can change.
+  function fillHasData() {
+    return Object.keys(fieldSource).some((k) => fieldSource[k]);
+  }
+  function confirmReseed(what) {
+    if (!isGuided(currentSpec()) || !visitedFill || !fillHasData()) return true;
+    return confirm('Changing the ' + what + ' will re-seed fetched values on the Fill screen. Fields you edited yourself are kept. Continue?');
+  }
+
   // Radio → is_renewal checkbox (section 3). The existing checkbox listener
   // handles the reverse direction so the two never disagree.
-  leaseModeBox.addEventListener('change', () => {
+  let lastLeaseMode = ''; // last accepted radio value, for reverting a declined change
+  leaseModeBox.addEventListener('change', (e) => {
+    const picked = leaseModeBox.querySelector('input[name="lease-mode"]:checked');
+    const value = picked ? picked.value : '';
+    // e.isTrusted: programmatic re-applies (applyFormModeUI) never prompt.
+    if (e.isTrusted && value !== lastLeaseMode && !confirmReseed('lease type')) {
+      leaseModeRadios().forEach((r) => { r.checked = r.value === lastLeaseMode; });
+      return;
+    }
+    lastLeaseMode = value;
     const renewal = leaseModeBox.querySelector('input[value="renewal"]').checked;
     const el = inputEl('is_renewal');
     if (el) {
@@ -424,6 +598,7 @@
       fieldSource['is_renewal'] = renewal ? 'typed' : '';
       updateSourceTag('is_renewal');
       applyLeaseAutofill();
+      refreshAllFieldPresentation(); // U3: verify prompts follow the lease type
     }
     maybeAutoCrmFetch(); // U2: flipping to New lease after a preview still auto-fetches
   });
@@ -446,6 +621,7 @@
   }
 
   async function fetchCrmTenants() {
+    const gen = fetchGen; // bail if the lease/form context resets mid-flight
     const out = document.getElementById('crm-tenants-result');
     const address = (lastPreviewBundle && lastPreviewBundle.premises.address_line) || queryInput.value.trim();
     if (!address) { out.textContent = ' — search a property first.'; return; }
@@ -453,12 +629,14 @@
     try {
       const sParams = new URLSearchParams({ q: address, provider: 'gea_crm', listing: 'lease' });
       const sResp = await fetch(API + '/tenancy/search?' + sParams, { headers: authHeaders() });
+      if (gen !== fetchGen) return; // stale — context changed while fetching
       const matches = sResp.ok ? (await sResp.json()).matches || [] : [];
       if (!matches.length) { out.textContent = ' — no match in GEA CRM; enter tenants manually.'; return; }
       const pParams = new URLSearchParams({ provider: 'gea_crm' });
       if (matches[0].lot_id) pParams.set('lot_id', matches[0].lot_id);
       if (matches[0].tenancy_id) pParams.set('tenancy_id', matches[0].tenancy_id);
       const pResp = await fetch(API + '/tenancy/preview?' + pParams, { headers: authHeaders() });
+      if (gen !== fetchGen) return; // stale — never seed renters into a new lease context
       if (!pResp.ok) { out.textContent = ' — GEA CRM has no tenancy for that property; enter tenants manually.'; return; }
       const crmRenters = ((await pResp.json()).bundle.renters || []);
       if (!crmRenters.length) { out.textContent = ' — no tenants recorded in GEA CRM; enter them manually.'; return; }
@@ -516,6 +694,13 @@
   // KTD4 mirrored client-side, same rule the server's build_context uses).
   let fieldSource = {}; // name -> '' | 'typed' | display source label
   let officeData = null; // { office, agents } from GET /agency
+  // U3: last value a fetch/default seeder wrote per field — the baseline for
+  // the renewal was/now marker (KTD5) and the collapsed-row display.
+  let seededValue = {};
+  // U3: fields the PM explicitly expanded — stay expanded until re-render.
+  let expandedManually = {};
+  // Lookup cache: field name → .cf-field wrap element (built in renderCallerFields).
+  let fieldWraps = {};
 
   function inputEl(name) {
     return callerFieldsBox.querySelector('[data-field="' + name + '"]');
@@ -527,6 +712,7 @@
     if (el.type === 'checkbox') el.checked = !!value && value !== 'false';
     else el.value = value == null ? '' : value;
     updateSourceTag(name);
+    refreshFieldPresentation(name);
     updateProgress();
   }
 
@@ -538,13 +724,223 @@
     tag.className = 'source-tag' + (source === 'typed' ? ' typed' : '');
   }
 
+  // U3/KTD5 baseline bookkeeping shared by seedField, forceFetchField and
+  // the diff chip's "Use" button.
+  function setSeeded(name, value, source) {
+    if (value && source) seededValue[name] = value;
+    else delete seededValue[name];
+  }
+
   // Seed a field's value UNLESS the PM already typed something into it — the
   // sticky rule above. Passing value='' with a truthy source still counts as
   // "seeded" (a real fetched blank); passing source='' clears the tag.
   function seedField(name, value, source) {
     if (fieldSource[name] === 'typed') return;
     fieldSource[name] = value ? source : '';
+    setSeeded(name, value, source);
     setFieldDom(name, value || '');
+  }
+
+  // ── U3: stable skeleton — collapsed seeded rows + renewal marking ─────────
+  // A field whose value came from fetch/defaults renders as a compact
+  // collapsed row (label + value + source + expand-to-edit); blank or
+  // hand-edited fields render expanded. Presentation only — the real input
+  // always stays in the DOM (KTD1).
+  function refreshFieldPresentation(name) {
+    const wrap = fieldWraps[name];
+    if (!wrap) return; // checkbox/hidden fields have no wrap
+    const el = inputEl(name);
+    const src = fieldSource[name] || '';
+    const collapsed = isGuided(currentSpec()) && !!src && src !== 'typed'
+      && !!(el && el.value) && !expandedManually[name];
+    wrap.classList.toggle('cf-collapsed', collapsed);
+    const btn = wrap.querySelector('.cf-collapsed-row');
+    if (btn && collapsed) {
+      btn.innerHTML = '';
+      const parts = [
+        ['cf-cr-label', wrap.dataset.label],
+        ['cf-cr-value', el.value],
+        ['cf-cr-source', 'from ' + src],
+        ['cf-cr-edit', 'Edit'],
+      ];
+      parts.forEach(([cls, text]) => {
+        const s = document.createElement('span');
+        s.className = cls;
+        s.textContent = text;
+        btn.appendChild(s);
+      });
+    }
+    updateRenewalMark(name);
+  }
+
+  // U3/KTD5 (R5): renewal-critical fields — verify prompt while untouched,
+  // persistent text-badged was/now marker once edited. New lease: nothing.
+  const RENEWAL_CRITICAL = /^(rent_amount|bond_amount|renter\d+_name)$/;
+
+  function updateRenewalMark(name) {
+    const wrap = fieldWraps[name];
+    const note = wrap ? wrap.querySelector('.verify-note[data-note-for="' + name + '"]') : null;
+    if (!note) return; // checkbox/hidden fields have no wrap/note
+    const el = inputEl(name);
+    const seeded = seededValue[name];
+    if (!isRenewalChecked() || !RENEWAL_CRITICAL.test(name) || !seeded || !el) {
+      note.style.display = 'none';
+      note.textContent = '';
+      return;
+    }
+    if (el.value === seeded) {
+      note.className = 'verify-note verify-prompt';
+      note.textContent = 'VERIFY — check this value against the new agreement';
+    } else {
+      note.className = 'verify-note changed-marker';
+      note.textContent = 'CHANGED — was ' + seeded + ', now ' + (el.value || '(blank)');
+    }
+    note.style.display = '';
+  }
+
+  // ── U4 (R8): date validation + advisory echo ──────────────────────────────
+  // The echo RESTATES what the user typed in plain words; it never computes
+  // or writes a date into any field (compliance: no computed dates).
+  function parseDateValue(v) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) return null;
+    const d = new Date(v + 'T00:00:00');
+    return isNaN(d.getTime()) ? null : d;
+  }
+
+  function plainWordsDate(d) {
+    return d.toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+  }
+
+  function updateDateEcho(name) {
+    const echo = callerFieldsBox.querySelector('[data-echo-for="' + name + '"]');
+    const el = inputEl(name);
+    if (!echo || !el) return;
+    const d = parseDateValue(el.value);
+    echo.textContent = d ? plainWordsDate(d) : '';
+  }
+
+  // Returns true when valid; marks the field invalid with a visible message
+  // otherwise. U5 reads .cf-invalid to block Enter-advance.
+  function validateDateField(name) {
+    const el = inputEl(name);
+    const wrap = callerFieldsBox.querySelector('.cf-field[data-wrap-for="' + name + '"]');
+    const err = callerFieldsBox.querySelector('[data-error-for="' + name + '"]');
+    if (!el || !wrap || !err) return true;
+    let message = '';
+    const d = parseDateValue(el.value);
+    if (!el.value && el.validity && el.validity.badInput) {
+      message = 'Enter a complete date, e.g. 08/09/2026.';
+    } else if (el.value && !d) {
+      message = 'Not a real date — check day, month and year.';
+    } else if (d && name.includes('end_date')) {
+      const start = parseDateValue((inputEl(name.replace('end_date', 'start_date')) || {}).value || '');
+      if (start && d <= start) message = 'End date must be after the start date (' + plainWordsDate(start) + ').';
+    }
+    wrap.classList.toggle('cf-invalid', !!message);
+    err.textContent = message;
+    err.style.display = message ? '' : 'none';
+    if (!message && name.includes('start_date')) {
+      // A corrected start date can clear (or create) the end date's error.
+      const endName = name.replace('start_date', 'end_date');
+      if (inputEl(endName) && inputEl(endName).value) validateDateField(endName);
+    }
+    return !message;
+  }
+
+  function refreshAllFieldPresentation() {
+    callerFieldsBox.querySelectorAll('.cf-field').forEach((w) => refreshFieldPresentation(w.dataset.wrapFor));
+  }
+
+  // U3 (R4): pinned context strip — premises, rent, term, renters, live.
+  function updateContextStrip() {
+    const strip = document.getElementById('context-strip');
+    if (!isGuided(currentSpec())) { strip.classList.remove('show'); return; }
+    const val = (n) => { const el = inputEl(n); return el && el.value ? el.value.trim() : ''; };
+    const set = (key, text) => {
+      strip.querySelector('[data-ctx="' + key + '"]').textContent = text || '—';
+    };
+    const bundleAddr = lastPreviewBundle ? lastPreviewBundle.premises.address_line : '';
+    set('premises', val('property_address') || bundleAddr || queryInput.value.trim());
+    const rent = val('rent_amount');
+    set('rent', rent ? rent + (val('rent_period') ? ' / ' + val('rent_period') : '') : '');
+    const start = val('fixed_start_date') || val('periodic_start_date');
+    set('term', start ? start + (val('fixed_end_date') ? ' → ' + val('fixed_end_date') : '') : '');
+    set('renters', [1, 2, 3, 4].map((i) => val('renter' + i + '_name')).filter(Boolean).join(', '));
+    strip.classList.add('show');
+  }
+
+  // U3 (R3): jump to the next expanded blank field, wrapping around.
+  function focusNextGap() {
+    const blanks = Array.from(callerFieldsBox.querySelectorAll('.cf-field:not(.cf-collapsed) [data-field]'))
+      .filter((el) => el.dataset.hidden !== '1' && el.type !== 'checkbox' && !el.value.trim());
+    if (!blanks.length) return;
+    const idx = blanks.indexOf(document.activeElement);
+    const next = blanks[(idx + 1) % blanks.length];
+    next.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    next.focus({ preventScroll: true });
+  }
+  document.getElementById('next-gap-btn').addEventListener('click', focusNextGap);
+
+  function countGaps() {
+    return Array.from(callerFieldsBox.querySelectorAll('[data-field]'))
+      .filter((el) => el.dataset.hidden !== '1'
+        && !(el.type === 'checkbox' ? el.checked : el.value.trim())).length;
+  }
+
+  // ── U5 (R9): Enter advances gap-to-gap in Fill. Delegated on the caller
+  // fields only, so review-screen mirror inputs and every other input keep
+  // their native Enter; textareas keep their newline. Invalid dates block
+  // the advance (R8) — the message shows instead. Enter on the LAST gap
+  // rides the existing submit → review path.
+  callerFieldsBox.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' || !isGuided(currentSpec())) return;
+    const el = e.target.closest('[data-field]');
+    if (!el || el.tagName === 'TEXTAREA') return;
+    e.preventDefault();
+    if (el.type === 'date' && !validateDateField(el.dataset.field)) return;
+    if (countGaps() === 0) { form.requestSubmit(); return; }
+    focusNextGap();
+  });
+
+  // ── U3 (R6): manual edits always win — diff chip instead of overwrite ─────
+  function dismissDiffChip(name) {
+    const chip = callerFieldsBox.querySelector('.diff-chip[data-diff-for="' + name + '"]');
+    if (chip) chip.remove();
+  }
+
+  function showDiffChip(name, entered, seed) {
+    dismissDiffChip(name);
+    const wrap = callerFieldsBox.querySelector('.cf-field[data-wrap-for="' + name + '"]');
+    if (!wrap) return;
+    const chip = document.createElement('div');
+    chip.className = 'diff-chip';
+    chip.dataset.diffFor = name;
+    const msg = document.createElement('span');
+    msg.textContent = (seed.source || 'The source') + ' says ' + seed.value + ' — you entered ' + entered + '.';
+    chip.appendChild(msg);
+    const keep = document.createElement('button');
+    keep.type = 'button';
+    keep.className = 'secondary';
+    keep.textContent = 'Keep ' + entered;
+    keep.addEventListener('click', () => {
+      fieldSource[name] = 'typed';
+      updateSourceTag(name);
+      dismissDiffChip(name);
+    });
+    const use = document.createElement('button');
+    use.type = 'button';
+    use.className = 'secondary';
+    use.textContent = 'Use ' + seed.value;
+    use.addEventListener('click', () => {
+      fieldSource[name] = seed.value ? seed.source : '';
+      setSeeded(name, seed.value, seed.source);
+      setFieldDom(name, seed.value);
+      dismissDiffChip(name);
+    });
+    chip.appendChild(keep);
+    chip.appendChild(use);
+    wrap.appendChild(chip);
+    keep.focus();
   }
 
   function isRenewalChecked() {
@@ -683,7 +1079,17 @@
   function forceFetchField(name) {
     const seed = computeSeed(name);
     if (!seed) return;
+    // U3 (R6): never silently overwrite a hand-edited value — show a diff
+    // chip with both values and let the PM pick.
+    const el = inputEl(name);
+    const entered = el ? el.value : '';
+    if (fieldSource[name] === 'typed' && entered && seed.value && seed.value !== entered) {
+      showDiffChip(name, entered, seed);
+      return;
+    }
+    dismissDiffChip(name);
     fieldSource[name] = seed.value ? seed.source : '';
+    setSeeded(name, seed.value, seed.source);
     setFieldDom(name, seed.value);
   }
 
@@ -714,6 +1120,9 @@
   function renderCallerFields(spec) {
     callerFieldsBox.innerHTML = '';
     fieldSource = {};
+    seededValue = {};
+    expandedManually = {};
+    fieldWraps = {};
     let lastSection = null;
     let sectionCount = 0;
     (spec.caller_fields || []).forEach((f) => {
@@ -783,7 +1192,25 @@
       }
       input.id = 'cf-' + f.name;
       input.dataset.field = f.name;
-      callerFieldsBox.appendChild(label);
+
+      // U3: per-field wrapper carrying the collapsed compact row (seeded
+      // fields) and the renewal verify/changed note — presentation only,
+      // the real input stays in the DOM at all times (KTD1).
+      const wrap = document.createElement('div');
+      wrap.className = 'cf-field';
+      wrap.dataset.wrapFor = f.name;
+      wrap.dataset.label = f.label;
+      fieldWraps[f.name] = wrap;
+      const collapsedBtn = document.createElement('button');
+      collapsedBtn.type = 'button'; // focusable, keyboard reachable
+      collapsedBtn.className = 'cf-collapsed-row';
+      collapsedBtn.addEventListener('click', () => {
+        expandedManually[f.name] = true;
+        refreshFieldPresentation(f.name);
+        input.focus();
+      });
+      wrap.appendChild(collapsedBtn);
+      wrap.appendChild(label);
 
       const inputRow = document.createElement('div');
       inputRow.className = 'field-input-row';
@@ -799,7 +1226,36 @@
         fetchBtn.addEventListener('click', () => forceFetchField(f.name));
         inputRow.appendChild(fetchBtn);
       }
-      callerFieldsBox.appendChild(inputRow);
+      wrap.appendChild(inputRow);
+      // U4 (R7): one-line help from the catalogue, under the expanded field.
+      if (f.help) {
+        const help = document.createElement('div');
+        help.className = 'cf-help';
+        help.id = 'cf-help-' + f.name;
+        help.textContent = f.help;
+        wrap.appendChild(help);
+      }
+      // U4 (R8): date fields get an advisory echo + validation message slot.
+      if (kind === 'date') {
+        const echo = document.createElement('div');
+        echo.className = 'date-echo';
+        echo.dataset.echoFor = f.name;
+        wrap.appendChild(echo);
+        const err = document.createElement('div');
+        err.className = 'date-error';
+        err.dataset.errorFor = f.name;
+        err.style.display = 'none';
+        wrap.appendChild(err);
+        input.addEventListener('input', () => updateDateEcho(f.name));
+        input.addEventListener('blur', () => validateDateField(f.name));
+        input.addEventListener('keydown', (e) => { if (e.key === 'Enter') validateDateField(f.name); });
+      }
+      const note = document.createElement('div');
+      note.className = 'verify-note';
+      note.dataset.noteFor = f.name;
+      note.style.display = 'none';
+      wrap.appendChild(note);
+      callerFieldsBox.appendChild(wrap);
     });
 
     // Any manual edit is sticky (KTD4) and marks the field 'typed'.
@@ -808,9 +1264,12 @@
       el.addEventListener(el.tagName === 'SELECT' || el.type === 'checkbox' ? 'change' : 'input', () => {
         fieldSource[name] = el.type === 'checkbox' && !el.checked ? '' : 'typed';
         updateSourceTag(name);
+        refreshFieldPresentation(name); // U3: expand + renewal was/now marker
+        if (name === 'is_renewal') refreshAllFieldPresentation(); // prompts follow the lease type
         if (name === 'is_renewal') {
           // Keep the section-2 lease-type radios agreeing with the checkbox.
-          leaseModeRadios().forEach((r) => { r.checked = r.value === (el.checked ? 'renewal' : 'new'); });
+          lastLeaseMode = el.checked ? 'renewal' : 'new';
+          leaseModeRadios().forEach((r) => { r.checked = r.value === lastLeaseMode; });
           applyLeaseAutofill();
         }
         if (name === 'handling_agent') applyAgentAutofill();
@@ -860,12 +1319,21 @@
 
   // Live "N of M filled" + section jump links for long forms (Form details).
   function updateProgress() {
+    updateContextStrip(); // U3 (R4): strip tracks every value change
     const box = document.getElementById('cf-progress');
     const fields = Array.from(callerFieldsBox.querySelectorAll('[data-field]'))
       .filter((el) => el.dataset.hidden !== '1');
     const sections = Array.from(callerFieldsBox.querySelectorAll('.field-section-title'));
+    // U3 (R3): "N to go" + next-gap jump, guided forms only
+    const gapNav = document.getElementById('gap-nav');
+    const gaps = countGaps();
+    const filled = fields.length - gaps;
+    document.getElementById('gap-count').textContent = gaps > 0 ? gaps + ' to go' : 'All filled';
+    // U5 (R9): zero gaps flips the nav to a "Go to Review" affordance.
+    document.getElementById('next-gap-btn').style.display = gaps > 0 ? '' : 'none';
+    document.getElementById('go-review-btn').style.display = gaps > 0 ? 'none' : '';
+    gapNav.classList.toggle('show', isGuided(currentSpec()));
     if (fields.length < 8) { box.style.display = 'none'; return; } // short forms don't need it
-    const filled = fields.filter((el) => el.type === 'checkbox' ? el.checked : el.value.trim()).length;
     document.getElementById('cf-progress-count').textContent = filled + ' of ' + fields.length + ' fields filled';
     const links = document.getElementById('cf-progress-links');
     links.innerHTML = '';
@@ -956,10 +1424,15 @@
         delete groups[g];
       });
       if (catalogue.length) {
+        // U2 (R2): preselect the last-used form if it's still in the catalogue;
+        // the shared render/mode path below is the same as firing 'change'.
+        const remembered = localStorage.getItem('forms_fill_last_form');
+        if (remembered && catalogue.some((f) => f.key === remembered)) formSelect.value = remembered;
         const first = catalogue.find((f) => f.key === formSelect.value) || catalogue[0];
         renderCallerFields(first);
         legalTitle.textContent = first.title;
         applyFormModeUI(first);
+        if (isGuided(first)) queryInput.focus(); // U2 (R2): address search ready to type
       }
     } catch (e) {
       showResult('Could not reach the forms-fill API: ' + esc(e), false);
@@ -968,9 +1441,11 @@
 
   formSelect.addEventListener('change', () => {
     const spec = currentSpec();
+    localStorage.setItem('forms_fill_last_form', formSelect.value); // U2 (R2)
     legalTitle.textContent = spec ? spec.title : '';
     if (spec) renderCallerFields(spec);
     applyFormModeUI(spec);
+    if (isGuided(spec)) queryInput.focus();
   });
 
   // ── address search → pick → tenancy preview ──────────────────────────────
@@ -1040,6 +1515,15 @@
       if (addressField) addressField.focus();
     }
   }
+  // U2 (R2): "Continue without CRM data" — always advances to Fill with the
+  // fields as blanks; today's fully manual entry path, one click away.
+  document.getElementById('skip-crm-btn').addEventListener('click', () => {
+    if (!isGuided(currentSpec())) return;
+    if (!requireLeaseMode()) return; // same lease-type gate as search/preview
+    fetchGen++; // an in-flight preview must not seed after opting out
+    setStage(2);
+  });
+
   manualAddBtn.addEventListener('click', () => setManualAddMode(true));
   manualAddBackBtn.addEventListener('click', () => setManualAddMode(false));
 
@@ -1083,10 +1567,17 @@
     prefillSalesFields();
     applyAgentAutofill(); // office data may already be loaded from a prior render
     applyLeaseAutofill(); // U5/U6 — lease/rent/bond fields for the agreement forms
+    // U2 (R2): a usable preview auto-advances a guided form to Fill. A renewal
+    // whose bundle has no renters is unusable — stay on Start with the summary
+    // (and its outgoing-tenant note) shown inline. Runs after maybeAutoCrmFetch
+    // above so new-lease CRM seeding is already in flight.
+    const usable = !isRenewalChecked() || (bundle.renters || []).length > 0;
+    if (isGuided(currentSpec()) && stage === 1 && usable) setStage(2);
   }
 
   async function fetchPreview() {
     if (!requireLeaseMode()) return;
+    const gen = ++fetchGen; // a new cycle invalidates any in-flight fetch
     crmAutoKey = null; // a new preview re-arms the auto CRM fetch (U2)
     previewBox.classList.remove('show');
     const sales = !!currentSpec() && currentSpec().requires_identifiers === false;
@@ -1095,6 +1586,7 @@
     if (tenancyInput.value.trim()) params.set('tenancy_id', tenancyInput.value.trim());
     try {
       const resp = await fetch(API + '/tenancy/preview?' + params, { headers: authHeaders() });
+      if (gen !== fetchGen) return; // stale — a newer cycle owns the UI now
       const body = await resp.json();
       if (!resp.ok) {
         if (sales && body.error === 'no_current_tenancy') {
@@ -1118,6 +1610,7 @@
 
   async function runSearch() {
     if (!requireLeaseMode()) return;
+    const gen = ++fetchGen; // a new cycle invalidates any in-flight fetch
     resultsList.innerHTML = '';
     previewBox.classList.remove('show');
     // A new search invalidates any address seeded from a previous pick —
@@ -1133,6 +1626,7 @@
     try {
       const params = new URLSearchParams({ q: q, provider: providerSelect.value, listing: listingMode() });
       const resp = await fetch(API + '/tenancy/search?' + params, { headers: authHeaders() });
+      if (gen !== fetchGen) return; // stale — a newer cycle owns the UI now
       const body = await resp.json();
       if (body.error === 'search_unsupported') {
         resultsList.innerHTML = '<li style="cursor:default">' + esc(body.message) + '</li>';
@@ -1153,6 +1647,7 @@
         li.tabIndex = 0;
         li.textContent = m.address_label;
         function pick() {
+          if (!confirmReseed('address')) return; // U2 (R6)
           clearTimeout(searchTimer); // pending type-ahead would re-list the picked address
           lotInput.value = m.lot_id || '';
           tenancyInput.value = m.tenancy_id || '';
@@ -1237,12 +1732,18 @@
     reviewRows.innerHTML = '';
     const summary = buildFetchedSummaryRow();
     if (summary) reviewRows.appendChild(summary);
+    // U4 (R10): blank fields split by consequence — blocking (agreement
+    // incomplete) vs informational (commonly blank). No classification
+    // published (non-declaring forms) → informational, today's behaviour.
+    const blankBlocking = [];
+    const blankInformational = [];
     (spec.caller_fields || []).forEach((f) => {
       const orig = inputEl(f.name);
       if (!orig) return;
       const isCheckbox = orig.type === 'checkbox';
       const value = isCheckbox ? (orig.checked ? 'Yes' : 'No') : orig.value;
       const isBlank = !isCheckbox && !value;
+      if (isBlank) (f.required === 'blocking' ? blankBlocking : blankInformational).push(f.label);
       const row = document.createElement('div');
       row.className = 'review-row' + (isBlank ? ' blank' : '');
       const label = document.createElement('div');
@@ -1254,10 +1755,13 @@
         valCol.textContent = value;
       } else {
         const mirror = document.createElement('input');
+        if (orig.type === 'date') mirror.type = 'date'; // date fields keep date UI/validation in Review
         mirror.value = value;
         mirror.addEventListener('input', () => {
           orig.value = mirror.value;
           fieldSource[f.name] = 'typed';
+          updateSourceTag(f.name); // Fill-screen tag stays truthful
+          queueDraftSave(); // mirrors live outside the form's autosave listener
         });
         valCol.appendChild(mirror);
       }
@@ -1272,6 +1776,13 @@
       row.appendChild(valCol);
       reviewRows.appendChild(row);
     });
+    const fillList = (id, names) => {
+      const box = document.getElementById(id);
+      box.querySelector('span').textContent = names.join(', ');
+      box.classList.toggle('show', names.length > 0);
+    };
+    fillList('review-blank-blocking', blankBlocking);
+    fillList('review-blank-informational', blankInformational);
   }
 
   function showReviewScreen() {
@@ -1280,16 +1791,20 @@
     reviewScreen.classList.add('show');
     reviewConfirmCheck.checked = false;
     reviewConfirmBtn.disabled = true;
+    if (isGuided(currentSpec())) setStage(3); // stepper reflects Review (R1)
+    reviewConfirmCheck.focus(); // U5 (R9): Space ticks, then Enter generates
   }
 
   function hideReviewScreen() {
     reviewScreen.classList.remove('show');
     form.classList.remove('hide-for-review');
+    if (isGuided(currentSpec())) setStage(2); // back to Fill
   }
 
   reviewBackBtn.addEventListener('click', hideReviewScreen);
   reviewConfirmCheck.addEventListener('change', () => {
     reviewConfirmBtn.disabled = !reviewConfirmCheck.checked; // R11: submission blocked until confirmed
+    if (reviewConfirmCheck.checked) reviewConfirmBtn.focus(); // U5 (R9): Enter now generates
   });
 
   form.addEventListener('submit', (e) => {
@@ -1298,6 +1813,20 @@
     const requiresIdentifiers = !spec || spec.requires_identifiers !== false;
     if (requiresIdentifiers && !lotInput.value.trim() && !tenancyInput.value.trim()) {
       showResult('Select a property first — search by address above, or enter a Lot/Tenancy ID manually.', false);
+      return;
+    }
+    // R8: invalid dates never reach Review — validate every visible date field.
+    let firstInvalid = null;
+    callerFieldsBox.querySelectorAll('input[type=date][data-field]').forEach((el) => {
+      if (el.dataset.hidden === '1') return;
+      if (!validateDateField(el.dataset.field) && !firstInvalid) firstInvalid = el;
+    });
+    if (firstInvalid) {
+      const name = firstInvalid.dataset.field;
+      expandedManually[name] = true;
+      refreshFieldPresentation(name);
+      firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      firstInvalid.focus({ preventScroll: true });
       return;
     }
     resultBox.style.display = 'none';
@@ -1386,6 +1915,10 @@
       if (body.warnings && body.warnings.length) {
         html += '<div class="warn">' + body.warnings.map(esc).join('<br>') + '</div>';
       }
+      // U6 (R11): one action from this result to typing the next address.
+      if (isGuided(currentSpec())) {
+        html += '<div style="margin-top:0.75rem"><button type="button" id="start-next-btn" class="secondary">Start next lease</button></div>';
+      }
       showResult(html, true);
       hideReviewScreen();
       captureDefaults(); // U3: the successful fill is the defaults memory
@@ -1408,6 +1941,61 @@
     } finally {
       reviewConfirmBtn.disabled = false;
     }
+  });
+
+  // ── U6 (R11): "Start next" — finished lease → fresh Start stage ──────────
+  // Kept across the loop: form key, lease mode (the is_renewal carrier +
+  // radios), handling-agent selection and the whole agent block, remembered
+  // defaults. Everything else — premises/tenancy/renter/lease values, preview
+  // and search state, seeded baselines and renewal markers — is cleared.
+  const AGENT_BLOCK_FIELDS = new Set([
+    'agent_name', 'agent_address', 'agent_postcode', 'agent_phone',
+    'agent_email', 'agent_acn', 'handling_agent',
+  ]);
+
+  function startNextLease() {
+    fetchGen++; // in-flight fetches from the finished lease must not seed the next
+    // Coverage guard: iterate the RENDERED fields, not a hardcoded name list,
+    // so a field added to the spec later can't be silently missed.
+    callerFieldsBox.querySelectorAll('[data-field]').forEach((el) => {
+      const name = el.dataset.field;
+      if (name === 'is_renewal') return; // lease-type carrier — kept (R11)
+      if (AGENT_BLOCK_FIELDS.has(name)) return; // agent selection kept
+      if (REMEMBER_FIELDS.includes(name)) return; // sticky defaults kept
+      fieldSource[name] = '';
+      delete seededValue[name]; // U3 baselines/markers reset with the value
+      delete expandedManually[name];
+      dismissDiffChip(name);
+      setFieldDom(name, ''); // tag + presentation + progress refresh
+      updateDateEcho(name);
+    });
+    // Preview / search state
+    lastPreviewBundle = null;
+    lastPreviewProvider = '';
+    crmAutoKey = null;
+    queryInput.value = '';
+    resultsList.innerHTML = '';
+    previewBox.classList.remove('show');
+    previewBox.innerHTML = '';
+    lotInput.value = '';
+    tenancyInput.value = '';
+    document.getElementById('crm-tenants-result').textContent = '';
+    // Result / review / e-sign UI
+    resultBox.style.display = 'none';
+    approveBox.classList.remove('show');
+    esignBox.style.display = 'none';
+    lastFill = null;
+    hideReviewScreen();
+    updateContextStrip();
+    applyRememberedDefaults(currentSpec()); // emergency contact / ACN re-seed
+    setStage(1);
+    visitedFill = false; // fresh lease — reseed prompts start over (after hideReviewScreen's setStage(2))
+    queryInput.focus();
+  }
+
+  // The button lives inside resultBox's innerHTML — delegate the click.
+  resultBox.addEventListener('click', (e) => {
+    if (e.target.id === 'start-next-btn') startNextLease();
   });
 
   // ── agent accounts: login / invite-accept / admin invite ─────────────────
@@ -1531,8 +2119,14 @@
       tenancy_id: tenancyInput.value,
       address_query: queryInput.value,
       lease_mode: mode ? mode.value : '',
+      // U5 (R12/KTD6): stage + focused field inside the same opaque blob —
+      // the server never inspects these (no schema change).
+      stage: stage,
+      focus: (document.activeElement && document.activeElement.dataset
+        && document.activeElement.dataset.field) || '',
       caller_fields: fields,
       field_source: fieldSource,
+      seeded_values: seededValue, // U3 baselines — renewal VERIFY/CHANGED markers survive resume
     };
   }
 
@@ -1617,7 +2211,8 @@
   async function resumeDraft(id) {
     const resp = await fetch(API + '/drafts/' + id, { headers: authHeaders() });
     if (!resp.ok) return;
-    const state = JSON.parse((await resp.json()).draft.state || '{}');
+    const draft = (await resp.json()).draft;
+    const state = JSON.parse(draft.state || '{}');
     restoringDraft = true;
     try {
       formSelect.value = state.form_key || formSelect.value;
@@ -1634,16 +2229,33 @@
         : state.lease_mode;
       if (mode) {
         leaseModeRadios().forEach((r) => { r.checked = r.value === mode; });
+        lastLeaseMode = mode; // a later declined change reverts to the restored mode
       }
       fieldSource = state.field_source || {};
+      seededValue = state.seeded_values || {};
       Object.entries(state.caller_fields || {}).forEach(([name, value]) => {
         setFieldDom(name, value);
       });
+      refreshAllFieldPresentation(); // renewal VERIFY/CHANGED markers reappear
     } finally {
       restoringDraft = false;
     }
     activeDraftId = id;
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    // U5 (R12): land the PM on the exact stage and field they left, with a
+    // "last saved …" note from the draft's server-side timestamp.
+    const lastSaved = document.getElementById('last-saved');
+    lastSaved.textContent = 'Last saved ' + relTime(draft.updated_at);
+    lastSaved.style.display = '';
+    if (isGuided(currentSpec()) && state.stage) setStage(Math.min(state.stage, 2)); // Review only via submit
+    const focusEl = state.focus ? inputEl(state.focus) : null;
+    if (focusEl) {
+      expandedManually[state.focus] = true;
+      refreshFieldPresentation(state.focus);
+      focusEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      focusEl.focus({ preventScroll: true });
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   }
 
   // Any edit in the form area queues a save; tenancy inputs count too.

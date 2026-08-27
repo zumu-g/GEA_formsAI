@@ -138,6 +138,7 @@ def form_catalogue() -> list[dict]:
             "short_title": _SHORT_TITLES.get(key) or spec.title or spec.key,
             "engine": spec.engine,
             "requires_identifiers": spec.requires_bundle,
+            "guided": spec.guided,
             "caller_fields": [
                 {
                     "name": name,
@@ -145,6 +146,8 @@ def form_catalogue() -> list[dict]:
                     "kind": _caller_field_kind(spec, name),
                     "options": _caller_field_options(spec, name),
                     "section": spec.caller_field_sections.get(name) or "",
+                    "help": spec.caller_field_help.get(name) or "",
+                    "required": spec.caller_field_required.get(name) or "",
                 }
                 for name, label in spec.caller_field_labels.items()
             ],

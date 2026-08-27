@@ -102,3 +102,64 @@ def test_agreement_fields_group_under_form_sections_in_order():
     assert "3. Rental provider & agent" in sections
     assert "6. Rent" in sections
     assert "10. Urgent repairs contact" in sections
+
+
+# ── Wizard U1: guided flag ───────────────────────────────────────────────────
+
+
+def test_catalogue_publishes_guided_for_rental_agreement():
+    catalogue = form_catalogue()
+    agreement = next(c for c in catalogue if c["key"] == "residential_rental_agreement")
+    assert agreement["guided"] is True
+
+
+def test_non_declaring_forms_are_not_guided():
+    catalogue = form_catalogue()
+    for c in catalogue:
+        if c["key"] != "residential_rental_agreement":
+            assert not c.get("guided")
+
+
+# ── Wizard U4: field help and required classification (R7, KTD7) ────────────
+
+
+def test_catalogue_publishes_help_for_always_manual_lease_fields():
+    catalogue = form_catalogue()
+    agreement = next(c for c in catalogue if c["key"] == "residential_rental_agreement")
+    by_name = {f["name"]: f for f in agreement["caller_fields"]}
+    for name in (
+        "agreement_date",
+        "renter1_current_address",
+        "renter1_current_postcode",
+        "fixed_start_date",
+        "fixed_end_date",
+        "periodic_start_date",
+        "rent_amount",
+        "rent_period",
+        "bond_amount",
+        "emergency_contact_name",
+        "emergency_phone",
+        "emergency_email",
+        "agent_acn",
+    ):
+        assert by_name[name]["help"], f"no help text for {name}"
+
+
+def test_catalogue_publishes_required_classification_for_lease():
+    catalogue = form_catalogue()
+    agreement = next(c for c in catalogue if c["key"] == "residential_rental_agreement")
+    by_name = {f["name"]: f for f in agreement["caller_fields"]}
+    # Agreement incomplete without these (printed form's rent/term/renter parts).
+    for name in ("agreement_date", "rent_amount", "rent_period", "bond_amount", "term_type"):
+        assert by_name[name]["required"] == "blocking"
+    # Commonly blank on real agreements.
+    for name in ("emergency_email", "provider_acn", "agent_acn", "renter2_current_address"):
+        assert by_name[name]["required"] == "informational"
+
+
+def test_non_declaring_form_publishes_empty_help_and_required():
+    catalogue = form_catalogue()
+    ntv = next(c for c in catalogue if c["key"] == "notice_to_vacate")
+    for f in ntv["caller_fields"]:
+        assert f["help"] == ""
+        assert f["required"] == ""
