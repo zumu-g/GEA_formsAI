@@ -498,6 +498,38 @@ def tenancy_preview(
     return {"bundle": bundle.model_dump(), "provider": p.name}
 
 
+@app.get("/property/facts")
+def property_facts(
+    address: str = "",
+    authorization: str = Header(default=""),
+) -> Any:
+    """Fetch property key features for PPS autofill (U2, R2, KTD3).
+
+    Returns PropertyFacts with 6 features (building type, beds, baths, cars, floor, land).
+    If credentials missing, returns {"configured": False} and UI hides autofill button.
+    """
+
+    _require_auth(authorization)
+    if not address.strip():
+        return _err(400, "invalid_request", "missing address query parameter")
+    from .providers.property_data import property_facts as fetch_facts
+
+    facts = fetch_facts(address.strip())
+    # If facts are all empty, provider is not configured.
+    is_configured = any((facts.building_type, facts.beds, facts.baths, facts.cars, facts.floor_m2, facts.land_m2))
+    return {
+        "configured": is_configured,
+        "facts": {
+            "building_type": facts.building_type,
+            "beds": facts.beds,
+            "baths": facts.baths,
+            "cars": facts.cars,
+            "floor_m2": facts.floor_m2,
+            "land_m2": facts.land_m2,
+        },
+    }
+
+
 @app.post("/fill")
 def fill(payload: dict[str, Any], authorization: str = Header(default="")) -> Any:
     _require_auth(authorization)
