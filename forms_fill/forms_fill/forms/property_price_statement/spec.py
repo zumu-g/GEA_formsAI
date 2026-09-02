@@ -113,6 +113,12 @@ def validate_warnings(context: dict) -> list[str]:
     return warnings
 
 
+_CALLER_FIELD_HELP = {
+    "sale_method": "Auction, fixed-date, or private sale. Auctions and fixed-date sales require vendor reserve to be published 7+ days before the event.",
+    "auction_date": "Date of the auction or fixed-date sale. Reserve must be published at least 7 days before.",
+    "reserve_price": "Vendor reserve price. REQUIRED for auctions and fixed-date sales; must be published at least 7 days before the event.",
+}
+
 SPEC = FormSpec(
     key="property_price_statement",
     template=TEMPLATE,
@@ -162,6 +168,7 @@ SPEC = FormSpec(
         "auction_date": "Auction/fixed-date date (YYYY-MM-DD)",
         "reserve_price": "Vendor reserve price ($) — required for auction/fixed-date",
     },
+    caller_field_help=_CALLER_FIELD_HELP,
     engine="docx",
     requires_bundle=False,
     validate_warnings=validate_warnings,

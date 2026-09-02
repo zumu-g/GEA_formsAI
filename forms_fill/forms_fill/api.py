@@ -562,6 +562,78 @@ def fill(payload: dict[str, Any], authorization: str = Header(default="")) -> An
     return body
 
 
+@app.get("/pps")
+def pps_list(authorization: str = Header(default="")) -> Any:
+    """List PPS records for the signed-in agent (U5, R7)."""
+
+    _require_auth(authorization)
+    agent_id = _draft_agent_id(authorization)
+    records = accounts.list_pps_records(agent_id)
+    return {"ok": True, "records": records}
+
+
+@app.post("/pps")
+def pps_save(payload: dict[str, Any], authorization: str = Header(default="")) -> Any:
+    """Create or update a PPS record (U3, R3–R5)."""
+
+    _require_auth(authorization)
+    agent_id = _draft_agent_id(authorization)
+    record_id = payload.get("id")
+    address = str(payload.get("address", ""))
+    sale_method = str(payload.get("sale_method", ""))
+    reserve_price = str(payload.get("reserve_price", ""))
+    auction_date = payload.get("auction_date")
+    unconditional_at = payload.get("unconditional_at")
+    sale_price = payload.get("sale_price")
+    document_request_id = payload.get("document_request_id")
+
+    if not address.strip():
+        raise HTTPException(
+            status_code=422, detail={"error": "invalid_request", "message": "address required"}
+        )
+
+    rid = accounts.save_pps_record(
+        agent_id=agent_id,
+        record_id=record_id,
+        address=address,
+        sale_method=sale_method,
+        reserve_price=reserve_price,
+        auction_date=auction_date,
+        unconditional_at=unconditional_at,
+        sale_price=sale_price,
+        document_request_id=document_request_id,
+    )
+    record = accounts.get_pps_record(rid, agent_id=agent_id)
+    return {"ok": True, "record": record}
+
+
+@app.patch("/pps/{record_id}")
+def pps_update(
+    record_id: int, payload: dict[str, Any], authorization: str = Header(default="")
+) -> Any:
+    """Update PPS record (sale price, unconditional date) (U3, R4)."""
+
+    _require_auth(authorization)
+    agent_id = _draft_agent_id(authorization)
+    unconditional_at = payload.get("unconditional_at")
+    sale_price = payload.get("sale_price")
+    document_request_id = payload.get("document_request_id")
+
+    success = accounts.update_pps_record(
+        record_id,
+        agent_id=agent_id,
+        unconditional_at=unconditional_at,
+        sale_price=sale_price,
+        document_request_id=document_request_id,
+    )
+    if not success:
+        raise HTTPException(
+            status_code=404, detail={"error": "not_found", "message": "PPS record not found"}
+        )
+    record = accounts.get_pps_record(record_id, agent_id=agent_id)
+    return {"ok": True, "record": record}
+
+
 @app.get("/pps/{public_id}")
 def get_pps_public(public_id: str) -> FileResponse:
     """Serve a PPS document publicly (unauthenticated, free access). U4, R6.

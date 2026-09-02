@@ -273,6 +273,13 @@
     <ul class="matches" id="drafts-list"></ul>
   </fieldset>
 
+  <!-- U5: Property Price Statement compliance tracking -->
+  <fieldset id="pps-banner" style="display:none">
+    <legend>Price statements</legend>
+    <p class="hint">Compliance tracking for Property Price Statements. Shows only statements generated here; no reminders sent — check deadlines after every unconditional.</p>
+    <ul class="matches" id="pps-list"></ul>
+  </fieldset>
+
   <!-- Wizard U1 (R1): stepper for guided forms — hidden for single-page forms (R13) -->
   <ol id="stepper" aria-label="Progress">
     <li><button type="button" data-stage="1">1. Start</button></li>
@@ -2275,6 +2282,86 @@
       if (!me.is_admin) inviteBanner.style.display = 'none';
     } catch (err) { /* non-fatal — settings gear just stays hidden */ }
   }
+
+  // ── Property Price Statement compliance list (U5) ──────────────────────────
+  const ppsBanner = document.getElementById('pps-banner');
+  const ppsList = document.getElementById('pps-list');
+
+  async function refreshPps() {
+    try {
+      const resp = await fetch(API + '/pps', { headers: authHeaders() });
+      if (!resp.ok) return;
+      const data = await resp.json();
+      const records = data.records || [];
+      ppsBanner.style.display = records.length ? '' : 'none';
+      ppsList.innerHTML = '';
+      records.forEach((r) => {
+        const li = document.createElement('li');
+        li.style.display = 'grid';
+        li.style.gridTemplateColumns = '1fr auto auto';
+        li.style.gap = '0.5rem';
+        li.style.alignItems = 'center';
+        // Address + deadline badges
+        const addr = document.createElement('span');
+        addr.textContent = (r.address || 'Property') + ' · ';
+        const due = document.createElement('span');
+        due.style.fontSize = '0.85rem';
+        due.style.fontWeight = '500';
+        if (r.price_overdue) {
+          due.style.color = '#9A5B5B';
+          due.textContent += 'Price overdue';
+        } else if (r.price_update_due) {
+          due.style.color = '#8B8580';
+          due.textContent += 'Price due ' + new Date(r.price_update_due).toLocaleDateString();
+        }
+        if (r.reserve_overdue) {
+          due.style.color = '#9A5B5B';
+          due.textContent += ' / Reserve overdue';
+        } else if (r.reserve_due && !r.reserve_published_at) {
+          due.style.color = '#8B8580';
+          due.textContent += ' / Reserve due ' + new Date(r.reserve_due).toLocaleDateString();
+        }
+        addr.appendChild(due);
+        // Action buttons
+        const actions = document.createElement('span');
+        actions.style.display = 'flex';
+        actions.style.gap = '0.5rem';
+        const linkBtn = document.createElement('button');
+        linkBtn.type = 'button';
+        linkBtn.className = 'linklike';
+        linkBtn.textContent = 'View';
+        linkBtn.addEventListener('click', () => {
+          window.open('/pps/' + r.public_id, '_blank');
+        });
+        const priceBtn = document.createElement('button');
+        priceBtn.type = 'button';
+        priceBtn.className = 'linklike';
+        priceBtn.textContent = 'Record sale';
+        priceBtn.addEventListener('click', async () => {
+          const price = prompt('Sale price ($):', r.sale_price || '');
+          if (price !== null) {
+            const unconditional = prompt('Unconditional date (YYYY-MM-DD):', '');
+            if (unconditional) {
+              const resp = await fetch(API + '/pps/' + r.id, {
+                method: 'PATCH',
+                headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sale_price: price, unconditional_at: unconditional + 'T00:00:00Z' }),
+              });
+              if (resp.ok) refreshPps();
+            }
+          }
+        });
+        actions.appendChild(linkBtn);
+        actions.appendChild(priceBtn);
+        li.appendChild(addr);
+        li.appendChild(actions);
+        ppsList.appendChild(li);
+      });
+    } catch (err) { /* non-fatal */ }
+  }
+
+  setInterval(refreshPps, 30000); // Refresh every 30s when page is open
+  refreshPps(); // Initial load
 
   const settingsBtn = document.getElementById('settings-btn');
   settingsBtn.addEventListener('click', () => {
