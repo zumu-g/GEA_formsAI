@@ -81,6 +81,23 @@ def init_db() -> None:
               state TEXT NOT NULL,
               updated_at TEXT NOT NULL
             );
+            CREATE TABLE IF NOT EXISTS pps_records (
+              id INTEGER PRIMARY KEY,
+              public_id TEXT UNIQUE NOT NULL,
+              agent_id INTEGER,
+              address TEXT NOT NULL,
+              state TEXT NOT NULL,
+              created_at TEXT NOT NULL,
+              sale_method TEXT NOT NULL DEFAULT '',
+              reserve_price TEXT NOT NULL DEFAULT '',
+              reserve_published_at TEXT,
+              auction_date TEXT,
+              unconditional_at TEXT,
+              sale_price TEXT,
+              sale_price_recorded_at TEXT,
+              document_request_id TEXT,
+              updated_at TEXT NOT NULL
+            );
             """
         )
 
@@ -342,3 +359,171 @@ def list_agents() -> list[dict]:
                FROM agents ORDER BY created_at"""
         ).fetchall()
         return [dict(r) for r in rows]
+
+
+# ── Property Price Statement records (U3) ────────────────────────────────────
+# Lifetime: draft → published → sold-unconditional → archived (18 months).
+# Deadlines (price_update_due, reserve_due, public_until) computed on read.
+
+
+def _compute_deadline_fields(record: dict) -> dict:
+    """Add computed deadline fields to a pps_record dict (read-side only)."""
+
+    # Price update due: 7 days after unconditional.
+    unconditional = record.get("unconditional_at")
+    if unconditional:
+        due = datetime.fromisoformat(unconditional) + timedelta(days=7)
+        record["price_update_due"] = due.isoformat()
+        record["price_overdue"] = _expired(record["price_update_due"]) if record.get("sale_price") is None else False
+    else:
+        record["price_update_due"] = None
+        record["price_overdue"] = False
+
+    # Reserve deadline: 7+ days before auction/fixed-date.
+    auction_date = record.get("auction_date")
+    reserve_published = record.get("reserve_published_at")
+    if auction_date:
+        due = datetime.fromisoformat(auction_date) - timedelta(days=7)
+        record["reserve_due"] = due.isoformat()
+        record["reserve_overdue"] = _expired(record["reserve_due"]) if not reserve_published else False
+    else:
+        record["reserve_due"] = None
+        record["reserve_overdue"] = False
+
+    # Public access deadline: 18 months after unconditional (or indefinite if not sold yet).
+    if unconditional:
+        until = datetime.fromisoformat(unconditional) + timedelta(days=365 * 1 + 182)  # ~18 months
+        record["public_until"] = until.isoformat()
+    else:
+        record["public_until"] = None
+
+    return record
+
+
+def save_pps_record(
+    agent_id: int | None,
+    record_id: int | None,
+    address: str,
+    state: str = "draft",
+    sale_method: str = "",
+    reserve_price: str = "",
+    auction_date: str | None = None,
+    unconditional_at: str | None = None,
+    sale_price: str | None = None,
+    sale_price_recorded_at: str | None = None,
+    document_request_id: str | None = None,
+    public_id: str | None = None,
+) -> int:
+    """Create or update a PPS record. Returns record id."""
+
+    if public_id is None:
+        public_id = secrets.token_urlsafe(16)
+
+    now = _now().isoformat()
+    with _connect() as conn:
+        if record_id is not None:
+            conn.execute(
+                """UPDATE pps_records SET address = ?, state = ?, sale_method = ?,
+                   reserve_price = ?, auction_date = ?, unconditional_at = ?,
+                   sale_price = ?, sale_price_recorded_at = ?, document_request_id = ?,
+                   updated_at = ? WHERE id = ? AND agent_id IS ?""",
+                (
+                    address,
+                    state,
+                    sale_method,
+                    reserve_price,
+                    auction_date,
+                    unconditional_at,
+                    sale_price,
+                    sale_price_recorded_at,
+                    document_request_id,
+                    now,
+                    record_id,
+                    agent_id,
+                ),
+            )
+            return record_id
+        return conn.execute(
+            """INSERT INTO pps_records
+               (public_id, agent_id, address, state, created_at, sale_method,
+                reserve_price, auction_date, unconditional_at, sale_price,
+                sale_price_recorded_at, document_request_id, updated_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (
+                public_id,
+                agent_id,
+                address,
+                state,
+                now,
+                sale_method,
+                reserve_price,
+                auction_date,
+                unconditional_at,
+                sale_price,
+                sale_price_recorded_at,
+                document_request_id,
+                now,
+            ),
+        ).lastrowid
+
+
+def list_pps_records(agent_id: int | None) -> list[dict]:
+    """List PPS records for an agent, newest first. Includes computed deadline fields."""
+
+    with _connect() as conn:
+        rows = conn.execute(
+            """SELECT * FROM pps_records WHERE agent_id IS ? ORDER BY created_at DESC""",
+            (agent_id,),
+        ).fetchall()
+        return [_compute_deadline_fields(dict(r)) for r in rows]
+
+
+def get_pps_record(record_id: int, agent_id: int | None = None) -> dict | None:
+    """Fetch one PPS record (by id or public_id). Includes computed deadline fields."""
+
+    with _connect() as conn:
+        # Try id first, then public_id.
+        query = "SELECT * FROM pps_records WHERE (id = ? OR public_id = ?) AND (agent_id IS ? OR 1=?)"
+        row = conn.execute(query, (record_id, str(record_id), agent_id, 1 if agent_id is None else 0)).fetchone()
+        return _compute_deadline_fields(dict(row)) if row else None
+
+
+def get_pps_record_by_public_id(public_id: str) -> dict | None:
+    """Fetch one PPS record by public_id (unauthenticated read for public route)."""
+
+    with _connect() as conn:
+        row = conn.execute("SELECT * FROM pps_records WHERE public_id = ?", (public_id,)).fetchone()
+        return _compute_deadline_fields(dict(row)) if row else None
+
+
+def update_pps_record(
+    record_id: int,
+    agent_id: int | None = None,
+    unconditional_at: str | None = None,
+    sale_price: str | None = None,
+    document_request_id: str | None = None,
+) -> bool:
+    """Update sale price / unconditional date on a PPS record."""
+
+    now = _now().isoformat()
+    with _connect() as conn:
+        sale_price_recorded = None
+        if sale_price is not None:
+            sale_price_recorded = now
+        cur = conn.execute(
+            """UPDATE pps_records SET unconditional_at = COALESCE(?, unconditional_at),
+               sale_price = COALESCE(?, sale_price),
+               sale_price_recorded_at = COALESCE(?, sale_price_recorded_at),
+               document_request_id = COALESCE(?, document_request_id),
+               updated_at = ? WHERE id = ? AND agent_id IS ?""",
+            (
+                unconditional_at,
+                sale_price,
+                sale_price_recorded,
+                document_request_id,
+                now,
+                record_id,
+                agent_id,
+            ),
+        )
+        return bool(cur.rowcount)
