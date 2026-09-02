@@ -28,6 +28,7 @@ from .forms.notice_to_vacate_death_sole_renter.spec import (
 from .forms.pm_exclusive_leasing_authority.spec import (
     SPEC as PM_LEASING_AUTHORITY_SPEC,
 )
+from .forms.property_price_statement.spec import SPEC as PROPERTY_PRICE_STATEMENT_SPEC
 from .forms.reiv_exclusive_sale_authority.spec import SPEC as REIV_EXCLUSIVE_SPEC
 from .forms.request_repairs_inspection.spec import SPEC as REPAIRS_INSPECTION_SPEC
 from .forms.residential_rental_agreement.spec import SPEC as RENTAL_AGREEMENT_SPEC
@@ -50,6 +51,7 @@ FORM_REGISTRY: dict[str, FormSpec] = {
     STATEMENT_OF_INFORMATION_SPEC.key: STATEMENT_OF_INFORMATION_SPEC,
     MANDATORY_DISCLOSURE_SPEC.key: MANDATORY_DISCLOSURE_SPEC,
     CONSENT_ELECTRONIC_SPEC.key: CONSENT_ELECTRONIC_SPEC,
+    PROPERTY_PRICE_STATEMENT_SPEC.key: PROPERTY_PRICE_STATEMENT_SPEC,
     REPAIRS_INSPECTION_SPEC.key: REPAIRS_INSPECTION_SPEC,
     REIV_EXCLUSIVE_SPEC.key: REIV_EXCLUSIVE_SPEC,
     PM_LEASING_AUTHORITY_SPEC.key: PM_LEASING_AUTHORITY_SPEC,
@@ -82,7 +84,7 @@ def available_forms() -> list[str]:
 # Display metadata for the web UI dropdown — one reviewed place (KTD1).
 # ponytail: display map lives here, not on 19 FormSpec declarations; move onto
 # FormSpec if a non-UI consumer ever needs it.
-_SALES_KEYS = {"reiv_exclusive_sale_authority"}
+_SALES_KEYS = {"reiv_exclusive_sale_authority", "property_price_statement"}
 _NOTICE_KEYS = {
     "breach_of_duty_notice",
     "cav_rent_increase_notice",
@@ -118,6 +120,7 @@ _SHORT_TITLES = {
     "notice_to_vacate": "Notice to vacate",
     "notice_to_vacate_death_sole_renter": "Notice to vacate — death of sole renter",
     "pm_exclusive_leasing_authority": "Exclusive Leasing Authority",
+    "property_price_statement": "Property Price Statement (PPS)",
     "reiv_exclusive_sale_authority": "Exclusive Sale Authority (REIV)",
     "request_repairs_inspection": "Repairs inspection / rent assessment",
     "residential_rental_agreement": "Lease agreement (Form 1)",
