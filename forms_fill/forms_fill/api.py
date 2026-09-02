@@ -562,6 +562,39 @@ def fill(payload: dict[str, Any], authorization: str = Header(default="")) -> An
     return body
 
 
+@app.get("/pps/{public_id}")
+def get_pps_public(public_id: str) -> FileResponse:
+    """Serve a PPS document publicly (unauthenticated, free access). U4, R6.
+
+    public_id is an unguessable UUID; 404s unknown IDs. Serves PDF inline.
+    """
+
+    # Isalnum guard: public_id is token_urlsafe(16) → alphanumeric + hyphen/underscore
+    if not all(c.isalnum() or c in "-_" for c in public_id):
+        raise HTTPException(status_code=404, detail={"error": "not_found"})
+
+    from . import accounts
+
+    record = accounts.get_pps_record_by_public_id(public_id)
+    if not record:
+        raise HTTPException(status_code=404, detail={"error": "not_found"})
+
+    doc_request_id = record.get("document_request_id")
+    if not doc_request_id or not doc_request_id.isalnum():
+        raise HTTPException(
+            status_code=404, detail={"error": "not_found", "message": "no PDF generated"}
+        )
+
+    directory = OUTPUT_ROOT / doc_request_id
+    matches = sorted(directory.glob("*.pdf")) if directory.exists() else []
+    if not matches:
+        raise HTTPException(
+            status_code=404, detail={"error": "not_found", "message": "PDF not found"}
+        )
+
+    return FileResponse(str(matches[0]), media_type="application/pdf")
+
+
 @app.get("/files/{request_id}/{kind}")
 def get_file(
     request_id: str, kind: str, authorization: str = Header(default="")
