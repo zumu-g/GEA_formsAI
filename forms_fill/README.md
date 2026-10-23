@@ -84,6 +84,17 @@ email) so the calling system can warn the PM.
 > If the `forms` console script fails to resolve on a path containing spaces
 > (e.g. iCloud Drive), use `python -m forms_fill.cli …` — identical behaviour.
 
+### Driving it from an LLM (e.g. GEA LLM)
+
+Give the model shell access to three commands, all JSON on stdout, errors on
+stderr with exit 1:
+
+1. `forms list` — every form key, title and engine.
+2. `forms describe <form_key>` — that form's `caller_fields` (name, label, kind,
+   options, required) and whether it needs `identifiers`.
+3. `forms fill --json -` — pipe the built payload in; read `files` and
+   `blank_fields` from the result and ask the user for anything blank.
+
 ---
 
 ## Programmatic API (HTTP)

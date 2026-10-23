@@ -66,6 +66,33 @@ def fill(
     typer.echo(result.model_dump_json())
 
 
+@app.command("list")
+def list_forms() -> None:
+    """Print every form (key, title, group, engine) as JSON — use `describe` for fields."""
+
+    import json
+
+    from .registry import form_catalogue
+
+    keep = ("key", "title", "group", "category", "engine", "requires_identifiers")
+    typer.echo(json.dumps({"forms": [{k: f[k] for k in keep} for f in form_catalogue()]}, indent=2))
+
+
+@app.command()
+def describe(form: str = typer.Argument(..., help="Form key from `forms list`")) -> None:
+    """Print one form's full field schema as JSON, so a caller can build a `fill` payload."""
+
+    import json
+
+    from .registry import form_catalogue
+
+    match = next((f for f in form_catalogue() if f["key"] == form), None)
+    if match is None:
+        typer.echo(f"error: unknown form {form!r} — run `forms list`", err=True)
+        raise typer.Exit(code=1)
+    typer.echo(json.dumps(match, indent=2))
+
+
 @app.command()
 def grounds(
     family: str = typer.Option(None, "--family", help="Filter: vacate | breach_of_duty | general | rent_increase"),

@@ -83,3 +83,30 @@ def test_cli_reports_blank_fields(tmp_path):
     result = json.loads(proc.stdout)
     assert "blank_fields" in result
     assert "method_basis" in result["blank_fields"]
+
+
+def _cmd(*args):
+    return subprocess.run(
+        [sys.executable, "-m", "forms_fill.cli", *args],
+        cwd=PKG_ROOT, capture_output=True, text=True,
+    )
+
+
+def test_cli_list_forms():
+    proc = _cmd("list")
+    assert proc.returncode == 0, proc.stderr
+    forms = json.loads(proc.stdout)["forms"]
+    assert any(f["key"] == "cav_rent_increase_notice" for f in forms)
+    assert "caller_fields" not in forms[0]  # compact: describe gives the detail
+
+
+def test_cli_describe_form():
+    proc = _cmd("describe", "cav_rent_increase_notice")
+    assert proc.returncode == 0, proc.stderr
+    assert json.loads(proc.stdout)["caller_fields"]
+
+
+def test_cli_describe_unknown_form():
+    proc = _cmd("describe", "nope")
+    assert proc.returncode == 1
+    assert "unknown form" in proc.stderr
