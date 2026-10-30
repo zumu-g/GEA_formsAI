@@ -62,3 +62,40 @@ def test_non_lease_form_rejects_nothing_and_stores_nothing(client, caller_fields
     )
     assert resp.status_code == 200, resp.text
     assert leases.get(resp.json()["request_id"]) is None
+
+
+# ── U2: rent-in-advance and bond facts gate the send ─────────────────────────
+
+FACTS = {
+    "rent_amount": "650", "rent_period": "weekly", "first_rent_due_date": "2026-11-07",
+    "bond_amount": "2600",
+}
+PAYMENTS = {
+    "rent_payment_details": "EFT to GEA Trust, BSB 063-000 Acc 1234 5678, ref OAK12",
+    "bond_payment_instructions": "Pay via the RTBA bond lodgement link emailed to you",
+}
+
+
+def test_complete_facts_have_nothing_missing():
+    assert leases.missing_payment_facts(FACTS, PAYMENTS) == []
+
+
+@pytest.mark.parametrize(
+    "gone", ["rent_amount", "first_rent_due_date", "bond_amount"],
+)
+def test_missing_lease_fact_blocks(gone):
+    facts = {**FACTS, gone: "  "}
+    assert gone in leases.missing_payment_facts(facts, PAYMENTS)
+
+
+@pytest.mark.parametrize("gone", list(PAYMENTS))
+def test_missing_agency_payment_detail_blocks(gone):
+    payments = {k: v for k, v in PAYMENTS.items() if k != gone}
+    assert gone in leases.missing_payment_facts(FACTS, payments)
+
+
+def test_signing_message_carries_rent_bond_and_rtba_note():
+    msg = leases.signing_message(FACTS, PAYMENTS)
+    for text in ("$650", "07/11/2026", PAYMENTS["rent_payment_details"], "$2600",
+                 PAYMENTS["bond_payment_instructions"], "Residential Tenancies Bond Authority"):
+        assert text in msg

@@ -105,3 +105,47 @@ def list_all() -> list[dict]:
             "SELECT * FROM lease_signings ORDER BY created_at DESC"
         ).fetchall()
     return [_row(r) for r in rows]
+
+
+# ── pre-send check: rent in advance + bond (never send placeholders) ─────────
+
+_LEASE_FACTS = ("rent_amount", "first_rent_due_date", "bond_amount")
+_AGENCY_PAYMENTS = ("rent_payment_details", "bond_payment_instructions")
+
+
+def _blank(value) -> bool:
+    return value is None or not str(value).strip()
+
+
+def missing_payment_facts(facts: dict, payments: dict) -> list[str]:
+    """Names of the values the signing pack needs but doesn't have."""
+
+    return [k for k in _LEASE_FACTS if _blank(facts.get(k))] + [
+        k for k in _AGENCY_PAYMENTS if _blank(payments.get(k))
+    ]
+
+
+def _date(value) -> str:
+    try:
+        return datetime.fromisoformat(str(value)).strftime("%d/%m/%Y")
+    except ValueError:
+        return str(value)  # already in display form
+
+
+def signing_message(facts: dict, payments: dict) -> str:
+    """The email text Annature sends with the lease. Call only when
+    ``missing_payment_facts`` is empty."""
+
+    period = str(facts.get("rent_period") or "").strip()
+    rent = f"${str(facts['rent_amount']).lstrip('$')}" + (f" per {period.removesuffix('ly')}" if period else "")
+    return (
+        "Please review and sign your residential rental agreement.\n\n"
+        "Rent in advance\n"
+        f"Amount: {rent}\n"
+        f"Due: {_date(facts['first_rent_due_date'])}\n"
+        f"How to pay: {payments['rent_payment_details']}\n\n"
+        "Bond\n"
+        f"Amount: ${str(facts['bond_amount']).lstrip('$')}\n"
+        f"How to pay: {payments['bond_payment_instructions']}\n"
+        "Your bond is lodged with the Residential Tenancies Bond Authority (RTBA), Victoria."
+    )
