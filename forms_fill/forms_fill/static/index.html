@@ -280,6 +280,13 @@
     <ul class="matches" id="pps-list"></ul>
   </fieldset>
 
+  <!-- Ingoing: lease e-signature and engine notification status -->
+  <fieldset id="lease-banner" style="display:none">
+    <legend>Lease signing</legend>
+    <p class="hint">Leases sent for e-signature. When every tenant has signed, the Ingoing workflow is told automatically.</p>
+    <ul class="matches" id="lease-list"></ul>
+  </fieldset>
+
   <!-- Wizard U1 (R1): stepper for guided forms — hidden for single-page forms (R13) -->
   <ol id="stepper" aria-label="Progress">
     <li><button type="button" data-stage="1">1. Start</button></li>
@@ -1856,14 +1863,15 @@
       return;
     }
     try {
-      const resp = await fetch(
-        API + '/approve/' + lastFill.request_id + '/' + lastFill.kind,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + approveToken },
-          body: JSON.stringify({ approver: approver, ground: null }),
-        }
-      );
+      // Leases: approval IS the send — tenants get it only from here.
+      const url = lastFill.lease
+        ? API + '/lease/' + lastFill.request_id + '/approve-send'
+        : API + '/approve/' + lastFill.request_id + '/' + lastFill.kind;
+      const resp = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + approveToken },
+        body: JSON.stringify({ approver: approver, ground: null }),
+      });
       const body = await resp.json();
       if (resp.status === 503) {
         approveResult.textContent = 'Approval is not configured on this server.';
@@ -1871,6 +1879,11 @@
       }
       if (!resp.ok) {
         approveResult.textContent = 'Approval failed: ' + (body.message || body.error || resp.status);
+        return;
+      }
+      if (lastFill.lease) {
+        approveResult.textContent = 'Approved and sent to ' + body.signers + ' tenant(s) for signing.';
+        refreshLeases();
         return;
       }
       approveResult.textContent = 'Approved by ' + esc(body.approver) + ' at ' + esc(body.approved_at) + '.';
@@ -1936,12 +1949,14 @@
         setTimeout(refreshDrafts, 300);
       }
       if (body.request_id && (body.files.pdf || body.files.docx)) {
-        lastFill = { request_id: body.request_id, kind: body.files.pdf ? 'pdf' : 'docx' };
+        const lease = body.form === 'residential_rental_agreement';
+        lastFill = { request_id: body.request_id, kind: body.files.pdf ? 'pdf' : 'docx', lease: lease };
+        document.getElementById('approve-btn').textContent = lease ? 'Approve and send to tenants' : 'Approve';
         approveResult.textContent = '';
         document.getElementById('approve-name').value = '';
         document.getElementById('approve-token').value = '';
         approveBox.classList.add('show');
-        if (body.files.pdf) showEsignBox();
+        if (body.files.pdf && !lease) showEsignBox(); // leases send via approval
       }
     } catch (err) {
       showResult('Request failed: ' + esc(err), false);
@@ -2362,6 +2377,62 @@
 
   setInterval(refreshPps, 30000); // Refresh every 30s when page is open
   refreshPps(); // Initial load
+
+  // ── Lease signing status + "Resend to Ingoing" ────────────────────────────
+  const leaseBanner = document.getElementById('lease-banner');
+  const leaseList = document.getElementById('lease-list');
+  const LEASE_STATUS = {
+    sent: 'Awaiting signatures', signed: 'Signed', declined: 'Declined by a tenant', voided: 'Envelope voided',
+  };
+  const NOTIFY_STATUS = {
+    sent: 'Ingoing told', sending: 'Telling Ingoing…', ingoing_notify_failed: 'Ingoing not told',
+    no_idem_key: 'Not linked to a move-in — update ClickUp manually',
+  };
+
+  async function refreshLeases() {
+    try {
+      const resp = await fetch(API + '/leases', { headers: authHeaders() });
+      if (!resp.ok) return;
+      const rows = ((await resp.json()).leases || []).filter((r) => r.status !== 'draft');
+      leaseBanner.style.display = rows.length ? '' : 'none';
+      leaseList.innerHTML = '';
+      rows.forEach((r) => {
+        const li = document.createElement('li');
+        li.style.display = 'grid';
+        li.style.gridTemplateColumns = '1fr auto';
+        li.style.gap = '0.5rem';
+        li.style.alignItems = 'center';
+        const label = document.createElement('span');
+        const problem = ['declined', 'voided'].includes(r.status)
+          || ['ingoing_notify_failed', 'no_idem_key'].includes(r.notify_status);
+        label.textContent = (r.idem_key || 'Lease ' + r.request_id.slice(0, 8)) + ' · '
+          + (LEASE_STATUS[r.status] || r.status)
+          + (r.status === 'signed' && r.notify_status ? ' · ' + (NOTIFY_STATUS[r.notify_status] || r.notify_status) : '');
+        if (problem) label.style.color = '#9A5B5B';
+        li.appendChild(label);
+        if (r.notify_status === 'ingoing_notify_failed') {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'linklike';
+          btn.textContent = 'Resend to Ingoing';
+          btn.addEventListener('click', async () => {
+            const cred = prompt('Approval credential:');
+            if (!cred) return;
+            const out = await fetch(API + '/lease/' + r.request_id + '/resend-ingoing', {
+              method: 'POST', headers: { Authorization: 'Bearer ' + cred.trim() },
+            });
+            if (!out.ok) alert('Resend failed: ' + ((await out.json()).message || out.status));
+            setTimeout(refreshLeases, 1500);
+          });
+          li.appendChild(btn);
+        }
+        leaseList.appendChild(li);
+      });
+    } catch (err) { /* non-fatal */ }
+  }
+
+  setInterval(refreshLeases, 30000);
+  refreshLeases();
 
   const settingsBtn = document.getElementById('settings-btn');
   settingsBtn.addEventListener('click', () => {

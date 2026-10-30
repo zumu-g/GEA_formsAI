@@ -386,6 +386,30 @@ async def annature_webhook(request: Request, background: BackgroundTasks) -> Any
     return {"ok": True}
 
 
+@app.post("/lease/{request_id}/resend-ingoing", status_code=202)
+def lease_resend_ingoing(
+    request_id: str, background: BackgroundTasks, authorization: str = Header(default="")
+) -> Any:
+    """PM's "Resend to Ingoing" — only after the automatic attempts failed."""
+
+    _require_approve_auth(authorization)
+    from . import ingoing
+
+    row = _lease_or_404(request_id)
+    if row["status"] != "signed" or row["notify_status"] != "ingoing_notify_failed":
+        return _err(409, "invalid_request", f"nothing to resend (notify status: {row['notify_status']})")
+    background.add_task(ingoing.notify_lease_signed, request_id)
+    return {"ok": True, "notify_status": "sending"}
+
+
+@app.get("/leases")
+def lease_list(authorization: str = Header(default="")) -> Any:
+    _require_auth(authorization)
+    keep = ("request_id", "idem_key", "status", "signers_expected", "signers", "signed_at",
+            "notify_status", "notify_attempts", "notify_sent_at", "created_at", "updated_at")
+    return {"leases": [{k: r[k] for k in keep} for r in leases.list_all()]}
+
+
 # ── per-agent sticky defaults (U3) ───────────────────────────────────────────
 
 

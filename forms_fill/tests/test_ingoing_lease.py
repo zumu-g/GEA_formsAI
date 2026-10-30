@@ -316,3 +316,45 @@ def test_webhook_trusts_annature_not_the_body(client, sent_lease, annature, engi
 def test_unknown_envelope_is_acknowledged_and_ignored(client, annature, engine):
     assert _hook(client, "envelope_completed", envelope_id="someone_else").status_code == 200
     assert engine == []
+
+
+# ── U6: PM sees status and can "Resend to Ingoing" ───────────────────────────
+
+
+def _complete(client, annature):
+    annature.update(status="completed", combined="https://annature.invalid/c.pdf",
+                    completed="2026-10-30T02:00:00Z",
+                    recipients=[_signer("completed"), _signer("completed")])
+    _hook(client, "envelope_completed")
+
+
+def test_resend_after_failure_posts_once(client, sent_lease, annature, engine, monkeypatch):
+    monkeypatch.delenv("INGOING_WEBHOOK_SECRET")
+    _complete(client, annature)
+    assert leases.get(sent_lease)["notify_status"] == "ingoing_notify_failed"
+    monkeypatch.setenv("INGOING_WEBHOOK_SECRET", "s")
+    resp = client.post(f"/lease/{sent_lease}/resend-ingoing", headers=APPROVE)
+    assert resp.status_code == 202, resp.text  # retries can take minutes: runs in background
+    assert leases.get(sent_lease)["notify_status"] == "sent"
+    assert len(engine) == 1
+
+
+def test_resend_after_success_is_refused(client, sent_lease, annature, engine):
+    _complete(client, annature)
+    resp = client.post(f"/lease/{sent_lease}/resend-ingoing", headers=APPROVE)
+    assert resp.status_code == 409
+    assert len(engine) == 1
+
+
+def test_resend_needs_the_approval_credential(client, sent_lease):
+    assert client.post(f"/lease/{sent_lease}/resend-ingoing", headers=AUTH).status_code == 401
+
+
+def test_lease_list_shows_signing_and_notify_status(client, sent_lease, annature, engine):
+    annature["recipients"] = [_signer("completed"), _signer("declined")]
+    _hook(client, "recipient_declined")
+    (row,) = [r for r in client.get("/leases", headers=AUTH).json()["leases"]
+              if r["request_id"] == sent_lease]
+    assert row["status"] == "declined"
+    assert row["idem_key"] == "OAK12:ingoing"
+    assert "facts" not in row  # tenant details stay out of the list
