@@ -161,3 +161,18 @@ def tenants(facts: dict) -> list[dict]:
         if name or email:
             out.append({"name": name, "email": email})
     return out
+
+
+def claim_notify(request_id: str) -> bool:
+    """Atomically take the right to notify the ingoing engine, so two webhook
+    deliveries racing each other can never both post. False = already sent,
+    already in flight, or not signed."""
+
+    with _connect() as conn:
+        cur = conn.execute(
+            """UPDATE lease_signings SET notify_status = 'sending', updated_at = ?
+               WHERE request_id = ? AND status = 'signed'
+                 AND (notify_status IS NULL OR notify_status = 'ingoing_notify_failed')""",
+            (_now(), request_id),
+        )
+        return cur.rowcount == 1
