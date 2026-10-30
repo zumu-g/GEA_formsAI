@@ -62,6 +62,15 @@ def _v(ctx: dict, key: str) -> str:
     return escape(str(ctx.get(key) or "").strip())
 
 
+def _d(ctx: dict, key: str) -> str:
+    """A date as Australians read it: ISO YYYY-MM-DD prints DD/MM/YYYY; any
+    other value prints exactly as given (never guessed or reformatted)."""
+
+    value = str(ctx.get(key) or "").strip()
+    m = re.fullmatch(r"(\d{4})-(\d{2})-(\d{2})", value)
+    return escape(f"{m[3]}/{m[2]}/{m[1]}" if m else value)
+
+
 def _row(label: str, value: str = "", cls: str = "l") -> str:
     return f'<tr><td class="{cls}">{label}</td><td>{value}</td></tr>'
 
@@ -128,7 +137,7 @@ def _part_a(ctx: dict, agency: str) -> str:
     return (
         '<p class="part">PART A—GENERAL</p>'
         "<h2>1. Date of agreement</h2>"
-        + _rows(_row('This is the date the agreement is signed', _v(ctx, "agreement_date")))
+        + _rows(_row('This is the date the agreement is signed', _d(ctx, "agreement_date")))
         + _paras('<span class="s">If the agreement is signed by the parties on different days, the date of the agreement is the date the last person signs the agreement.</span>')
         + "<h2>2. Premises let by the rental provider</h2>"
         + _rows(_row("Address of premises", _addr(ctx, "premises_address", "premises_postcode")))
@@ -155,11 +164,11 @@ def _part_a(ctx: dict, agency: str) -> str:
         + "<h2>5. Length of the agreement (tick one box only)</h2>"
         + _tick(fixed, "Fixed term agreement")
         + _rows(
-            _row('Start date<br/>(this is the date the agreement starts and you may move in)', _v(ctx, "fixed_start_date") if fixed else ""),
-            _row("End date", _v(ctx, "fixed_end_date") if fixed else ""),
+            _row('Start date<br/>(this is the date the agreement starts and you may move in)', _d(ctx, "fixed_start_date") if fixed else ""),
+            _row("End date", _d(ctx, "fixed_end_date") if fixed else ""),
         )
         + _tick(periodic, "Periodic agreement (monthly)")
-        + _rows(_row("Start date", _v(ctx, "periodic_start_date") if periodic else ""))
+        + _rows(_row("Start date", _d(ctx, "periodic_start_date") if periodic else ""))
         + _paras('<span class="s">Note: If a fixed term agreement ends and the renter and rental provider do not enter into a new fixed term agreement, and the renter continues to occupy the premises, a periodic (e.g. month by month) residential rental agreement will be formed.</span>')
         + "<h2>6. Rent</h2>"
         + "<table><tr>"
@@ -169,7 +178,7 @@ def _part_a(ctx: dict, agency: str) -> str:
         "</tr><tr>"
         f'<td>{_v(ctx, "rent_amount")}</td><td>{ticks}</td><td>{_v(ctx, "rent_payment_day")}</td>'
         "</tr></table>"
-        + _rows(_row("Date first rent payment due", _v(ctx, "first_rent_due_date")))
+        + _rows(_row("Date first rent payment due", _d(ctx, "first_rent_due_date")))
         + "<h2>7. Bond</h2>"
         + _paras(
             "The renter has been asked to pay the bond specified below.",
@@ -183,7 +192,7 @@ def _part_a(ctx: dict, agency: str) -> str:
         + _bullets("email the RTBA at rtba@justice.vic.gov.au; or", "call the RTBA on 1300 137 164.")
         + _rows(
             _row("Bond amount ($)", _v(ctx, "bond_amount")),
-            _row("Date bond payment due", _v(ctx, "bond_due_date")),
+            _row("Date bond payment due", _d(ctx, "bond_due_date")),
         )
     )
 

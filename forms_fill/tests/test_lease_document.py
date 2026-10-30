@@ -69,7 +69,7 @@ def test_fixed_term_ticks_fixed_and_prints_dates(tmp_path):
     body = _flat("\n".join(_pages(_pdf(tmp_path))[1:]))
     assert "■ Fixed term agreement" in body
     assert "□ Periodic agreement (monthly)" in body
-    assert "2027-08-01" in body
+    assert "01/08/2027" in body
 
 
 def test_periodic_ticks_periodic_and_omits_fixed_dates(tmp_path):
@@ -80,7 +80,7 @@ def test_periodic_ticks_periodic_and_omits_fixed_dates(tmp_path):
     body = _flat("\n".join(_pages(pdf)[1:]))
     assert "□ Fixed term agreement" in body
     assert "■ Periodic agreement (monthly)" in body
-    assert "2026-09-09" in body and "2027-08-01" not in body
+    assert "09/09/2026" in body and "01/08/2027" not in body
 
 
 def test_empty_bond_due_date_prints_label_only(tmp_path):
@@ -118,3 +118,15 @@ def test_postcode_not_repeated_when_address_already_ends_with_it():
     ctx.update(provider_address="1 Agency Rd, Melbourne VIC 3000", provider_postcode="3000")
     html = FORM1_SPEC.build_html(ctx).html
     assert "Melbourne VIC 3000<" in html and "3000 3000" not in html
+
+
+def test_iso_dates_print_in_australian_format(tmp_path):
+    # GEA LLM sends ISO dates; the lease must read DD/MM/YYYY (30 Oct 2026 review).
+    text = _flat("".join(_pages(_pdf(tmp_path, agreement_date="2026-07-01", bond_due_date="2026-07-15"))))
+    assert "01/07/2026" in text and "15/07/2026" in text
+    assert "2026-07-01" not in text
+
+
+def test_non_iso_dates_print_exactly_as_given(tmp_path):
+    text = _flat("".join(_pages(_pdf(tmp_path, agreement_date="1 July 2026"))))
+    assert "1 July 2026" in text
