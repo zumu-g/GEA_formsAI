@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GEA Lease Document - Plan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<style>
+:root{--ink:#1a1c1c;--muted:#5e5e5e;--rule:#cfc4c5;--surface:#ffffff;--canvas:#f9f9f9}
+*{box-sizing:border-box}
+@page{size:A4 portrait;margin:0}
+html,body{margin:0;padding:0}
+body{background:var(--canvas);color:var(--ink);font-family:Inter,-apple-system,"Helvetica Neue",Arial,sans-serif;font-size:10.5pt;line-height:1.55;font-variant-numeric:tabular-nums;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.sheet{width:210mm;height:297mm;margin:10mm auto;background:var(--surface);padding:16mm 18mm 14mm;display:flex;flex-direction:column;overflow:hidden;page-break-after:always;break-after:page}
+.sheet:last-of-type{page-break-after:auto;break-after:auto}
+@media print{body{background:#fff}.sheet{margin:0}}
+.sheet-head{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:1px solid var(--ink);padding-bottom:3mm;margin-bottom:6mm}
+.sheet-head svg{width:22mm;height:auto;display:block}
+.meta-r{text-align:right;font-size:7.5pt;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:500;line-height:1.7}
+.sheet-body{flex:1;min-height:0;display:flex;flex-direction:column}
+.sheet-foot{border-top:1px solid var(--rule);padding-top:2mm;margin-top:4mm;display:flex;justify-content:space-between;font-size:7pt;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.kicker,.eyebrow{font-size:7.5pt;font-weight:500;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+h1{font-size:30pt;font-weight:600;letter-spacing:-.04em;line-height:1.08;margin:2mm 0 3mm}
+h2{font-size:15pt;font-weight:600;letter-spacing:-.02em;line-height:1.15;border-top:1px solid var(--ink);padding-top:4mm;margin:0 0 3mm}
+h3{font-size:11pt;font-weight:600;letter-spacing:-.01em;margin:4mm 0 1.5mm}
+p{margin:0 0 2.2mm;max-width:72ch}
+.sub{color:var(--muted);font-size:11pt;max-width:60ch}
+code{font-family:"SF Mono",Menlo,Consolas,monospace;font-size:8.6pt}
+strong{color:inherit}
+a{color:inherit}
+dl.meta{display:grid;grid-template-columns:repeat(3,1fr);gap:3mm 6mm;border-top:1px solid var(--ink);padding-top:3mm;margin:6mm 0}
+dl.meta div{border-top:1px solid var(--rule);padding-top:1.5mm}
+dl.meta dt{font-size:7pt;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:500}
+dl.meta dd{margin:.5mm 0 0;font-size:9.5pt;font-weight:500}
+nav.toc ol{margin:0;padding-left:5mm;columns:2;font-size:9.5pt}
+nav.toc li{margin:0 0 1mm}
+table{width:100%;border-collapse:collapse;font-size:9pt;margin:1mm 0 3mm}
+th{text-align:left;font-size:7pt;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:500;border-bottom:1px solid var(--ink);padding:1.5mm 2mm 1.5mm 0}
+td{border-bottom:1px solid var(--rule);padding:1.6mm 2mm 1.6mm 0;vertical-align:top}
+td.id{white-space:nowrap;font-weight:600;width:11mm}
+.ktd,.card{border-top:1px solid var(--ink);padding-top:2mm;margin:0 0 3mm}
+.ktd p,.card p{font-size:9.3pt;margin-bottom:1.2mm}
+.settled{font-size:8.3pt;color:var(--muted)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:5mm}
+article.unit{border-top:1px solid var(--ink);padding-top:2mm;margin:0 0 3.5mm}
+article.unit h3{margin:0 0 1.5mm}
+article.unit dl{display:grid;grid-template-columns:24mm 1fr;gap:.8mm 3mm;margin:0 0 1.5mm;font-size:9pt}
+article.unit dt{font-size:7pt;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:500;padding-top:.6mm}
+article.unit dd{margin:0}
+details{font-size:9pt;border-top:1px solid var(--rule);padding:1mm 0}
+summary{cursor:pointer;font-size:7.5pt;letter-spacing:.14em;text-transform:uppercase;font-weight:500;color:var(--muted)}
+details ul,details ol{margin:1mm 0 1mm;padding-left:5mm}
+details li{margin-bottom:.6mm}
+.note{border:1px solid var(--ink);padding:2mm 3mm;font-size:9pt;margin:1.5mm 0 2mm}
+.note .eyebrow{display:block;margin-bottom:.5mm}
+ul.tight{margin:0 0 2mm;padding-left:5mm}
+ul.tight li{margin-bottom:.8mm}
+svg.flow{width:100%;height:auto;flex:1;min-height:0}
+footer.composition-signal{font-size:7pt;color:var(--muted);letter-spacing:.06em}
+</style>
+<script>
+// Print every unit's collapsed detail so the PDF carries the full plan.
+addEventListener('beforeprint',()=>document.querySelectorAll('details').forEach(d=>d.open=true));
+</script>
+</head>
+<body>
+
+<!-- ================= SHEET 1: cover + metadata ================= -->
+<section class="sheet">
+  <header class="sheet-head"><svg role="img" aria-label="Grants Estate Agents" viewBox="0 0 1321 813" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-miterlimit:2;"><g><path d="M1311.05,433.613c9.9,36.891 -12,74.841 -48.925,84.729l-1069.48,286.579c-36.929,9.883 -74.863,-12.025 -84.754,-48.946l-100.309,-374.313c-9.891,-36.916 12.025,-74.862 48.934,-84.758l1069.5,-286.55c36.908,-9.904 74.854,12.004 84.758,48.934l100.279,374.325Z" style="fill:#1a1c1c;fill-rule:nonzero;"/><path d="M1311.05,433.613c9.9,36.891 -12,74.841 -48.925,84.729l-1069.48,286.579c-36.929,9.883 -74.863,-12.025 -84.754,-48.946l-100.309,-374.313c-9.891,-36.916 12.025,-74.862 48.934,-84.758l1069.5,-286.55c36.908,-9.904 74.854,12.004 84.758,48.934l100.279,374.325Z" style="fill:none;stroke:#fff;stroke-width:10.42px;"/><path d="M290.375,499.008c7.283,27.142 10.729,54.95 -20.483,63.305c-31.205,8.375 -42.467,-17.355 -49.721,-44.484c-7.279,-27.15 -10.371,-55.033 20.804,-63.391c31.242,-8.367 42.142,17.429 49.4,44.57Zm58.242,78.934l-45.809,-170.967l-33.583,8.992l4.9,18.308c-17.063,-12.129 -32.242,-13.142 -50.567,-8.237c-17.308,4.629 -30.416,13.95 -37.37,25.991c-12.18,21.088 -8.438,45.888 -0.621,75.067c7.816,29.171 16.975,52.525 38.05,64.704c12.062,6.946 27.829,8.888 45.133,4.263c17.654,-4.725 30.629,-13.296 39.171,-31.592l5.912,22.05c6.18,23.091 0.534,46.762 -28.65,54.592c-16.966,4.537 -27.808,1.991 -41.383,-5.275l-16.154,27.954c22.446,11.808 40.696,13.458 66.812,6.454c45.784,-12.284 65.434,-50.246 54.159,-92.304Z" style="fill:#fff;fill-rule:nonzero;"/><path d="M451.342,410.45c-9.88,-5.725 -16.996,-7.812 -28.863,-4.629c-18.683,4.992 -30.271,24.104 -23.904,47.85l27.992,104.454l-34.592,9.275l-46.087,-171.971l33.912,-9.087l5.004,18.654c5.55,-14.579 20.904,-27.771 40.246,-32.963c16.617,-4.45 30.35,-3.4 45.413,5.292l-19.121,33.125Z" style="fill:#fff;fill-rule:nonzero;"/><path d="M612.779,441.721c3.263,12.208 3.088,20.992 -0.658,27.437c-6.792,11.255 -16.358,14.917 -29.592,18.463c-21.692,5.817 -33.887,-0.35 -38.079,-15.954c-4.183,-15.609 3.887,-27.588 24.242,-33.038l40.354,-10.812l3.733,13.904Zm51.221,52.791l-30.817,-114.983c-10.441,-39.004 -39.533,-52.662 -86.696,-40.016c-28.504,7.633 -43.92,17.933 -55.116,41.279l28.471,15.279c6.216,-14.729 14.212,-21.608 33.212,-26.696c26.771,-7.183 40.467,0.417 46.259,22.137l3.279,12.209l-45.463,12.196c-39.337,10.533 -53.796,36.575 -46.075,65.416c3.917,14.588 12.184,26.559 23.475,33.338c13.329,7.7 28.946,8.958 50.3,3.233c21.379,-5.725 31.879,-13.987 41.063,-29.891l4.204,15.599l33.904,-9.1Z" style="fill:#fff;fill-rule:nonzero;"/><path d="M811.892,454.883l-28.088,-104.8c-7.171,-26.804 -25.529,-34.258 -44.862,-29.05c-19.334,5.175 -32.434,21.392 -25.346,47.859l28.079,104.808l-34.583,9.271l-46.088,-171.963l33.925,-9.1l4.621,17.3c8.429,-16.062 23.321,-26.962 40.621,-31.6c17.641,-4.721 33.775,-2.875 46.596,4.246c16.666,9.338 25.108,24.529 30.287,43.863l29.463,109.891l-34.625,9.275Z" style="fill:#fff;fill-rule:nonzero;"/><path d="M950.979,417.633c-32.212,8.625 -53.333,-10.437 -59.958,-35.204l-25.379,-94.629l-19.667,5.275l-7.079,-26.463l19.666,-5.275l-13.995,-52.241l34.579,-9.259l14.025,52.242l33.221,-8.912l7.096,26.462l-33.221,8.896l24.908,92.946c3.338,12.546 11.442,18.379 24.321,14.925l14.254,-3.825l7.904,29.512l-20.675,5.55Z" style="fill:#fff;fill-rule:nonzero;"/><path d="M954.504,229.083l-17.829,-66.483l34.608,-9.254l10.321,38.483l-27.1,37.254Z" style="fill:#fff;fill-rule:nonzero;"/><path d="M1089.91,382.575c-28.159,7.55 -53.192,9.167 -78.9,-5.396l16.658,-28.821c17.729,10.521 37.379,9.238 54.342,4.713c21.029,-5.642 35.629,-17.554 31.291,-33.825c-3.096,-11.55 -11.541,-17.283 -28.525,-14.171l-28.112,4.971c-32.967,5.929 -55.525,-3.663 -63.604,-33.854c-9.013,-33.579 14.729,-60.292 50.691,-69.929c25.775,-6.892 49.271,-7.4 68.95,2.233l-15.787,27.875c-13.325,-6.246 -29.509,-5.546 -45.78,-1.179c-20.687,5.537 -28.737,17.516 -25.308,30.4c2.742,10.175 10.263,16.525 29.034,13.32l27.779,-4.899c32.933,-5.946 56.025,4.245 64.195,34.779c9.646,35.954 -15.875,62.783 -56.924,73.783Z" style="fill:#fff;fill-rule:nonzero;"/></g></svg><div class="meta-r">Plan · formsAI<br>30 Oct 2026</div></header>
+  <div class="sheet-body">
+    <div class="kicker">Implementation plan · feat</div>
+    <h1>GEA Lease Document - Plan</h1>
+    <p class="sub">A Grants-designed residential rental agreement, laid out like the GEA iAgree agreement in Studio Minimalist style, that carries the current 2025-amended Victorian Form 1 word for word.</p>
+    <dl class="meta">
+      <div><dt>title</dt><dd>GEA Lease Document - Plan</dd></div>
+      <div><dt>type</dt><dd>feat</dd></div>
+      <div><dt>date</dt><dd><time datetime="2026-10-30">2026-10-30</time></dd></div>
+      <div><dt>artifact_contract</dt><dd>ce-unified-plan/v1</dd></div>
+      <div><dt>product_contract_source</dt><dd>ce-plan-bootstrap</dd></div>
+      <div><dt>execution</dt><dd>code</dd></div>
+    </dl>
+    <p><strong>Target repo:</strong> GEA_formsAI. Paths are repo-relative; the package lives under <code>forms_fill/</code>.</p>
+    <nav class="toc" aria-label="Sections">
+      <div class="eyebrow">Contents</div>
+      <ol>
+        <li><a href="#goal-capsule">Goal Capsule</a></li>
+        <li><a href="#product-contract">Product Contract</a></li>
+        <li><a href="#planning-contract">Planning Contract</a></li>
+        <li><a href="#implementation-units">Implementation Units</a></li>
+        <li><a href="#verification-contract">Verification Contract</a></li>
+        <li><a href="#definition-of-done">Definition of Done</a></li>
+        <li><a href="#appendix">Appendix</a></li>
+      </ol>
+    </nav>
+    <section id="goal-capsule" style="margin-top:6mm">
+      <h2>Goal Capsule</h2>
+      <p><strong>Objective:</strong> a renter of a Grants-managed property receives a lease that reads as a Grants document (cover page, branded pages, clean schedule layout) and is a valid current Victorian residential rental agreement whose every value comes from a real record.</p>
+      <p><strong>Means:</strong> render the lease as HTML laid out to PDF by PyMuPDF, with the Form 1 v009 text checked by a compliance test (KTD1, KTD2).</p>
+      <p><strong>Authority:</strong> the official Form 1 text (Regulations v009, Sch 1) &gt; Requirements (R-IDs) &gt; Key Technical Decisions &gt; unit Approach.</p>
+      <p><strong>Stop conditions:</strong> stop and report if the v009 Form 1 text cannot be obtained verbatim; if PyMuPDF cannot place the renter signature labels or a page X of Y footer; or if any requirement would need data that has no real source.</p>
+      <p><strong>Execution profile:</strong> Standard depth, test-first (CLAUDE.md coding discipline). Claude Code builds; Stuart approves the visual result and any push to <code>main</code>.</p>
+    </section>
+  </div>
+  <div class="sheet-foot"><span>GEA Lease Document - Plan</span><span>1</span></div>
+</section>
+
+<!-- ================= SHEET 2: product contract ================= -->
+<section class="sheet" id="product-contract">
+  <header class="sheet-head"><svg role="img" aria-label="Grants Estate Agents" viewBox="0 0 1321 813" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-miterlimit:2;"><g><path d="M1311.05,433.613c9.9,36.891 -12,74.841 -48.925,84.729l-1069.48,286.579c-36.929,9.883 -74.863,-12.025 -84.754,-48.946l-100.309,-374.313c-9.891,-36.916 12.025,-74.862 48.934,-84.758l1069.5,-286.55c36.908,-9.904 74.854,12.004 84.758,48.934l100.279,374.325Z" style="fill:#1a1c1c;fill-rule:nonzero;"/><path d="M1311.05,433.613c9.9,36.891 -12,74.841 -48.925,84.729l-1069.48,286.579c-36.929,9.883 -74.863,-12.025 -84.754,-48.946l-100.309,-374.313c-9.891,-36.916 12.025,-74.862 48.934,-84.758l1069.5,-286.55c36.908,-9.904 74.854,12.004 84.758,48.934l100.279,374.325Z" style="fill:none;stroke:#fff;stroke-width:10.42px;"/><path d="M290.375,499.008c7.283,27.142 10.729,54.95 -20.483,63.305c-31.205,8.375 -42.467,-17.355 -49.721,-44.484c-7.279,-27.15 -10.371,-55.033 20.804,-63.391c31.242,-8.367 42.142,17.429 49.4,44.57Zm58.242,78.934l-45.809,-170.967l-33.583,8.992l4.9,18.308c-17.063,-12.129 -32.242,-13.142 -50.567,-8.237c-17.308,4.629 -30.416,13.95 -37.37,25.991c-12.18,21.088 -8.438,45.888 -0.621,75.067c7.816,29.171 16.975,52.525 38.05,64.704c12.062,6.946 27.829,8.888 45.133,4.263c17.654,-4.725 30.629,-13.296 39.171,-31.592l5.912,22.05c6.18,23.091 0.534,46.762 -28.65,54.592c-16.966,4.537 -27.808,1.991 -41.383,-5.275l-16.154,27.954c22.446,11.808 40.696,13.458 66.812,6.454c45.784,-12.284 65.434,-50.246 54.159,-92.304Z" style="fill:#fff;fill-rule:nonzero;"/><path d="M451.342,410.45c-9.88,-5.725 -16.996,-7.812 -28.863,-4.629c-18.683,4.992 -30.271,24.104 -23.904,47.85l27.992,104.454l-34.592,9.275l-46.087,-171.971l33.912,-9.087l5.004,18.654c5.55,-14.579 20.904,-27.771 40.246,-32.963c16.617,-4.45 30.35,-3.4 45.413,5.292l-19.121,33.125Z" style="fill:#fff;fill-rule:nonzero;"/><path d="M612.779,441.721c3.263,12.208 3.088,20.992 -0.658,27.437c-6.792,11.255 -16.358,14.917 -29.592,18.463c-21.692,5.817 -33.887,-0.35 -38.079,-15.954c-4.183,-15.609 3.887,-27.588 24.242,-33.038l40.354,-10.812l3.733,13.904Zm51.221,52.791l-30.817,-114.983c-10.441,-39.004 -39.533,-52.662 -86.696,-40.016c-28.504,7.633 -43.92,17.933 -55.116,41.279l28.471,15.279c6.216,-14.729 14.212,-21.608 33.212,-26.696c26.771,-7.183 40.467,0.417 46.259,22.137l3.279,12.209l-45.463,12.196c-39.337,10.533 -53.796,36.575 -46.075,65.416c3.917,14.588 12.184,26.559 23.475,33.338c13.329,7.7 28.946,8.958 50.3,3.233c21.379,-5.725 31.879,-13.987 41.063,-29.891l4.204,15.599l33.904,-9.1Z" style="fill:#fff;fill-rule:nonzero;"/><path d="M811.892,454.883l-28.088,-104.8c-7.171,-26.804 -25.529,-34.258 -44.862,-29.05c-19.334,5.175 -32.434,21.392 -25.346,47.859l28.079,104.808l-34.583,9.271l-46.088,-171.963l33.925,-9.1l4.621,17.3c8.429,-16.062 23.321,-26.962 40.621,-31.6c17.641,-4.721 33.775,-2.875 46.596,4.246c16.666,9.338 25.108,24.529 30.287,43.863l29.463,109.891l-34.625,9.275Z" style="fill:#fff;fill-rule:nonzero;"/><path d="M950.979,417.633c-32.212,8.625 -53.333,-10.437 -59.958,-35.204l-25.379,-94.629l-19.667,5.275l-7.079,-26.463l19.666,-5.275l-13.995,-52.241l34.579,-9.259l14.025,52.242l33.221,-8.912l7.096,26.462l-33.221,8.896l24.908,92.946c3.338,12.546 11.442,18.379 24.321,14.925l14.254,-3.825l7.904,29.512l-20.675,5.55Z" style="fill:#fff;fill-rule:nonzero;"/><path d="M954.504,229.083l-17.829,-66.483l34.608,-9.254l10.321,38.483l-27.1,37.254Z" style="fill:#fff;fill-rule:nonzero;"/><path d="M1089.91,382.575c-28.159,7.55 -53.192,9.167 -78.9,-5.396l16.658,-28.821c17.729,10.521 37.379,9.238 54.342,4.713c21.029,-5.642 35.629,-17.554 31.291,-33.825c-3.096,-11.55 -11.541,-17.283 -28.525,-14.171l-28.112,4.971c-32.967,5.929 -55.525,-3.663 -63.604,-33.854c-9.013,-33.579 14.729,-60.292 50.691,-69.929c25.775,-6.892 49.271,-7.4 68.95,2.233l-15.787,27.875c-13.325,-6.246 -29.509,-5.546 -45.78,-1.179c-20.687,5.537 -28.737,17.516 -25.308,30.4c2.742,10.175 10.263,16.525 29.034,13.32l27.779,-4.899c32.933,-5.946 56.025,4.245 64.195,34.779c9.646,35.954 -15.875,62.783 -56.924,73.783Z" style="fill:#fff;fill-rule:nonzero;"/></g></svg><div class="meta-r">Product Contract</div></header>
+  <div class="sheet-body">
+    <h2>Product Contract</h2>
+    <h3>Summary</h3>
+    <p>Replace the plain CAV Form 1 Word template with GEA's own lease document: a cover page and running header and footer modelled on the GEA iAgree agreement, Studio Minimalist typography, and "label | value" schedule rows, while every Part, item and prescribed sentence of the current Form 1 stays in place and in order.</p>
+    <h3>Problem Frame</h3>
+    <p>formsAI produces CAV's own grey-boxed Form 1. It does not look like a Grants document, and on 30 Oct 2026 a draft went out with the fixture's invented landlord, which shook trust in the output. Grants' earlier iAgree agreements had a clean branded layout, but they predate the 2021 regime and their structure cannot be reused. Form 1 has also been amended since 2021 (S.R. 123/2025), so the current template may carry outdated wording.</p>
+    <h3 id="product-requirements">Requirements</h3>
+    <div class="eyebrow">Legal content</div>
+    <table>
+      <tr><th>ID</th><th>Requirement</th></tr>
+      <tr id="r1"><td class="id">R1.</td><td>The lease contains every Part, item, heading, note and prescribed sentence of Form 1 as in the Residential Tenancies Regulations 2021, authorised version 009, Schedule 1 (amended by S.R. 123/2025), verbatim and in prescribed order.</td></tr>
+      <tr id="r2"><td class="id">R2.</td><td>Nothing outside Form 1 appears in the agreement body except branding (cover, header, footer); agency clauses, if ever added, go only in Part E additional terms.</td></tr>
+      <tr id="r3"><td class="id">R3.</td><td>Every filled value comes from a real record (PropertyMe, agency config, the agent's account, or the PM); an unknown value prints as an empty labelled field, never a placeholder or sample.</td></tr>
+    </table>
+    <div class="eyebrow">Design</div>
+    <table>
+      <tr><th>ID</th><th>Requirement</th></tr>
+      <tr id="r4"><td class="id">R4.</td><td>A cover page like the example's: logo, "Residential Rental Agreement", premises address, agency name, the property manager's name, mobile and email, and the renters' names.</td></tr>
+      <tr id="r5"><td class="id">R5.</td><td>Every page after the cover carries a small logo top-left, the document title top-right over a hairline, and a footer with the premises address and "Page X of Y".</td></tr>
+      <tr id="r6"><td class="id">R6.</td><td>Studio Minimalist styling: Inter, ink #1a1c1c and grey #5e5e5e only, hairline rules, square corners, a black-and-white logo, "label | value" rows instead of grey boxes.</td></tr>
+      <tr id="r7"><td class="id">R7.</td><td>A4 portrait pages that print and view cleanly, with body text no smaller than 9pt.</td></tr>
+    </table>
+    <div class="eyebrow">Signing and contract</div>
+    <table>
+      <tr><th>ID</th><th>Requirement</th></tr>
+      <tr id="r8"><td class="id">R8.</td><td>formsAI's tenant signing keeps working: each renter's signature and signing date land in their own "Signature of renter N" and Date fields, and the signing record page matches the new style.</td></tr>
+      <tr id="r9"><td class="id">R9.</td><td>The <code>/fill</code> response shape is unchanged; for the lease, <code>files.docx</code> becomes null, as it already is for overlay forms.</td></tr>
+    </table>
+  </div>
+  <div class="sheet-foot"><span>GEA Lease Document - Plan</span><span>2</span></div>
+</section>
+
+<!-- ================= SHEET 3: product contract cont. ================= -->
+<section class="sheet">
+  <header class="sheet-head"><svg role="img" aria-label="Grants Estate Agents" viewBox="0 0 1321 813" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-miterlimit:2;"><g><path d="M1311.05,433.613c9.9,36.891 -12,74.841 -48.925,84.729l-1069.48,286.579c-36.929,9.883 -74.863,-12.025 -84.754,-48.946l-100.309,-374.313c-9.891,-36.916 12.025,-74.862 48.934,-84.758l1069.5,-286.55c36.908,-9.904 74.854,12.004 84.758,48.934l100.279,374.325Z" style="fill:#1a1c1c;fill-rule:nonzero;"/><path d="M1311.05,433.613c9.9,36.891 -12,74.841 -48.925,84.729l-1069.48,286.579c-36.929,9.883 -74.863,-12.025 -84.754,-48.946l-100.309,-374.313c-9.891,-36.916 12.025,-74.862 48.934,-84.758l1069.5,-286.55c36.908,-9.904 74.854,12.004 84.758,48.934l100.279,374.325Z" style="fill:none;stroke:#fff;stroke-width:10.42px;"/><path d="M290.375,499.008c7.283,27.142 10.729,54.95 -20.483,63.305c-31.205,8.375 -42.467,-17.355 -49.721,-44.484c-7.279,-27.15 -10.371,-55.033 20.804,-63.391c31.242,-8.367 42.142,17.429 49.4,44.57Zm58.242,78.934l-45.809,-170.967l-33.583,8.992l4.9,18.308c-17.063,-12.129 -32.242,-13.142 -50.567,-8.237c-17.308,4.629 -30.416,13.95 -37.37,25.991c-12.18,21.088 -8.438,45.888 -0.621,75.067c7.816,29.171 16.975,52.525 38.05,64.704c12.062,6.946 27.829,8.888 45.133,4.263c17.654,-4.725 30.629,-13.296 39.171,-31.592l5.912,22.05c6.18,23.091 0.534,46.762 -28.65,54.592c-16.966,4.537 -27.808,1.991 -41.383,-5.275l-16.154,27.954c22.446,11.808 40.696,13.458 66.812,6.454c45.784,-12.284 65.434,-50.246 54.159,-92.304Z" style="fill:#fff;fill-rule:nonzero;"/><path d="M451.342,410.45c-9.88,-5.725 -16.996,-7.812 -28.863,-4.629c-18.683,4.992 -30.271,24.104 -23.904,47.85l27.992,104.454l-34.592,9.275l-46.087,-171.971l33.912,-9.087l5.004,18.654c5.55,-14.579 20.904,-27.771 40.246,-32.963c16.617,-4.45 30.35,-3.4 45.413,5.292l-19.121,33.125Z" style="fill:#fff;fill-rule:nonzero;"/><path d="M612.779,441.721c3.263,12.208 3.088,20.992 -0.658,27.437c-6.792,11.255 -16.358,14.917 -29.592,18.463c-21.692,5.817 -33.887,-0.35 -38.079,-15.954c-4.183,-15.609 3.887,-27.588 24.242,-33.038l40.354,-10.812l3.733,13.904Zm51.221,52.791l-30.817,-114.983c-10.441,-39.004 -39.533,-52.662 -86.696,-40.016c-28.504,7.633 -43.92,17.933 -55.116,41.279l28.471,15.279c6.216,-14.729 14.212,-21.608 33.212,-26.696c26.771,-7.183 40.467,0.417 46.259,22.137l3.279,12.209l-45.463,12.196c-39.337,10.533 -53.796,36.575 -46.075,65.416c3.917,14.588 12.184,26.559 23.475,33.338c13.329,7.7 28.946,8.958 50.3,3.233c21.379,-5.725 31.879,-13.987 41.063,-29.891l4.204,15.599l33.904,-9.1Z" style="fill:#fff;fill-rule:nonzero;"/><path d="M811.892,454.883l-28.088,-104.8c-7.171,-26.804 -25.529,-34.258 -44.862,-29.05c-19.334,5.175 -32.434,21.392 -25.346,47.859l28.079,104.808l-34.583,9.271l-46.088,-171.963l33.925,-9.1l4.621,17.3c8.429,-16.062 23.321,-26.962 40.621,-31.6c17.641,-4.721 33.775,-2.875 46.596,4.246c16.666,9.338 25.108,24.529 30.287,43.863l29.463,109.891l-34.625,9.275Z" style="fill:#fff;fill-rule:nonzero;"/><path d="M950.979,417.633c-32.212,8.625 -53.333,-10.437 -59.958,-35.204l-25.379,-94.629l-19.667,5.275l-7.079,-26.463l19.666,-5.275l-13.995,-52.241l34.579,-9.259l14.025,52.242l33.221,-8.912l7.096,26.462l-33.221,8.896l24.908,92.946c3.338,12.546 11.442,18.379 24.321,14.925l14.254,-3.825l7.904,29.512l-20.675,5.55Z" style="fill:#fff;fill-rule:nonzero;"/><path d="M954.504,229.083l-17.829,-66.483l34.608,-9.254l10.321,38.483l-27.1,37.254Z" style="fill:#fff;fill-rule:nonzero;"/><path d="M1089.91,382.575c-28.159,7.55 -53.192,9.167 -78.9,-5.396l16.658,-28.821c17.729,10.521 37.379,9.238 54.342,4.713c21.029,-5.642 35.629,-17.554 31.291,-33.825c-3.096,-11.55 -11.541,-17.283 -28.525,-14.171l-28.112,4.971c-32.967,5.929 -55.525,-3.663 -63.604,-33.854c-9.013,-33.579 14.729,-60.292 50.691,-69.929c25.775,-6.892 49.271,-7.4 68.95,2.233l-15.787,27.875c-13.325,-6.246 -29.509,-5.546 -45.78,-1.179c-20.687,5.537 -28.737,17.516 -25.308,30.4c2.742,10.175 10.263,16.525 29.034,13.32l27.779,-4.899c32.933,-5.946 56.025,4.245 64.195,34.779c9.646,35.954 -15.875,62.783 -56.924,73.783Z" style="fill:#fff;fill-rule:nonzero;"/></g></svg><div class="meta-r">Product Contract</div></header>
+  <div class="sheet-body">
+    <h3>Key Decisions</h3>
+    <div class="ktd"><p><strong>Never make up data.</strong> Governs R3.</p><p class="settled">(session-settled: user-directed — chosen over fixture or sample fallback data: Stuart, 30 Oct 2026, "never make up data in formsAI, check with user")</p></div>
+    <div class="ktd"><p><strong>GEA's own document, not the plain CAV form.</strong> Governs R4, R5, R6.</p><p class="settled">(session-settled: user-directed — chosen over restyling CAV's Word template: Stuart, "dont use the plain cav form")</p></div>
+    <div class="ktd"><p><strong>Use the 2025-amended Form 1.</strong> Governs R1.</p><p class="settled">(session-settled: user-directed — chosen over the template's original 2021 wording: Stuart, "use the 2025 amended form 1")</p></div>
+    <div class="ktd"><p><strong>Studio Minimalist styling with the folder example's layout, compliant with the new version.</strong> Governs R1, R4, R5, R6.</p><p class="settled">(session-settled: user-directed — chosen over copying the iAgree example's 2019 schedule and clauses: Stuart, "use the studio minimalist styling and the example in project folder layout, but make sure complies with the new version")</p></div>
+    <div class="ktd"><p><strong>The rental provider's agent block names the agency; the cover names the property manager.</strong> Governs R3, R4. Matches both GEA examples.</p></div>
+
+    <h3>Success Criteria</h3>
+    <ul class="tight">
+      <li>Stuart, comparing a rendered lease side by side with the folder example, judges the cover, header, footer and schedule layout to be the same family.</li>
+      <li>The Form 1 compliance test passes against the v009 reference text with zero missing prescribed lines.</li>
+      <li>A real lease (25 Blackwood Dr, Narre Warren) goes through fill, approve-send and two tenant signatures with both signatures in the right boxes.</li>
+    </ul>
+
+    <h3>Scope Boundaries</h3>
+    <div class="grid2">
+      <div class="card"><div class="eyebrow">In scope</div><p>The residential rental agreement (Form 1, up to 5 years): document design, rendering, compliance test, signing compatibility.</p></div>
+      <div class="card"><div class="eyebrow">Deferred to follow-up work</div><p>The same treatment for Form 2 (over 5 years) and other forms. A move-in pack (Renting a home guide, condition report). Rental provider and agent signatures.</p></div>
+    </div>
+    <div class="card"><div class="eyebrow">Considered and not built</div>
+      <p>Headless Chrome rendering: better CSS, but it needs Chromium in the Railway image (KTD1). Revisit if PyMuPDF cannot meet R5 or R8.</p>
+      <p>GEA's old clauses 1–39 in Part E: not requested; Part E stays blank for the PM. Revisit when Stuart supplies vetted terms.</p>
+      <p>An editable DOCX of the lease: no consumer found in GEA_LLM, n8n or GEA_app. Revisit if PMs say they hand-edit the Word file.</p>
+    </div>
+
+    <h3>Outstanding Questions</h3>
+    <ul class="tight">
+      <li><strong>Deferred:</strong> a solicitor's view that a re-typeset Form 1 is "in the prescribed form". Interpretation of Legislation Act 1984 s 53 accepts a form "to the like effect"; commercial products already do this. Not blocking; recorded as a risk.</li>
+      <li><strong>Deferred:</strong> whether PMs currently edit the Word lease before sending (affects only the DOCX non-goal).</li>
+    </ul>
+  </div>
+  <div class="sheet-foot"><span>GEA Lease Document - Plan</span><span>3</span></div>
+</section>
+
+<!-- ================= SHEET 4: planning contract ================= -->
+<section class="sheet" id="planning-contract">
+  <header class="sheet-head"><svg role="img" aria-label="Grants Estate Agents" viewBox="0 0 1321 813" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-miterlimit:2;"><g><path d="M1311.05,433.613c9.9,36.891 -12,74.841 -48.925,84.729l-1069.48,286.579c-36.929,9.883 -74.863,-12.025 -84.754,-48.946l-100.309,-374.313c-9.891,-36.916 12.025,-74.862 48.934,-84.758l1069.5,-286.55c36.908,-9.904 74.854,12.004 84.758,48.934l100.279,374.325Z" style="fill:#1a1c1c;fill-rule:nonzero;"/><path d="M1311.05,433.613c9.9,36.891 -12,74.841 -48.925,84.729l-1069.48,286.579c-36.929,9.883 -74.863,-12.025 -84.754,-48.946l-100.309,-374.313c-9.891,-36.916 12.025,-74.862 48.934,-84.758l1069.5,-286.55c36.908,-9.904 74.854,12.004 84.758,48.934l100.279,374.325Z" style="fill:none;stroke:#fff;stroke-width:10.42px;"/><path d="M290.375,499.008c7.283,27.142 10.729,54.95 -20.483,63.305c-31.205,8.375 -42.467,-17.355 -49.721,-44.484c-7.279,-27.15 -10.371,-55.033 20.804,-63.391c31.242,-8.367 42.142,17.429 49.4,44.57Zm58.242,78.934l-45.809,-170.967l-33.583,8.992l4.9,18.308c-17.063,-12.129 -32.242,-13.142 -50.567,-8.237c-17.308,4.629 -30.416,13.95 -37.37,25.991c-12.18,21.088 -8.438,45.888 -0.621,75.067c7.816,29.171 16.975,52.525 38.05,64.704c12.062,6.946 27.829,8.888 45.133,4.263c17.654,-4.725 30.629,-13.296 39.171,-31.592l5.912,22.05c6.18,23.091 0.534,46.762 -28.65,54.592c-16.966,4.537 -27.808,1.991 -41.383,-5.275l-16.154,27.954c22.446,11.808 40.696,13.458 66.812,6.454c45.784,-12.284 65.434,-50.246 54.159,-92.304Z" style="fill:#fff;fill-rule:nonzero;"/><path d="M451.342,410.45c-9.88,-5.725 -16.996,-7.812 -28.863,-4.629c-18.683,4.992 -30.271,24.104 -23.904,47.85l27.992,104.454l-34.592,9.275l-46.087,-171.971l33.912,-9.087l5.004,18.654c5.55,-14.579 20.904,-27.771 40.246,-32.963c16.617,-4.45 30.35,-3.4 45.413,5.292l-19.121,33.125Z" style="fill:#fff;fill-rule:nonzero;"/><path d="M612.779,441.721c3.263,12.208 3.088,20.992 -0.658,27.437c-6.792,11.255 -16.358,14.917 -29.592,18.463c-21.692,5.817 -33.887,-0.35 -38.079,-15.954c-4.183,-15.609 3.887,-27.588 24.242,-33.038l40.354,-10.812l3.733,13.904Zm51.221,52.791l-30.817,-114.983c-10.441,-39.004 -39.533,-52.662 -86.696,-40.016c-28.504,7.633 -43.92,17.933 -55.116,41.279l28.471,15.279c6.216,-14.729 14.212,-21.608 33.212,-26.696c26.771,-7.183 40.467,0.417 46.259,22.137l3.279,12.209l-45.463,12.196c-39.337,10.533 -53.796,36.575 -46.075,65.416c3.917,14.588 12.184,26.559 23.475,33.338c13.329,7.7 28.946,8.958 50.3,3.233c21.379,-5.725 31.879,-13.987 41.063,-29.891l4.204,15.599l33.904,-9.1Z" style="fill:#fff;fill-rule:nonzero;"/><path d="M811.892,454.883l-28.088,-104.8c-7.171,-26.804 -25.529,-34.258 -44.862,-29.05c-19.334,5.175 -32.434,21.392 -25.346,47.859l28.079,104.808l-34.583,9.271l-46.088,-171.963l33.925,-9.1l4.621,17.3c8.429,-16.062 23.321,-26.962 40.621,-31.6c17.641,-4.721 33.775,-2.875 46.596,4.246c16.666,9.338 25.108,24.529 30.287,43.863l29.463,109.891l-34.625,9.275Z" style="fill:#fff;fill-rule:nonzero;"/><path d="M950.979,417.633c-32.212,8.625 -53.333,-10.437 -59.958,-35.204l-25.379,-94.629l-19.667,5.275l-7.079,-26.463l19.666,-5.275l-13.995,-52.241l34.579,-9.259l14.025,52.242l33.221,-8.912l7.096,26.462l-33.221,8.896l24.908,92.946c3.338,12.546 11.442,18.379 24.321,14.925l14.254,-3.825l7.904,29.512l-20.675,5.55Z" style="fill:#fff;fill-rule:nonzero;"/><path d="M954.504,229.083l-17.829,-66.483l34.608,-9.254l10.321,38.483l-27.1,37.254Z" style="fill:#fff;fill-rule:nonzero;"/><path d="M1089.91,382.575c-28.159,7.55 -53.192,9.167 -78.9,-5.396l16.658,-28.821c17.729,10.521 37.379,9.238 54.342,4.713c21.029,-5.642 35.629,-17.554 31.291,-33.825c-3.096,-11.55 -11.541,-17.283 -28.525,-14.171l-28.112,4.971c-32.967,5.929 -55.525,-3.663 -63.604,-33.854c-9.013,-33.579 14.729,-60.292 50.691,-69.929c25.775,-6.892 49.271,-7.4 68.95,2.233l-15.787,27.875c-13.325,-6.246 -29.509,-5.546 -45.78,-1.179c-20.687,5.537 -28.737,17.516 -25.308,30.4c2.742,10.175 10.263,16.525 29.034,13.32l27.779,-4.899c32.933,-5.946 56.025,4.245 64.195,34.779c9.646,35.954 -15.875,62.783 -56.924,73.783Z" style="fill:#fff;fill-rule:nonzero;"/></g></svg><div class="meta-r">Planning Contract</div></header>
+  <div class="sheet-body">
+    <h2>Planning Contract</h2>
+    <h3>Key Technical Decisions</h3>
+    <div class="ktd" id="ktd1"><p><strong>KTD1. Render with PyMuPDF's <code>fitz.Story</code> (HTML and a CSS subset to PDF).</strong> It is already installed (1.28.0) and needs no Dockerfile change, unlike headless Chrome. Layout uses block flow and tables only, because Story has no flexbox or grid.</p></div>
+    <div class="ktd" id="ktd2"><p><strong>KTD2. The v009 Form 1 text is the reference, held as a test fixture.</strong> Extract Schedule 1 Form 1 from the authorised Regulations v009 PDF into <code>forms_fill/tests/fixtures/form1_v009.txt</code>. A test normalises whitespace and asserts every reference line appears, in order, in the rendered PDF text. Cross-check against CAV's current Word Form 1.</p></div>
+    <div class="ktd" id="ktd3"><p><strong>KTD3. A Python document builder, not a template engine.</strong> A lease module assembles the HTML from the context with <code>html.escape</code>, so selector logic (fixed or periodic term, rent period) is ordinary code and no Jinja dependency is added.</p></div>
+    <div class="ktd" id="ktd4"><p><strong>KTD4. Page chrome is stamped after layout.</strong> Story lays out the body; a second pass draws the header, footer and "Page X of Y" on every page except the cover, once the page count is known.</p></div>
+    <div class="ktd" id="ktd5"><p><strong>KTD5. Vendor the brand assets.</strong> Inter TTF (OFL) and a black-and-white logo PNG ship inside the package; <code>pyproject.toml</code> package-data is extended so the Railway image carries them.</p></div>
+    <div class="ktd" id="ktd6"><p><strong>KTD6. Keep the signing anchors literal.</strong> The renter signature rows print "Signature of renter N" with a "Date" label within 70pt below and clear space to the right, so <code>forms_fill/sign_pdf.py</code> placement is unchanged. Only its signing-record page is restyled. Its footer reads "Signing record", outside the X of Y count.</p></div>
+    <div class="ktd" id="ktd7"><p><strong>KTD7. A new <code>html</code> engine in <code>render.py</code>.</strong> It returns <code>(None, pdf_path, warnings)</code> like the overlay engine, so <code>core.py</code>, <code>FillResult</code> and the API stay as they are (R9).</p></div>
+
+    <h3>High-Level Technical Design</h3>
+    <svg class="flow" viewBox="0 0 700 150" role="img" aria-label="Lease render and signing flow">
+      <g font-family="Inter,Arial" font-size="10" fill="#1a1c1c">
+        <g fill="none" stroke="#1a1c1c" stroke-width="1">
+          <rect x="5" y="20" width="110" height="44"/><rect x="145" y="20" width="120" height="44"/><rect x="295" y="20" width="120" height="44"/><rect x="445" y="20" width="110" height="44"/><rect x="585" y="20" width="110" height="44"/>
+          <rect x="295" y="96" width="120" height="44"/><rect x="445" y="96" width="110" height="44"/>
+          <path d="M115 42h30M265 42h30M415 42h30M555 42h30M640 64v12H355v20M415 118h30"/>
+        </g>
+        <text x="60" y="39" text-anchor="middle">fill_form</text><text x="60" y="53" text-anchor="middle" fill="#5e5e5e" font-size="8.5">real data only</text>
+        <text x="205" y="39" text-anchor="middle">lease builder</text><text x="205" y="53" text-anchor="middle" fill="#5e5e5e" font-size="8.5">Form 1 + context → HTML</text>
+        <text x="355" y="39" text-anchor="middle">fitz.Story</text><text x="355" y="53" text-anchor="middle" fill="#5e5e5e" font-size="8.5">layout to A4</text>
+        <text x="500" y="39" text-anchor="middle">page chrome</text><text x="500" y="53" text-anchor="middle" fill="#5e5e5e" font-size="8.5">header · Page X of Y</text>
+        <text x="640" y="39" text-anchor="middle">lease PDF</text><text x="640" y="53" text-anchor="middle" fill="#5e5e5e" font-size="8.5">compliance test</text>
+        <text x="355" y="115" text-anchor="middle">approve-send</text><text x="355" y="129" text-anchor="middle" fill="#5e5e5e" font-size="8.5">missing_boxes check</text>
+        <text x="500" y="115" text-anchor="middle">sign_pdf</text><text x="500" y="129" text-anchor="middle" fill="#5e5e5e" font-size="8.5">stamp + signing record</text>
+      </g>
+    </svg>
+    <p style="font-size:9pt">The flow: <code>fill_form</code> builds the context from real data; the lease builder turns Form 1 plus that context into HTML; Story lays it out; the chrome pass adds header, footer and page numbers; the PDF then follows the existing approve-send and signing path unchanged.</p>
+  </div>
+  <div class="sheet-foot"><span>GEA Lease Document - Plan</span><span>4</span></div>
+</section>
+
+<!-- ================= SHEET 5: units 1-3 ================= -->
+<section class="sheet" id="implementation-units">
+  <header class="sheet-head"><svg role="img" aria-label="Grants Estate Agents" viewBox="0 0 1321 813" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-miterlimit:2;"><g><path d="M1311.05,433.613c9.9,36.891 -12,74.841 -48.925,84.729l-1069.48,286.579c-36.929,9.883 -74.863,-12.025 -84.754,-48.946l-100.309,-374.313c-9.891,-36.916 12.025,-74.862 48.934,-84.758l1069.5,-286.55c36.908,-9.904 74.854,12.004 84.758,48.934l100.279,374.325Z" style="fill:#1a1c1c;fill-rule:nonzero;"/><path d="M1311.05,433.613c9.9,36.891 -12,74.841 -48.925,84.729l-1069.48,286.579c-36.929,9.883 -74.863,-12.025 -84.754,-48.946l-100.309,-374.313c-9.891,-36.916 12.025,-74.862 48.934,-84.758l1069.5,-286.55c36.908,-9.904 74.854,12.004 84.758,48.934l100.279,374.325Z" style="fill:none;stroke:#fff;stroke-width:10.42px;"/><path d="M290.375,499.008c7.283,27.142 10.729,54.95 -20.483,63.305c-31.205,8.375 -42.467,-17.355 -49.721,-44.484c-7.279,-27.15 -10.371,-55.033 20.804,-63.391c31.242,-8.367 42.142,17.429 49.4,44.57Zm58.242,78.934l-45.809,-170.967l-33.583,8.992l4.9,18.308c-17.063,-12.129 -32.242,-13.142 -50.567,-8.237c-17.308,4.629 -30.416,13.95 -37.37,25.991c-12.18,21.088 -8.438,45.888 -0.621,75.067c7.816,29.171 16.975,52.525 38.05,64.704c12.062,6.946 27.829,8.888 45.133,4.263c17.654,-4.725 30.629,-13.296 39.171,-31.592l5.912,22.05c6.18,23.091 0.534,46.762 -28.65,54.592c-16.966,4.537 -27.808,1.991 -41.383,-5.275l-16.154,27.954c22.446,11.808 40.696,13.458 66.812,6.454c45.784,-12.284 65.434,-50.246 54.159,-92.304Z" style="fill:#fff;fill-rule:nonzero;"/><path d="M451.342,410.45c-9.88,-5.725 -16.996,-7.812 -28.863,-4.629c-18.683,4.992 -30.271,24.104 -23.904,47.85l27.992,104.454l-34.592,9.275l-46.087,-171.971l33.912,-9.087l5.004,18.654c5.55,-14.579 20.904,-27.771 40.246,-32.963c16.617,-4.45 30.35,-3.4 45.413,5.292l-19.121,33.125Z" style="fill:#fff;fill-rule:nonzero;"/><path d="M612.779,441.721c3.263,12.208 3.088,20.992 -0.658,27.437c-6.792,11.255 -16.358,14.917 -29.592,18.463c-21.692,5.817 -33.887,-0.35 -38.079,-15.954c-4.183,-15.609 3.887,-27.588 24.242,-33.038l40.354,-10.812l3.733,13.904Zm51.221,52.791l-30.817,-114.983c-10.441,-39.004 -39.533,-52.662 -86.696,-40.016c-28.504,7.633 -43.92,17.933 -55.116,41.279l28.471,15.279c6.216,-14.729 14.212,-21.608 33.212,-26.696c26.771,-7.183 40.467,0.417 46.259,22.137l3.279,12.209l-45.463,12.196c-39.337,10.533 -53.796,36.575 -46.075,65.416c3.917,14.588 12.184,26.559 23.475,33.338c13.329,7.7 28.946,8.958 50.3,3.233c21.379,-5.725 31.879,-13.987 41.063,-29.891l4.204,15.599l33.904,-9.1Z" style="fill:#fff;fill-rule:nonzero;"/><path d="M811.892,454.883l-28.088,-104.8c-7.171,-26.804 -25.529,-34.258 -44.862,-29.05c-19.334,5.175 -32.434,21.392 -25.346,47.859l28.079,104.808l-34.583,9.271l-46.088,-171.963l33.925,-9.1l4.621,17.3c8.429,-16.062 23.321,-26.962 40.621,-31.6c17.641,-4.721 33.775,-2.875 46.596,4.246c16.666,9.338 25.108,24.529 30.287,43.863l29.463,109.891l-34.625,9.275Z" style="fill:#fff;fill-rule:nonzero;"/><path d="M950.979,417.633c-32.212,8.625 -53.333,-10.437 -59.958,-35.204l-25.379,-94.629l-19.667,5.275l-7.079,-26.463l19.666,-5.275l-13.995,-52.241l34.579,-9.259l14.025,52.242l33.221,-8.912l7.096,26.462l-33.221,8.896l24.908,92.946c3.338,12.546 11.442,18.379 24.321,14.925l14.254,-3.825l7.904,29.512l-20.675,5.55Z" style="fill:#fff;fill-rule:nonzero;"/><path d="M954.504,229.083l-17.829,-66.483l34.608,-9.254l10.321,38.483l-27.1,37.254Z" style="fill:#fff;fill-rule:nonzero;"/><path d="M1089.91,382.575c-28.159,7.55 -53.192,9.167 -78.9,-5.396l16.658,-28.821c17.729,10.521 37.379,9.238 54.342,4.713c21.029,-5.642 35.629,-17.554 31.291,-33.825c-3.096,-11.55 -11.541,-17.283 -28.525,-14.171l-28.112,4.971c-32.967,5.929 -55.525,-3.663 -63.604,-33.854c-9.013,-33.579 14.729,-60.292 50.691,-69.929c25.775,-6.892 49.271,-7.4 68.95,2.233l-15.787,27.875c-13.325,-6.246 -29.509,-5.546 -45.78,-1.179c-20.687,5.537 -28.737,17.516 -25.308,30.4c2.742,10.175 10.263,16.525 29.034,13.32l27.779,-4.899c32.933,-5.946 56.025,4.245 64.195,34.779c9.646,35.954 -15.875,62.783 -56.924,73.783Z" style="fill:#fff;fill-rule:nonzero;"/></g></svg><div class="meta-r">Implementation Units</div></header>
+  <div class="sheet-body">
+    <h2>Implementation Units</h2>
+
+    <article class="unit" id="u1">
+      <h3>U1. Form 1 v009 reference and compliance test</h3>
+      <dl><dt>Goal</dt><dd>Lock the current prescribed text in a fixture and a test that fails until the new lease carries it.</dd>
+      <dt>Requirements</dt><dd>R1, R2</dd><dt>Dependencies</dt><dd>none</dd>
+      <dt>Files</dt><dd><code>forms_fill/tests/fixtures/form1_v009.txt</code>, <code>forms_fill/tests/test_lease_form1_compliance.py</code></dd></dl>
+      <div class="note"><span class="eyebrow">Execution note</span>Write the compliance test first, against the current DOCX output, and record which lines it already misses; that list is the 2021-to-2025 wording gap.</div>
+      <details><summary>Approach</summary><ol><li>Download the authorised v009 PDF (Sources) and extract Schedule 1 Form 1 into the fixture, one prescribed line per row.</li><li>Cross-check the fixture against CAV's current Word Form 1 and note any difference in the fixture header.</li><li>The test renders a lease from fixture-provider data, extracts PDF text, normalises whitespace and hyphenation, and asserts each line appears in order.</li></ol></details>
+      <details><summary>Test scenarios</summary><ul><li>Every fixture line present, in order, in a rendered lease: pass.</li><li>A rendered lease missing one Part D heading: the test fails naming that line.</li><li>Lines that wrap across a page break still match after normalisation.</li></ul></details>
+      <details><summary>Verification</summary><p>The test exists, runs, and reports the exact wording gap of today's template.</p></details>
+    </article>
+
+    <article class="unit" id="u2">
+      <h3>U2. HTML render engine and brand assets</h3>
+      <dl><dt>Goal</dt><dd>Render any HTML document to an A4 PDF with Inter, the logo, and post-layout page chrome.</dd>
+      <dt>Requirements</dt><dd>R5, R6, R7, R9</dd><dt>Dependencies</dt><dd>none</dd>
+      <dt>Files</dt><dd><code>forms_fill/forms_fill/render.py</code>, <code>forms_fill/forms_fill/render_html.py</code>, <code>forms_fill/forms_fill/forms/_assets/</code> (Inter TTF, logo PNG), <code>forms_fill/pyproject.toml</code>, <code>forms_fill/tests/test_render_html.py</code></dd></dl>
+      <details><summary>Approach</summary><ol><li>Add the <code>html</code> engine branch per KTD7.</li><li>Lay out with Story onto A4 (KTD1), then stamp chrome per KTD4.</li><li>Vendor assets and extend package-data per KTD5.</li></ol></details>
+      <details><summary>Test scenarios</summary><ul><li>A three-page HTML renders three A4 pages (595 x 842 pt).</li><li>Pages 2 and 3 carry "Page 2 of 3" and "Page 3 of 3"; the cover carries no header.</li><li>The PDF embeds Inter, not a fallback font.</li><li>A missing asset raises a clear render error, not a silently unbranded PDF.</li></ul></details>
+      <details><summary>Verification</summary><p>Rendered pages, viewed as PNG, show the logo top-left, title top-right and footer on every non-cover page.</p></details>
+    </article>
+
+    <article class="unit" id="u3">
+      <h3>U3. The GEA lease document</h3>
+      <dl><dt>Goal</dt><dd>Build the cover and Form 1 Parts A to E in the example's layout from the existing lease context.</dd>
+      <dt>Requirements</dt><dd>R1, R3, R4, R6, R8</dd><dt>Dependencies</dt><dd>U1, U2</dd>
+      <dt>Files</dt><dd><code>forms_fill/forms_fill/forms/residential_rental_agreement/document.py</code>, <code>.../spec.py</code>, <code>forms_fill/tests/test_rental_agreement.py</code></dd></dl>
+      <details><summary>Approach</summary><ol><li>Builder per KTD3: cover (R4), then each Part as label | value rows with the prescribed text.</li><li>Switch the spec to <code>engine="html"</code>; keep <code>build_context</code>, declared and selector fields as they are.</li><li>Signature rows per KTD6.</li><li>Blank values print as empty labelled fields (R3).</li></ol></details>
+      <details><summary>Test scenarios</summary><ul><li>Fixture-provider lease: the cover shows premises, agency, the PM's mobile and email, and both renters.</li><li>Fixed-term context prints the fixed-term dates; periodic prints the periodic start only.</li><li>An empty bond due date prints the label with no value, and no "N/A" or sample text.</li><li>The compliance test from U1 passes.</li><li><code>missing_boxes</code> finds every renter slot.</li></ul></details>
+      <details><summary>Verification</summary><p>U1 passes and the rendered lease matches the folder example's family of layout by eye.</p></details>
+    </article>
+  </div>
+  <div class="sheet-foot"><span>GEA Lease Document - Plan</span><span>5</span></div>
+</section>
+
+<!-- ================= SHEET 6: units 4-5, verification, done ================= -->
+<section class="sheet">
+  <header class="sheet-head"><svg role="img" aria-label="Grants Estate Agents" viewBox="0 0 1321 813" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-miterlimit:2;"><g><path d="M1311.05,433.613c9.9,36.891 -12,74.841 -48.925,84.729l-1069.48,286.579c-36.929,9.883 -74.863,-12.025 -84.754,-48.946l-100.309,-374.313c-9.891,-36.916 12.025,-74.862 48.934,-84.758l1069.5,-286.55c36.908,-9.904 74.854,12.004 84.758,48.934l100.279,374.325Z" style="fill:#1a1c1c;fill-rule:nonzero;"/><path d="M1311.05,433.613c9.9,36.891 -12,74.841 -48.925,84.729l-1069.48,286.579c-36.929,9.883 -74.863,-12.025 -84.754,-48.946l-100.309,-374.313c-9.891,-36.916 12.025,-74.862 48.934,-84.758l1069.5,-286.55c36.908,-9.904 74.854,12.004 84.758,48.934l100.279,374.325Z" style="fill:none;stroke:#fff;stroke-width:10.42px;"/><path d="M290.375,499.008c7.283,27.142 10.729,54.95 -20.483,63.305c-31.205,8.375 -42.467,-17.355 -49.721,-44.484c-7.279,-27.15 -10.371,-55.033 20.804,-63.391c31.242,-8.367 42.142,17.429 49.4,44.57Zm58.242,78.934l-45.809,-170.967l-33.583,8.992l4.9,18.308c-17.063,-12.129 -32.242,-13.142 -50.567,-8.237c-17.308,4.629 -30.416,13.95 -37.37,25.991c-12.18,21.088 -8.438,45.888 -0.621,75.067c7.816,29.171 16.975,52.525 38.05,64.704c12.062,6.946 27.829,8.888 45.133,4.263c17.654,-4.725 30.629,-13.296 39.171,-31.592l5.912,22.05c6.18,23.091 0.534,46.762 -28.65,54.592c-16.966,4.537 -27.808,1.991 -41.383,-5.275l-16.154,27.954c22.446,11.808 40.696,13.458 66.812,6.454c45.784,-12.284 65.434,-50.246 54.159,-92.304Z" style="fill:#fff;fill-rule:nonzero;"/><path d="M451.342,410.45c-9.88,-5.725 -16.996,-7.812 -28.863,-4.629c-18.683,4.992 -30.271,24.104 -23.904,47.85l27.992,104.454l-34.592,9.275l-46.087,-171.971l33.912,-9.087l5.004,18.654c5.55,-14.579 20.904,-27.771 40.246,-32.963c16.617,-4.45 30.35,-3.4 45.413,5.292l-19.121,33.125Z" style="fill:#fff;fill-rule:nonzero;"/><path d="M612.779,441.721c3.263,12.208 3.088,20.992 -0.658,27.437c-6.792,11.255 -16.358,14.917 -29.592,18.463c-21.692,5.817 -33.887,-0.35 -38.079,-15.954c-4.183,-15.609 3.887,-27.588 24.242,-33.038l40.354,-10.812l3.733,13.904Zm51.221,52.791l-30.817,-114.983c-10.441,-39.004 -39.533,-52.662 -86.696,-40.016c-28.504,7.633 -43.92,17.933 -55.116,41.279l28.471,15.279c6.216,-14.729 14.212,-21.608 33.212,-26.696c26.771,-7.183 40.467,0.417 46.259,22.137l3.279,12.209l-45.463,12.196c-39.337,10.533 -53.796,36.575 -46.075,65.416c3.917,14.588 12.184,26.559 23.475,33.338c13.329,7.7 28.946,8.958 50.3,3.233c21.379,-5.725 31.879,-13.987 41.063,-29.891l4.204,15.599l33.904,-9.1Z" style="fill:#fff;fill-rule:nonzero;"/><path d="M811.892,454.883l-28.088,-104.8c-7.171,-26.804 -25.529,-34.258 -44.862,-29.05c-19.334,5.175 -32.434,21.392 -25.346,47.859l28.079,104.808l-34.583,9.271l-46.088,-171.963l33.925,-9.1l4.621,17.3c8.429,-16.062 23.321,-26.962 40.621,-31.6c17.641,-4.721 33.775,-2.875 46.596,4.246c16.666,9.338 25.108,24.529 30.287,43.863l29.463,109.891l-34.625,9.275Z" style="fill:#fff;fill-rule:nonzero;"/><path d="M950.979,417.633c-32.212,8.625 -53.333,-10.437 -59.958,-35.204l-25.379,-94.629l-19.667,5.275l-7.079,-26.463l19.666,-5.275l-13.995,-52.241l34.579,-9.259l14.025,52.242l33.221,-8.912l7.096,26.462l-33.221,8.896l24.908,92.946c3.338,12.546 11.442,18.379 24.321,14.925l14.254,-3.825l7.904,29.512l-20.675,5.55Z" style="fill:#fff;fill-rule:nonzero;"/><path d="M954.504,229.083l-17.829,-66.483l34.608,-9.254l10.321,38.483l-27.1,37.254Z" style="fill:#fff;fill-rule:nonzero;"/><path d="M1089.91,382.575c-28.159,7.55 -53.192,9.167 -78.9,-5.396l16.658,-28.821c17.729,10.521 37.379,9.238 54.342,4.713c21.029,-5.642 35.629,-17.554 31.291,-33.825c-3.096,-11.55 -11.541,-17.283 -28.525,-14.171l-28.112,4.971c-32.967,5.929 -55.525,-3.663 -63.604,-33.854c-9.013,-33.579 14.729,-60.292 50.691,-69.929c25.775,-6.892 49.271,-7.4 68.95,2.233l-15.787,27.875c-13.325,-6.246 -29.509,-5.546 -45.78,-1.179c-20.687,5.537 -28.737,17.516 -25.308,30.4c2.742,10.175 10.263,16.525 29.034,13.32l27.779,-4.899c32.933,-5.946 56.025,4.245 64.195,34.779c9.646,35.954 -15.875,62.783 -56.924,73.783Z" style="fill:#fff;fill-rule:nonzero;"/></g></svg><div class="meta-r">Implementation Units</div></header>
+  <div class="sheet-body">
+    <article class="unit" id="u4">
+      <h3>U4. Signing on the new document</h3>
+      <dl><dt>Goal</dt><dd>Prove tenant signing stamps correctly into the new lease and restyle the signing-record page.</dd>
+      <dt>Requirements</dt><dd>R8</dd><dt>Dependencies</dt><dd>U3</dd>
+      <dt>Files</dt><dd><code>forms_fill/forms_fill/sign_pdf.py</code>, <code>forms_fill/tests/test_sign_pdf.py</code>, <code>forms_fill/tests/test_ingoing_lease.py</code></dd></dl>
+      <details><summary>Approach</summary><ol><li>Swap the test lease PDF for a real U3 render.</li><li>Restyle the signing-record page (Inter, logo, hairlines) per KTD6.</li></ol></details>
+      <details><summary>Test scenarios</summary><ul><li>Two renters sign: each signature sits right of its own label, each date in its own Date field.</li><li>The signing-record page lists both signers and the document hash in the new style.</li><li>Approve-send on the new lease passes the box check.</li></ul></details>
+      <details><summary>Verification</summary><p>End-to-end local run (fill, approve-send, two browser signatures) gives one Ingoing post and a correct signed PDF.</p></details>
+    </article>
+
+    <article class="unit" id="u5">
+      <h3>U5. Retire the lease DOCX path</h3>
+      <dl><dt>Goal</dt><dd>Move remaining lease tests and docs off the Word template without touching other forms.</dd>
+      <dt>Requirements</dt><dd>R9</dd><dt>Dependencies</dt><dd>U3</dd>
+      <dt>Files</dt><dd><code>forms_fill/tests/test_render.py</code>, <code>forms_fill/tests/test_lease_alias.py</code>, <code>forms_fill/README.md</code></dd></dl>
+      <details><summary>Approach</summary><ol><li>Rewrite DOCX-table assertions as PDF-text assertions.</li><li>Keep <code>template.docx</code> only while <code>_rental_agreement_shared.py</code> consumers still need it.</li><li>README: the lease is PDF-only.</li></ol></details>
+      <details><summary>Test scenarios</summary><ul><li>The <code>lease</code> alias still resolves and renders the new PDF.</li><li><code>/fill</code> for the lease returns <code>files.docx</code> null and a working <code>files.pdf</code>.</li></ul></details>
+      <details><summary>Verification</summary><p>The full suite passes apart from the two known unrelated failures.</p></details>
+    </article>
+
+    <section id="verification-contract">
+      <h2>Verification Contract</h2>
+      <ul class="tight">
+        <li>Full suite: <code>.venv/bin/python -m pytest -q</code> from <code>forms_fill/</code>; result reported verbatim.</li>
+        <li>Compliance: <code>tests/test_lease_form1_compliance.py</code> passes with zero missing lines.</li>
+        <li>Visual: render the 25 Blackwood Dr lease to PNG pages and compare with the folder example; Stuart signs off.</li>
+        <li>Page size: every page MediaBox is 595 x 842 pt.</li>
+        <li>Railway: the Docker image builds with no new system packages.</li>
+      </ul>
+    </section>
+    <section id="definition-of-done">
+      <h2>Definition of Done</h2>
+      <ul class="tight">
+        <li>U1 to U5 landed as small commits with tests written first.</li>
+        <li>The lease carries the v009 Form 1 text verbatim and the compliance test guards it.</li>
+        <li>Cover, header, footer and schedule layout approved by Stuart against the folder example.</li>
+        <li>Tenant signing works end to end on the new document.</li>
+        <li>No invented values anywhere in a rendered lease.</li>
+        <li>Abandoned experiments and dead code removed from the diff.</li>
+      </ul>
+    </section>
+  </div>
+  <div class="sheet-foot"><span>GEA Lease Document - Plan</span><span>6</span></div>
+</section>
+
+<!-- ================= SHEET 7: risks + appendix ================= -->
+<section class="sheet" id="appendix">
+  <header class="sheet-head"><svg role="img" aria-label="Grants Estate Agents" viewBox="0 0 1321 813" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-miterlimit:2;"><g><path d="M1311.05,433.613c9.9,36.891 -12,74.841 -48.925,84.729l-1069.48,286.579c-36.929,9.883 -74.863,-12.025 -84.754,-48.946l-100.309,-374.313c-9.891,-36.916 12.025,-74.862 48.934,-84.758l1069.5,-286.55c36.908,-9.904 74.854,12.004 84.758,48.934l100.279,374.325Z" style="fill:#1a1c1c;fill-rule:nonzero;"/><path d="M1311.05,433.613c9.9,36.891 -12,74.841 -48.925,84.729l-1069.48,286.579c-36.929,9.883 -74.863,-12.025 -84.754,-48.946l-100.309,-374.313c-9.891,-36.916 12.025,-74.862 48.934,-84.758l1069.5,-286.55c36.908,-9.904 74.854,12.004 84.758,48.934l100.279,374.325Z" style="fill:none;stroke:#fff;stroke-width:10.42px;"/><path d="M290.375,499.008c7.283,27.142 10.729,54.95 -20.483,63.305c-31.205,8.375 -42.467,-17.355 -49.721,-44.484c-7.279,-27.15 -10.371,-55.033 20.804,-63.391c31.242,-8.367 42.142,17.429 49.4,44.57Zm58.242,78.934l-45.809,-170.967l-33.583,8.992l4.9,18.308c-17.063,-12.129 -32.242,-13.142 -50.567,-8.237c-17.308,4.629 -30.416,13.95 -37.37,25.991c-12.18,21.088 -8.438,45.888 -0.621,75.067c7.816,29.171 16.975,52.525 38.05,64.704c12.062,6.946 27.829,8.888 45.133,4.263c17.654,-4.725 30.629,-13.296 39.171,-31.592l5.912,22.05c6.18,23.091 0.534,46.762 -28.65,54.592c-16.966,4.537 -27.808,1.991 -41.383,-5.275l-16.154,27.954c22.446,11.808 40.696,13.458 66.812,6.454c45.784,-12.284 65.434,-50.246 54.159,-92.304Z" style="fill:#fff;fill-rule:nonzero;"/><path d="M451.342,410.45c-9.88,-5.725 -16.996,-7.812 -28.863,-4.629c-18.683,4.992 -30.271,24.104 -23.904,47.85l27.992,104.454l-34.592,9.275l-46.087,-171.971l33.912,-9.087l5.004,18.654c5.55,-14.579 20.904,-27.771 40.246,-32.963c16.617,-4.45 30.35,-3.4 45.413,5.292l-19.121,33.125Z" style="fill:#fff;fill-rule:nonzero;"/><path d="M612.779,441.721c3.263,12.208 3.088,20.992 -0.658,27.437c-6.792,11.255 -16.358,14.917 -29.592,18.463c-21.692,5.817 -33.887,-0.35 -38.079,-15.954c-4.183,-15.609 3.887,-27.588 24.242,-33.038l40.354,-10.812l3.733,13.904Zm51.221,52.791l-30.817,-114.983c-10.441,-39.004 -39.533,-52.662 -86.696,-40.016c-28.504,7.633 -43.92,17.933 -55.116,41.279l28.471,15.279c6.216,-14.729 14.212,-21.608 33.212,-26.696c26.771,-7.183 40.467,0.417 46.259,22.137l3.279,12.209l-45.463,12.196c-39.337,10.533 -53.796,36.575 -46.075,65.416c3.917,14.588 12.184,26.559 23.475,33.338c13.329,7.7 28.946,8.958 50.3,3.233c21.379,-5.725 31.879,-13.987 41.063,-29.891l4.204,15.599l33.904,-9.1Z" style="fill:#fff;fill-rule:nonzero;"/><path d="M811.892,454.883l-28.088,-104.8c-7.171,-26.804 -25.529,-34.258 -44.862,-29.05c-19.334,5.175 -32.434,21.392 -25.346,47.859l28.079,104.808l-34.583,9.271l-46.088,-171.963l33.925,-9.1l4.621,17.3c8.429,-16.062 23.321,-26.962 40.621,-31.6c17.641,-4.721 33.775,-2.875 46.596,4.246c16.666,9.338 25.108,24.529 30.287,43.863l29.463,109.891l-34.625,9.275Z" style="fill:#fff;fill-rule:nonzero;"/><path d="M950.979,417.633c-32.212,8.625 -53.333,-10.437 -59.958,-35.204l-25.379,-94.629l-19.667,5.275l-7.079,-26.463l19.666,-5.275l-13.995,-52.241l34.579,-9.259l14.025,52.242l33.221,-8.912l7.096,26.462l-33.221,8.896l24.908,92.946c3.338,12.546 11.442,18.379 24.321,14.925l14.254,-3.825l7.904,29.512l-20.675,5.55Z" style="fill:#fff;fill-rule:nonzero;"/><path d="M954.504,229.083l-17.829,-66.483l34.608,-9.254l10.321,38.483l-27.1,37.254Z" style="fill:#fff;fill-rule:nonzero;"/><path d="M1089.91,382.575c-28.159,7.55 -53.192,9.167 -78.9,-5.396l16.658,-28.821c17.729,10.521 37.379,9.238 54.342,4.713c21.029,-5.642 35.629,-17.554 31.291,-33.825c-3.096,-11.55 -11.541,-17.283 -28.525,-14.171l-28.112,4.971c-32.967,5.929 -55.525,-3.663 -63.604,-33.854c-9.013,-33.579 14.729,-60.292 50.691,-69.929c25.775,-6.892 49.271,-7.4 68.95,2.233l-15.787,27.875c-13.325,-6.246 -29.509,-5.546 -45.78,-1.179c-20.687,5.537 -28.737,17.516 -25.308,30.4c2.742,10.175 10.263,16.525 29.034,13.32l27.779,-4.899c32.933,-5.946 56.025,4.245 64.195,34.779c9.646,35.954 -15.875,62.783 -56.924,73.783Z" style="fill:#fff;fill-rule:nonzero;"/></g></svg><div class="meta-r">Risks · Appendix</div></header>
+  <div class="sheet-body">
+    <h2>Risks &amp; Dependencies</h2>
+    <div class="card"><div class="eyebrow">Risk · legal</div><p>A re-typeset Form 1 could be challenged as not "in the prescribed form". Mitigation: verbatim text, prescribed order, Part E only for extras, and the compliance test; s 53 "like effect" applies.</p></div>
+    <div class="card"><div class="eyebrow">Risk · renderer limits</div><p>Story's CSS subset may not reproduce the example exactly. Mitigation: block-and-table layout only; the stop condition triggers a renderer review rather than a compromised design.</p></div>
+    <div class="card"><div class="eyebrow">Risk · signing anchors</div><p>Renaming or wrapping "Signature of renter N" breaks stamping. Mitigation: KTD6 plus the U4 end-to-end test.</p></div>
+    <div class="card"><div class="eyebrow">Dependency</div><p>Real data needs <code>FORMS_DATA_PROVIDER=propertyme</code>, now set on the local forms-api; Railway still runs the fixture and will refuse real tenancies until given a real provider.</p></div>
+
+    <h2 style="margin-top:4mm">Appendix</h2>
+    <h3>Sources &amp; Research</h3>
+    <ul class="tight" style="font-size:9pt">
+      <li><a href="https://content.legislation.vic.gov.au/sites/default/files/2026-06/21-3sra009-authorised.pdf">Residential Tenancies Regulations 2021, authorised version 009</a> — reg 10, Schedule 1 Form 1 (amended by S.R. 123/2025).</li>
+      <li><a href="https://content.legislation.vic.gov.au/sites/default/files/2026-05/84-10096aa134-authorised.pdf">Interpretation of Legislation Act 1984 (Vic)</a> — s 53, forms "to the like effect".</li>
+      <li><a href="https://www.consumer.vic.gov.au/housing/renting/starting-and-changing-rental-agreements/different-rental-agreements/residential-rental-agreements">Consumer Affairs Victoria — residential rental agreements</a>, source of the current Word Form 1.</li>
+      <li><code>GEA_PM_example_lease agreement/1. Residential Tenancy Agreement - 7 Stewart Ave Narre Warren VIC 3805.pdf</code> — layout reference only (2019, pre-2021 structure).</li>
+      <li><a href="https://github.com/zumu-g/GEA_formsAI/blob/main/forms_fill/forms_fill/render.py"><code>forms_fill/forms_fill/render.py</code></a> — engine switch.</li>
+      <li><a href="https://github.com/zumu-g/GEA_formsAI/blob/main/forms_fill/forms_fill/sign_pdf.py"><code>forms_fill/forms_fill/sign_pdf.py</code></a> — signing anchors and signing record.</li>
+      <li><a href="https://github.com/zumu-g/GEA_formsAI/blob/main/forms_fill/forms_fill/forms/residential_rental_agreement/spec.py"><code>forms_fill/forms_fill/forms/residential_rental_agreement/spec.py</code></a> — context and fields.</li>
+      <li>Studio Minimalist spec: <code>GEA_HR/_GEA_HR_MASTER_FILES/DESIGN-studio-minimalist.md</code> (outside this repo).</li>
+    </ul>
+    <h3>Assumptions</h3>
+    <ul class="tight" style="font-size:9pt">
+      <li>The authorised v009 PDF yields clean extractable Form 1 text; if not, OCR it (ocrmypdf) before U1.</li>
+      <li>No external caller needs the lease DOCX (searched GEA_LLM, GEA_n8n, GEA_app).</li>
+    </ul>
+    <footer class="composition-signal" style="margin-top:auto">Composed 2026-10-30T15:26+11:00 by ce-plan from the session request (GEA lease redesign, 30 Oct 2026).</footer>
+  </div>
+  <div class="sheet-foot"><span>GEA Lease Document - Plan</span><span>7</span></div>
+</section>
+
+</body>
+</html>
