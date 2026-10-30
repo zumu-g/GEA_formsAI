@@ -1,47 +1,25 @@
-"""CAV "Form 1 - Residential rental agreement" spec (RTA 1997 (Vic) s 26).
+"""Form 1 - Residential rental agreement (RTA 1997 (Vic) s 26; RT Regs 2021 v009 Sch 1).
 
-Source: https://www.consumer.vic.gov.au/library/forms/housing-and-accommodation/
-renting/form-1-residential-rental-agreement.docx (downloaded 2026-07-08).
-
-Table/cell indices below were derived by inspecting the template's structure
-(python-docx): 61 tables total, indexed label/value cell layout.
-
-This is the largest template in the registry (KTD3). This spec fills the
-fixed identity/premises/term/rent/bond/emergency-contact tables (Parts A-B's
-factual sections 1-7 and 10) and declares everything else blank-by-design:
-
-- The rental provider's agent details (section 3) and both renters' current
-  addresses (section 4) are caller-supplied — they are not part of the
-  `TenancyBundle` provider contract (the agent block is GEA's own fixed
-  business details; "current address" is the renter's pre-tenancy address,
-  a fact this tool has no source for).
-- Section 8 payment-method ticks (table 37) and section 9 electronic-service
-  consent ticks (tables 38-42) are multi-select PM/renter negotiated choices,
-  left for the PM to complete on the printed form.
-- Section 12 owners corporation (table 46), section 13 condition report
-  (table 47), Part E additional terms (table 48), and all signature blocks
-  (tables 49-60) are blank-by-design, same rule as every shipped notice spec.
-- Parts C and D (safety-activity clauses, rights and obligations) are fixed
-  statutory boilerplate with no fillable fields.
-
-Term type and rent period are ticked via `CheckboxOp`, mirroring the
-shipped `cav_rent_increase_notice` pattern.
+Rendered by the html engine (U3): ``document.build_html`` lays out GEA's lease
+document (cover + Form 1 Parts A-E, verbatim v009 wording) from the context
+built here. Fields this tool has no source for (payment-method and
+electronic-service ticks, owners corporation, condition report, Part E terms,
+signatures) print as empty labelled fields for the PM or renters to complete.
 """
 
 from __future__ import annotations
 
 from pathlib import Path
 
-from ...formspec import CheckboxOp, FormSpec, TextOp
+from ...formspec import FormSpec
 from ...models import TenancyBundle
+from .document import RENT_PERIODS, TERM_TYPES, build_html
 from .._rental_agreement_shared import (
     LEASE_FIELDS_COMMON,
     apply_agent_autofill,
     apply_lease_autofill,
     lease_fields_for_mode,
 )
-
-TEMPLATE = Path(__file__).with_name("template.docx")
 
 # Term type + periodic start are Form 1-only lease fields (Form 2 is
 # fixed-term-only — see residential_rental_agreement_5yr's module docstring).
@@ -110,75 +88,6 @@ FETCHED_FIELDS = (
 
 DECLARED_FIELDS = FETCHED_FIELDS + CALLER_FIELDS
 
-TEXT_OPS = (
-    # Section 1 — date of agreement (caller)
-    TextOp("agreement_date", table_index=1, cell_index=0),
-    # Section 2 — premises (fetched)
-    TextOp("premises_address", table_index=2, cell_index=0),
-    TextOp("premises_postcode", table_index=2, cell_index=2),
-    # Section 3 — rental provider (fetched) + agent (caller)
-    TextOp("provider_name", table_index=3, row_index=0, cell_index=1),
-    TextOp("provider_company_name", table_index=3, row_index=1, cell_index=1),
-    TextOp("provider_acn", table_index=4, cell_index=0),
-    TextOp("provider_address", table_index=5, cell_index=1),
-    TextOp("provider_postcode", table_index=5, cell_index=3),
-    TextOp("provider_phone", table_index=6, cell_index=1),
-    TextOp("provider_email", table_index=7, cell_index=1),
-    TextOp("agent_name", table_index=8, cell_index=1),
-    TextOp("agent_address", table_index=9, cell_index=1),
-    TextOp("agent_postcode", table_index=9, cell_index=3),
-    TextOp("agent_phone", table_index=10, cell_index=1),
-    TextOp("agent_acn", table_index=11, cell_index=1),
-    TextOp("agent_email", table_index=12, cell_index=1),
-    # Section 4 — renters (fetched name/phone/email; caller current address)
-    TextOp("renter1_name", table_index=13, cell_index=1),
-    TextOp("renter1_current_address", table_index=14, cell_index=1),
-    TextOp("renter1_current_postcode", table_index=14, cell_index=3),
-    TextOp("renter1_phone", table_index=15, cell_index=1),
-    TextOp("renter1_email", table_index=16, cell_index=1),
-    TextOp("renter2_name", table_index=17, cell_index=1),
-    TextOp("renter2_current_address", table_index=18, cell_index=1),
-    TextOp("renter2_current_postcode", table_index=18, cell_index=3),
-    TextOp("renter2_phone", table_index=19, cell_index=1),
-    TextOp("renter2_email", table_index=20, cell_index=1),
-    TextOp("renter3_name", table_index=21, cell_index=1),
-    TextOp("renter3_current_address", table_index=22, cell_index=1),
-    TextOp("renter3_current_postcode", table_index=22, cell_index=3),
-    TextOp("renter3_phone", table_index=23, cell_index=1),
-    TextOp("renter3_email", table_index=24, cell_index=1),
-    TextOp("renter4_name", table_index=25, cell_index=1),
-    TextOp("renter4_current_address", table_index=26, cell_index=1),
-    TextOp("renter4_current_postcode", table_index=26, cell_index=3),
-    TextOp("renter4_phone", table_index=27, cell_index=1),
-    TextOp("renter4_email", table_index=28, cell_index=1),
-    # Section 5 — length of agreement (caller)
-    TextOp("fixed_start_date", table_index=29, cell_index=2),
-    TextOp("fixed_end_date", table_index=30, cell_index=2),
-    TextOp("periodic_start_date", table_index=31, cell_index=2),
-    # Section 6 — rent (caller)
-    TextOp("rent_amount", table_index=32, row_index=0, cell_index=1),
-    TextOp("rent_payment_day", table_index=33, cell_index=0),
-    TextOp("first_rent_due_date", table_index=34, cell_index=1),
-    # Section 7 — bond (caller)
-    TextOp("bond_amount", table_index=35, cell_index=1),
-    TextOp("bond_due_date", table_index=36, cell_index=1),
-    # Section 10 — urgent repairs emergency contact (caller)
-    TextOp("emergency_contact_name", table_index=43, cell_index=1),
-    TextOp("emergency_phone", table_index=44, cell_index=1),
-    TextOp("emergency_email", table_index=45, cell_index=1),
-)
-
-_TERM_TYPES = {"fixed": 0}
-_PERIODIC = {"periodic": 0}
-_RENT_PERIODS = {"week": 0, "fortnight": 1, "calendar month": 2}
-
-CHECKBOX_OPS = (
-    CheckboxOp("term_type", table_index=29, options=_TERM_TYPES),
-    CheckboxOp("term_type", table_index=31, options=_PERIODIC),
-    CheckboxOp("rent_period", table_index=32, options=_RENT_PERIODS),
-)
-
-
 def _s(value: object) -> str:
     return "" if value is None else str(value)
 
@@ -239,12 +148,15 @@ def build_context(bundle: TenancyBundle, fields: dict) -> dict[str, str]:
 
 SPEC = FormSpec(
     key="residential_rental_agreement",
-    template=TEMPLATE,
+    template=Path(),
     declared_fields=DECLARED_FIELDS,
-    text_ops=TEXT_OPS,
-    checkbox_ops=CHECKBOX_OPS,
+    text_ops=(),
+    checkbox_ops=(),
+    engine="html",
+    build_html=build_html,
     build_context=build_context,
     selector_fields=("term_type", "rent_period", "is_renewal"),
+    caller_field_options={"term_type": TERM_TYPES, "rent_period": RENT_PERIODS},
     title="Residential rental agreement (Form 1)",
     group="residential_rental_agreement",
     caller_field_labels={

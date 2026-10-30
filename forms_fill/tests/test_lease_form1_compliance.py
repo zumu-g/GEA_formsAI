@@ -32,7 +32,7 @@ def normalise(text: str) -> str:
     """Compare wording, not layout: unify quotes/dashes, join hyphen breaks, collapse whitespace, ignore case."""
     text = text.translate(_CHAR_MAP)
     text = re.sub(r"[-☐-☒]", " ", text)  # tick-box glyphs
-    text = re.sub(r"-\s*\n\s*", "-", text)
+    text = re.sub(r"([-/])\s*\n\s*", r"\1", text)  # rejoin lines broken after a hyphen or URL slash
     text = re.sub(r"\s+", " ", text)
     text = re.sub(r" ?- ?", "-", text)
     text = re.sub(r"\b(\d+[a-z]?)\.(?= |$)", r"\1", text, flags=re.I)  # "7. Bond" == "7 Bond"
@@ -84,6 +84,7 @@ def test_normalise_ignores_layout_differences():
         "rental provider's pre-termination PART A—GENERAL"
     )
     assert normalise("7\nBond") == normalise("7. Bond")
+    assert normalise("vic.gov.au/\nrenting") == normalise("vic.gov.au/renting")
 
 
 def test_out_of_order_line_is_reported():
@@ -125,7 +126,6 @@ def _render_lease_pdf(tmp_path) -> bytes:
     return pdf_path.read_bytes()
 
 
-@pytest.mark.xfail(strict=True, reason="lease template not yet on Form 1 v009 — U3")
 @pytest.mark.skipif(
     FORM1_SPEC.engine == "docx" and not shutil.which("soffice"),
     reason="DOCX engine needs LibreOffice (soffice) to make the PDF",

@@ -10,8 +10,8 @@
 #   The source itself numbers items 15 then 17 (there is no item 16) - kept as published.
 # CAV Word Form 1: https://www.consumer.vic.gov.au/library/forms/housing-and-accommodation/renting/form-1-residential-rental-agreement.docx
 #   (Last-Modified 2026-05-07, retrieved 2026-10-30). CAV-DIFF: the CAV Word form is a plain-language
-#   rewrite, not the Regs text - 136 of the 240 lines below are missing from it or out of order (the same
-#   136 as today's lease; see form1_v009_gap.txt). Examples: CAV "The maximum bond is 1 months' rent
+#   rewrite, not the Regs text - 136 of the 240 lines below are missing from it or out of order (as was
+#   the case for the pre-U3 Word lease). Examples: CAV "The maximum bond is 1 months' rent
 #   (unless the rent is more than $900 per week)"; CAV gives the RTBA email as rtba@dgs.vic.gov.au and
 #   phone as 1300 13 71 64 (Regs: rtba@justice.vic.gov.au, 1300 137 164); CAV item 14 is "Electrical
 #   safety activities" (Regs: "Electrical safety checks"); CAV headings read "Part A - Basic terms".
