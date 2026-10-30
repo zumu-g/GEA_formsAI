@@ -149,3 +149,15 @@ def signing_message(facts: dict, payments: dict) -> str:
         f"How to pay: {payments['bond_payment_instructions']}\n"
         "Your bond is lodged with the Residential Tenancies Bond Authority (RTBA), Victoria."
     )
+
+
+def tenants(facts: dict) -> list[dict]:
+    """Every renter named on the lease (slots 1-4) as an Annature signer."""
+
+    out = []
+    for n in range(1, 5):
+        name = str(facts.get(f"renter{n}_name") or "").strip()
+        email = str(facts.get(f"renter{n}_email") or "").strip()
+        if name or email:
+            out.append({"name": name, "email": email})
+    return out

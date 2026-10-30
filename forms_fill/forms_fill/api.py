@@ -225,6 +225,14 @@ def esign_send(payload: dict[str, Any], authorization: str = Header(default=""))
             status_code=400,
             detail={"error": "invalid_request", "message": "invalid request id"},
         )
+    if leases.get(request_id) is not None:
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "error": "invalid_request",
+                "message": "leases go out via POST /lease/{request_id}/approve-send (PM approval)",
+            },
+        )
     recipients = [
         {"name": str(r.get("name", "")).strip(), "email": str(r.get("email", "")).strip()}
         for r in payload.get("recipients", [])
@@ -261,6 +269,70 @@ def esign_send(payload: dict[str, Any], authorization: str = Header(default=""))
             status_code=502, detail={"error": "upstream_error", "message": str(exc)}
         ) from None
     return {"ok": True, **result, "signers": len(recipients)}
+
+
+# ── ingoing lease: PM approval → e-sign → engine notification ───────────────
+
+
+def _lease_or_404(request_id: str) -> dict:
+    row = leases.get(request_id) if request_id.isalnum() else None
+    if row is None:
+        raise HTTPException(
+            status_code=404, detail={"error": "not_found", "message": "no lease for that request id"}
+        )
+    return row
+
+
+@app.post("/lease/{request_id}/approve-send")
+def lease_approve_send(
+    request_id: str, payload: dict[str, Any], authorization: str = Header(default="")
+) -> Any:
+    """PM approves the drafted lease; only then does it go to every tenant."""
+
+    _require_approve_auth(authorization)
+    from . import esign
+    from .agency import load_agency_config
+    from .approval import ApprovalError, approve
+
+    row = _lease_or_404(request_id)
+    if row["status"] != "draft":
+        return _err(409, "invalid_request", f"lease already {row['status']}")
+    facts = row["facts"]
+    payments = load_agency_config().get("payments") or {}
+    missing = leases.missing_payment_facts(facts, payments)
+    signers = leases.tenants(facts)
+    if not signers or any(not s["name"] or "@" not in s["email"] for s in signers):
+        missing.append("renter names and emails")
+    if missing:
+        return JSONResponse(
+            status_code=422,
+            content={
+                "ok": False,
+                "error": "missing_facts",
+                "message": "cannot send until these are filled: " + ", ".join(missing),
+                "missing": missing,
+            },
+        )
+    pdfs = sorted((OUTPUT_ROOT / request_id).glob("*.pdf"))
+    if len(pdfs) != 1:
+        return _err(409, "invalid_request", "lease needs exactly one generated PDF to send")
+    try:
+        approve(pdfs[0], str(payload.get("approver", "")))
+        result = esign.send_for_signing(
+            pdfs[0], "Residential rental agreement", signers,
+            leases.signing_message(facts, payments),
+        )
+    except ApprovalError as exc:
+        return _err(400, "invalid_request", str(exc))
+    except esign.EsignConfigError as exc:
+        return _err(503, "not_configured", str(exc))
+    except Exception as exc:  # Annature/network — the lease stays a draft, PM can retry
+        return _err(502, "upstream_error", str(exc))
+    leases.update(
+        request_id, status="sent", envelope_id=result["envelope_id"],
+        signers_expected=len(signers),
+    )
+    return {"ok": True, "envelope_id": result["envelope_id"], "signers": len(signers)}
 
 
 # ── per-agent sticky defaults (U3) ───────────────────────────────────────────

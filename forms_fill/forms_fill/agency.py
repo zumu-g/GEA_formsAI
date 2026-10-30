@@ -45,7 +45,13 @@ def load_agency_config() -> dict:
     agency = data.get("agency", {})
     raw_agent = data.get("agents") or data.get("agent") or {}
     agents = raw_agent if isinstance(raw_agent, list) else [raw_agent]
-    return {"agency": agency, "agents": [a for a in agents if a], "meta": data.get("meta", {})}
+    return {
+        "agency": agency,
+        "agents": [a for a in agents if a],
+        "meta": data.get("meta", {}),
+        # trust-account / RTBA instructions for the lease signing pack
+        "payments": data.get("payments", {}),
+    }
 
 
 def office_address(agency: dict) -> str:
