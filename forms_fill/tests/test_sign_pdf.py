@@ -98,3 +98,15 @@ def test_audit_page_keeps_the_whole_device_string():
     s["user_agent"] = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/140.0 Safari/537.36"
     out = fitz.open(stream=build_signed_pdf(_lease_pdf(), [s]))
     assert "Safari/537.36" in out[-1].get_text().replace("\n", " ")
+
+
+def test_audit_page_is_studio_minimalist_with_inter_and_logo():
+    signers = [_signer(1, "Jane Renter"), _signer(2, "Sam Tenant")]
+    original = _lease_pdf()
+    audit = fitz.open(stream=build_signed_pdf(original, signers))[-1]
+    assert any("Inter" in f[3] for f in audit.get_fonts())
+    assert audit.get_images()
+    text = audit.get_text()
+    for t in ("SIGNING RECORD", "Signing record", "Electronic signing record",
+              hashlib.sha256(original).hexdigest(), "Jane Renter", "sam@example.com", "1.2.3.4", "Mozilla/5.0"):
+        assert t in text

@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import hashlib
+from pathlib import Path
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -17,6 +18,10 @@ CONSENT = (
     "Electronic Transactions (Victoria) Act 2000, typed their full name and "
     "drew their signature on formsAI."
 )
+
+
+_ASSETS = Path(__file__).parent / "forms" / "_assets"
+INK, GREY, RULE = (0x1A / 255, 0x1C / 255, 0x1C / 255), (0x5E / 255,) * 3, (0xCF / 255, 0xC4 / 255, 0xC5 / 255)
 
 
 class SigningError(FormsFillError):
@@ -63,6 +68,51 @@ def _date_label_below(page, label):
     return min(below, key=lambda d: d.y0) if below else None
 
 
+def _audit_page(doc, sha256: str, signers: list[dict]) -> None:
+    """Studio Minimalist signing record, matching the lease pages' chrome."""
+
+    page = doc.new_page(width=595, height=842)  # A4
+    for name in ("Regular", "SemiBold"):
+        page.insert_font(fontname=f"Inter-{name}", fontfile=str(_ASSETS / "fonts" / f"Inter-{name}.ttf"))
+    left, right = 54, page.rect.width - 54
+    logo = fitz.Pixmap(str(_ASSETS / "grants-logo-bw.png"))
+    page.insert_image(fitz.Rect(left, 36, left + 24 * logo.width / logo.height, 60), pixmap=logo)
+    page.insert_textbox(fitz.Rect(right - 200, 48, right, 62), "SIGNING RECORD", fontname="Inter-SemiBold",
+                        fontsize=7, color=GREY, align=fitz.TEXT_ALIGN_RIGHT)
+    page.draw_line((left, 66), (right, 66), color=RULE, width=0.5)
+    page.draw_line((left, 800), (right, 800), color=RULE, width=0.5)
+    page.insert_text((left, 812), "Signing record", fontname="Inter-Regular", fontsize=7, color=GREY)
+
+    y = 100
+
+    def write(text, size=9, font="Inter-Regular", color=INK, gap=4):
+        nonlocal y
+        box = fitz.Rect(left, y, right, 790)
+        spare = page.insert_textbox(box, text, fontname=font, fontsize=size, color=color)
+        if spare < 0:
+            raise SigningError("signing record does not fit on one page")
+        y = box.y1 - spare + gap
+
+    def rule():
+        nonlocal y
+        page.draw_line((left, y), (right, y), color=RULE, width=0.5)
+        y += 10
+
+    write("Electronic signing record", size=18, font="Inter-SemiBold", gap=12)
+    write("Document SHA-256 (unsigned lease)", size=7, color=GREY, gap=1)
+    write(sha256, gap=18)
+    for s in signers:
+        rule()
+        write(f"Renter {s['slot']}: {s['name']} <{s['email']}>", size=10, font="Inter-SemiBold", gap=6)
+        for label, value in (("Typed name", s["signed_name"]), ("Signed", _local(s["signed_at"])),
+                             ("IP address", s["ip"]), ("Device", s["user_agent"] or "")):
+            write(label, size=7, color=GREY, gap=1)
+            write(str(value), gap=5)
+        y += 10
+    rule()
+    write(CONSENT, size=8, color=GREY)
+
+
 def missing_boxes(pdf: bytes, slots: list[int]) -> list[int]:
     """Renter slots with no signature box — checked before links go out."""
 
@@ -86,23 +136,5 @@ def build_signed_pdf(original: bytes, signers: list[dict]) -> bytes:
             signed_on = datetime.fromisoformat(s["signed_at"]).astimezone(MELBOURNE)
             page.insert_text((label.x1 + 24, date_label.y1 - 2), f"{signed_on:%d/%m/%Y}", fontsize=10)
 
-    audit = doc.new_page()
-    lines = [
-        "Electronic signing record",
-        "",
-        f"Document SHA-256 (unsigned lease): {hashlib.sha256(original).hexdigest()}",
-        "",
-    ]
-    for s in signers:
-        lines += [
-            f"Renter {s['slot']}: {s['name']} <{s['email']}>",
-            f"  Typed name: {s['signed_name']}",
-            f"  Signed: {_local(s['signed_at'])}",
-            f"  IP address: {s['ip']}",
-            f"  Device: {s['user_agent'] or ''}",
-            "",
-        ]
-    lines.append(CONSENT)
-    audit.insert_textbox(fitz.Rect(54, 54, audit.rect.width - 54, audit.rect.height - 54),
-                         "\n".join(lines), fontsize=9)
+    _audit_page(doc, hashlib.sha256(original).hexdigest(), signers)
     return doc.tobytes(garbage=3, deflate=True)
