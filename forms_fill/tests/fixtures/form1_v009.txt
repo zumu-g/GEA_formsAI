@@ -1,0 +1,258 @@
+# Residential Tenancies Regulations 2021 (S.R. No. 3/2021), Schedule 1, Form 1
+# "Residential rental agreement of no more than 5 years"
+# Source: https://content.legislation.vic.gov.au/sites/default/files/2026-06/21-3sra009-authorised.pdf
+#   Authorised version 009, PDF pages 105-117 (printed pages 101-113). Retrieved 2026-10-30.
+#   Margin note: "Sch. 1 Form 1 amended by S.R. Nos 21/2021 reg. 8, 123/2025 reg. 10."
+#   Text extracted with PyMuPDF (text layer present; no OCR needed). Wording copied verbatim.
+# Rules: one prescribed line per row, in order. "[insert ...]" fill placeholders and tick-box
+#   glyphs are omitted (the lease fills them). Bullet lists are split one bullet per row.
+#   Regulations page furniture (running headers, page numbers, margin notes) excluded.
+#   The source itself numbers items 15 then 17 (there is no item 16) - kept as published.
+# CAV Word Form 1: https://www.consumer.vic.gov.au/library/forms/housing-and-accommodation/renting/form-1-residential-rental-agreement.docx
+#   (Last-Modified 2026-05-07, retrieved 2026-10-30). CAV-DIFF: the CAV Word form is a plain-language
+#   rewrite, not the Regs text - 136 of the 240 lines below are missing from it or out of order (the same
+#   136 as today's lease; see form1_v009_gap.txt). Examples: CAV "The maximum bond is 1 months' rent
+#   (unless the rent is more than $900 per week)"; CAV gives the RTBA email as rtba@dgs.vic.gov.au and
+#   phone as 1300 13 71 64 (Regs: rtba@justice.vic.gov.au, 1300 137 164); CAV item 14 is "Electrical
+#   safety activities" (Regs: "Electrical safety checks"); CAV headings read "Part A - Basic terms".
+#   These lines follow the Regs (the legal instrument), not CAV.
+FORM 1
+Residential Tenancies Act 1997
+(Section 26(1))
+(Regulation 10(1))
+RESIDENTIAL RENTAL AGREEMENT OF NO MORE THAN 5 YEARS
+This agreement is between the residential rental provider (rental provider) and the renter listed on this form.
+Rental providers must use this form for a fixed term residential rental agreement of no more than 5 years or a periodic residential rental agreement in writing.
+PART A—GENERAL
+1. Date of agreement
+This is the date the agreement is signed
+If the agreement is signed by the parties on different days, the date of the agreement is the date the last person signs the agreement.
+2. Premises let by the rental provider
+Address of premises
+3. Rental provider's details
+Full name or company name of rental provider
+Address
+Phone number
+ACN
+Email address
+Rental provider's agent's details
+Full name
+Address
+Phone number
+ACN
+Email address
+Note: The rental provider must notify the renter within 7 days if any of this information changes.
+4. Renter's details
+Each renter that is a party to the agreement must provide their details here.
+Full name of renter
+Current address
+Phone number
+Email address
+5. Length of the agreement (tick one box only)
+Fixed term agreement
+Start date
+(this is the date the agreement starts and you may move in)
+End date
+Periodic agreement (monthly)
+Start date
+Note: If a fixed term agreement ends and the renter and rental provider do not enter into a new fixed term agreement, and the renter continues to occupy the premises, a periodic (e.g. month by month) residential rental agreement will be formed.
+6. Rent
+Rent amount ($)
+(payable in advance)
+To be paid per
+(tick one box only)
+Day rent is to be paid
+(e.g. each Thursday or the 11th of each month)
+week
+fortnight
+calendar month
+Date first rent payment due
+7. Bond
+The renter has been asked to pay the bond specified below.
+Unless the rent is greater than $900 (per week), the maximum bond is one month's rent.
+In some cases, the rental provider may ask the Victorian Civil and Administrative Tribunal (VCAT) to increase this limit.
+The rental provider or their agent must lodge the bond with the Residential Tenancies Bond Authority (RTBA).
+The bond must be lodged within 10 business days after receiving payment.
+The RTBA will send the renter a receipt for the bond.
+If the renter does not receive a receipt within 15 business days from when they paid the bond, they may—
+email the RTBA at rtba@justice.vic.gov.au; or
+call the RTBA on 1300 137 164.
+Bond amount ($)
+Date bond payment due
+PART B—STANDARD TERMS
+8. Rental provider's preferred methods of payment
+Note: The rental provider must permit a fee-free (other than the renter's own bank fees) payment method and must allow the renter to use Centrepay or another form of electronic funds transfer.
+Note: The renter is entitled to receive a receipt from the rental provider confirming payment of rent.
+(rental provider to tick available methods of rent payment)
+direct debit
+bank deposit
+cash
+cheque
+money order
+BPAY
+other electronic form of payment, including Centrepay
+Payment details
+9. Service of notices and other documents by electronic methods
+Electronic service of documents must be in accordance with the requirements of the Electronic Transactions (Victoria) Act 2000.
+Just because someone responds to an email or other electronic communications does not mean they have consented to the service of notices and other documents by electronic methods.
+The rental provider and renter must notify the other party in writing if they no longer wish to receive notices or other documents by electronic methods.
+The rental provider and renter must immediately notify the other party in writing if their contact details change.
+9.1 Does the rental provider agree to the service of notices and other documents by electronic methods such as email?
+The rental provider must complete this section before giving the agreement to the renter.
+(rental provider to tick as appropriate)
+9.2 Does the renter agree to the service of notices and other documents by electronic methods such as email?
+(renter to tick as appropriate)
+(The option to consent should be provided to each renter who is a party to the agreement)
+10. Urgent repairs
+The rental provider must ensure that the rental property is provided and maintained in good repair.
+If there is a need for an urgent repair, the renter should notify the rental provider in writing.
+For further information on seeking repairs see Part D (below).
+Details of person the renter should contact for an urgent repair
+(rental provider to insert details)
+Emergency contact name
+Emergency contact phone number
+Emergency contact email address
+11. Professional cleaning
+The rental provider must not require the renter to arrange professional cleaning or cleaning to a professional standard at the end of the tenancy unless—
+professional cleaning or cleaning to a professional standard was carried out to the rented premises immediately before the start of the tenancy and the renter was advised that professional cleaning or cleaning to a professional standard had been carried out to those premises immediately before the start of the tenancy; or
+professional cleaning or cleaning to a professional standard is required to restore the rented premises to the same condition they were in immediately before the start of the tenancy, having regard to the condition report and taking into account fair wear and tear.
+The renter must have all or part of the rented premises professionally cleaned, or pay the cost of having all or part of the rented premises professional cleaned, if professional cleaning becomes required to restore the premises to the condition they were in immediately before the start of the tenancy, having regard to the condition report and taking into account fair wear and tear.
+12. Owners corporation
+Do owners corporation rules apply to the premises?
+(rental provider to tick as appropriate)
+If yes, the rental provider must attach a copy of the rules to this agreement.
+13. Condition report
+The renter must be given 2 copies of the condition report (or one emailed copy) on or before the date the renter moves into the rented premises.
+(rental provider to tick as appropriate)
+The condition report has been provided.
+The condition report will be provided to the renter on or before the date the agreement starts.
+PART C—SAFETY-RELATED ACTIVITIES
+14. Electrical safety checks
+(a) The rental provider must ensure an electrical safety check of all electrical installations, appliances and fittings provided by a rental provider in the rented premises is conducted every 2 years by a licensed or registered electrician and must provide the renter with the date of the most recent safety check, in writing, on request of the renter.
+(b) If an electrical safety check of the rented premises has not been conducted within the last 2 years at the time the renter occupies the premises, the rental provider must arrange an electrical safety check as soon as practicable.
+15. Gas safety activities
+This safety-related activity only applies if the rented premises contains any appliances, fixtures or fittings which use or supply gas.
+(a) The rental provider must ensure that a gas safety check of all gas installations and fittings in the rented premises is conducted every 2 years by a licensed or registered gasfitter and must provide the renter with the date of the most recent safety check, in writing, on request of the renter.
+(b) If a gas safety check has not been conducted within the last 2 years at the time the renter occupies the premises, the rental provider must arrange a gas safety check as soon as practicable.
+17. Swimming pool barrier safety activities
+These safety-related activities only apply if the rented premises contains a swimming pool.
+(a) The rental provider must ensure that the swimming pool barrier is maintained in good repair.
+(b) The renter must give written notice to the rental provider as soon as practicable after becoming aware that the swimming pool barrier is not in working order.
+(c) The rental provider must arrange for a swimming pool barrier to be immediately repaired or replaced as an urgent repair if they are notified by the renter that it is not in working order.
+(d) The rental provider must provide the renter with a copy of the most recent certificate of swimming pool barrier compliance issued under the Building Act 1993 on the request of the renter.
+18. Relocatable swimming pool safety activities
+These safety-related activities only apply if a relocatable swimming pool is erected, or is intended to be erected, on the rented premises.
+(a) The renter must not erect a relocatable swimming pool without giving written notice to the rental provider before erecting the pool.
+(b) The renter must obtain any necessary approvals before erecting a relocatable swimming pool.
+Note: Regulations made under Building Act 1993 apply to any person erecting a relocatable swimming pool.
+This safety-related activity only applies to swimming pools or spas that hold water deeper than 300 mm.
+19. Bushfire prone area activities
+This safety-related activity only applies if the rented premises is in a bushfire prone area and is required to have a water tank for bushfire safety.
+If the rented premises is in a designated bushfire prone area under section 192A of the Building Act 1993 and a water tank is required for firefighting purposes, the rental provider must ensure the water tank and any connected infrastructure is maintained in good repair as required.
+The water tank must be full and clean at the commencement of the agreement.
+PART D—RIGHTS AND OBLIGATIONS
+This is a summary of selected rights and obligations of renters and rental providers under the Act.
+Any reference to VCAT refers to the Victorian Civil and Administrative Tribunal.
+For more information, visit consumer.vic.gov.au/renting.
+20. Use of the premises
+The renter—
+is entitled to quiet enjoyment of the premises. The rental provider may only enter the premises in accordance with the Act; and
+must not use the premises for illegal purposes; and
+must not cause a nuisance or interfere with the reasonable peace, comfort or privacy of neighbours; and
+must avoid damaging the premises and common areas. Common areas include hallways, driveways, gardens and stairwells. Where damage occurs, the renter must notify the rental provider in writing; and
+must keep the premises reasonably clean.
+21. Condition of the premises
+The rental provider—
+must ensure that the premises comply with the rental minimum standards, and is vacant and reasonably clean when the renter moves in; and
+must maintain the premises in good repair and in a fit condition for occupation; and
+agrees to do all the safety-related maintenance and repair activities set out in Part C of the Agreement.
+The renter must follow all safety-related activities set out in Part C of the agreement and not remove, deactivate or otherwise interfere with the operation of prescribed safety devices on the premises.
+22. Modifications
+The renter—
+may make some modifications without seeking the rental provider's consent. These modifications are listed on the Consumer Affairs Victoria website; and
+must seek the rental provider's consent before installing any other fixtures or additions; and
+may apply to VCAT if they believe that the rental provider has unreasonably refused consent for a modification mentioned in the Act; and
+at the end of the agreement, must restore the premises to the condition it was in before they moved in (excluding fair wear and tear). This includes removing all modifications, unless the parties agree they do not need to be removed.
+The rental provider must not unreasonably refuse consent for certain modifications.
+A list of the modifications that the rental provider cannot unreasonably refuse consent for is available on the Consumer Affairs Victoria website consumer.vic.gov.au/renting.
+23. Locks
+The rental provider must ensure the premises—
+has locks to secure all windows capable of having a lock; and
+has deadlocks (a deadlock is a deadlatch with at least one cylinder) for external doors that are able to be secured with a functioning deadlock; and
+meets the rental minimum standards for locks and window locks.
+External doors which are not able to be secured with a functioning deadlock must at least be fitted with a locking device that—
+is operated by a key from the outside; and
+may be unlocked from the inside with or without a key.
+The renter must obtain consent from the rental provider to change a lock in the master key system.
+The rental provider must not unreasonably refuse consent for a renter seeking to change a lock in the master key system.
+The rental provider must not give a key to a person excluded from the premises under—
+a family violence intervention order; or
+a family violence safety notice; or
+a recognised non-local DVO; or
+a personal safety intervention order.
+24. Repairs
+Only a suitably qualified person may do repairs—both urgent and non-urgent.
+25. Urgent repairs
+Section 3(1) of the Act defines urgent repairs. Refer to the Consumer Affairs Victoria website for the full list of urgent repairs and for more information, visit consumer.vic.gov.au/urgentrepairs.
+Urgent repairs include failure or breakdown of any essential service or appliance provided for hot water, cooking, heating or laundering supplied by the rental provider.
+The rental provider must carry out urgent repairs after being notified.
+A renter may arrange for urgent repairs to be done if the renter has taken reasonable steps to arrange for the rental provider to immediately do the repairs and the rental provider has not carried out the repairs.
+If the renter has arranged for urgent repairs, the renter may be reimbursed directly by the rental provider for the reasonable cost of repairs up to $2500.
+The renter may apply to VCAT for an order requiring the rental provider to carry out urgent repairs if—
+(a) the renter cannot meet the cost of the repairs; or
+(b) the cost of repairs is more than $2500; or
+(c) the rental provider refuses to pay the cost of repairs if it is carried out by the renter.
+26. Non-urgent repairs
+The renter must notify the rental provider, in writing, as soon as practicable of—
+damage to the premises; and
+a breakdown of facilities, fixtures, furniture or equipment supplied by the rental provider.
+The rental provider must carry out non-urgent repairs in a reasonable time.
+The renter may apply to VCAT for an order requiring the rental provider to do the repairs if the rental provider has not carried out the repairs within 14 days of receiving notice of the need for repair.
+27. Assignment or sub-letting
+The renter must not assign (transfer to another person) or sub-let the whole or any part of the premises without the written consent of the rental provider.
+The rental provider may give the renter notice to vacate if the renter assigns or sub-lets the premises without consent.
+The rental provider—
+cannot unreasonably withhold consent to assign or sub-let the premises; and
+must not demand or receive a fee or payment for consent, other than any reasonable expenses incurred by the assignment.
+28. Rent
+The rental provider must give the renter at least 90 days written notice of a proposed rent increase.
+The rent cannot be increased more than once every 12 months.
+The rental provider must not increase the rent under a fixed term agreement unless the agreement provides for an increase by specifying the amount of increase or the method of calculating the rent increase.
+29. Access and entry
+The rental provider may enter the premises—
+at any time, if the renter has agreed within the last 7 days; and
+to do an inspection, but not more than once every 6 months; and
+to comply with the rental provider's duties under the Act; and
+to show the premises or conduct an open inspection to sell, rent or value the premises; and
+to take images or video for advertising a property that is for sale or rent; and
+if they believe the renter has failed to follow their duties under the Act; and
+to do a pre-termination inspection where the renter has applied to have the agreement terminated because of family violence or personal violence.
+The renter must allow entry to the premises where the rental provider has followed proper procedure.
+The renter is entitled to a set amount of compensation for each sales inspection.
+30. Pets
+The renter must seek consent from the rental provider before keeping a pet on the premises.
+The rental provider must not unreasonably refuse a request to keep a pet.
+30A. Smoke alarms
+(a) A residential rental provider must ensure that any smoke alarm installed in rented premises is—
+(i) correctly installed and in working condition; and
+(ii) fitted with batteries or replacement batteries; and
+(iii) tested at least once every 12 months in accordance with any instructions by the manufacturer of the smoke alarm.
+(b) If a smoke alarm installed in the rented premises does not meet the requirements set out in paragraph (a), the renter may issue a request to the residential rental provider for urgent repairs to the smoke alarm in accordance with section 72AA of the Act.
+(c) On receiving notice from the renter under paragraph (b), the residential rental provider or the provider's agent must immediately arrange for the repairs to be carried out.
+(d) Any testing, repair or replacement of a smoke alarm that is powered by a mains electricity supply must be undertaken by a suitably qualified person.
+PART E—ADDITIONAL TERMS
+31. Additional terms (if any)
+List any additional terms to this agreement. The terms listed must not exclude, restrict or modify any of the rights and duties included in the Act.
+Additional terms must also comply with the Australian Consumer Law (Victoria). For example, they cannot be unfair terms, which will have no effect.
+Contact Consumer Affairs Victoria on 1300 558 181 for further information or visit consumer.vic.gov.au/products-and-services/business-practices/contracts/unfair-contract-terms.
+Note: If you need extra space, attach a separate sheet. Both the rental provider and renter should sign and date all attachments.
+32. Signatures
+This agreement is made under the Act.
+Before signing you must read Part D—Rights and Obligations in this form which outlines your rights and obligations.
+Rental provider
+Signature
+Dated
+Renter
+Signature
+Dated
+Note: Each renter who is a party to the agreement must sign and date here. If there are more than 4 renters, include details on an extra page.
