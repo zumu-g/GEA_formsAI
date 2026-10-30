@@ -84,3 +84,13 @@ def test_render_dispatches_html_engine(tmp_path):
     assert pdf_path == tmp_path / "fake_html.pdf"
     assert "Jo" in fitz.open(pdf_path)[0].get_text()
     assert warnings == []
+
+
+def test_punctuation_extracts_as_plain_text(tmp_path):
+    # Inter's contextual alternates (case-sensitive parens, dashes) extract as
+    # private-use codepoints, which would break text checks and signing anchors.
+    out = render_html.render_html_pdf(
+        "<p>(Section 26(1)) 2026-08-01 Rent ($)</p>", tmp_path / "p.pdf",
+        title="T", footer_left="F", cover=False,
+    )
+    assert "(Section 26(1)) 2026-08-01 Rent ($)" in fitz.open(out)[0].get_text()

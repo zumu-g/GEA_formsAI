@@ -21,6 +21,8 @@ from .errors import RenderError
 ASSETS = Path(__file__).parent / "forms" / "_assets"
 FONTS = ASSETS / "fonts"
 LOGO = ASSETS / "grants-logo-bw.png"
+# Inter TTFs are vendored with GSUB features stripped (pyftsubset --layout-features=kern):
+# Story applies contextual alternates whose glyphs extract as private-use codepoints.
 FONT_FILES = {
     400: "Inter-Regular.ttf",
     500: "Inter-Medium.ttf",
@@ -36,7 +38,7 @@ PAGE = fitz.paper_rect("a4")  # 595 x 842 pt
 BODY = fitz.Rect(20 * MM, 30 * MM, PAGE.width - 20 * MM, PAGE.height - 22 * MM)
 
 _BASE_CSS = "".join(
-    f"@font-face {{font-family: Inter; src: url({name}); font-weight: {weight};}}"
+    f"@font-face {{font-family: Inter; src: url(fonts/{name}); font-weight: {weight};}}"
     for weight, name in FONT_FILES.items()
 ) + (
     "* {font-family: Inter;}"
@@ -76,7 +78,7 @@ def render_html_pdf(
 
     buf = io.BytesIO()
     writer = fitz.DocumentWriter(buf)
-    story = fitz.Story(html=html, user_css=_BASE_CSS, archive=fitz.Archive(str(FONTS)))
+    story = fitz.Story(html=html, user_css=_BASE_CSS, archive=fitz.Archive(str(ASSETS)))
     more = True
     while more:
         device = writer.begin_page(PAGE)
