@@ -17,7 +17,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 
 
 class _Strict(BaseModel):
@@ -171,6 +171,9 @@ class FillResult(_Strict):
     blank_fields: list[str] = Field(default_factory=list)
     # Non-fatal notes (e.g. "PDF skipped — LibreOffice unavailable").
     warnings: list[str] = Field(default_factory=list)
+    # Resolved render context, for in-process callers (lease signing facts).
+    # Private: never serialised, so the wire contract is unchanged.
+    _context: dict = PrivateAttr(default_factory=dict)
 
 
 def build_request(

@@ -45,7 +45,7 @@ def fill_form(
         # provider data-quality flag (e.g. >1 active tenancy) — the PM must see it
         warnings = [*warnings, bundle.meta.note]
 
-    return FillResult(
+    result = FillResult(
         ok=True,
         form=request.form,
         files=FillFiles(
@@ -56,3 +56,5 @@ def fill_form(
         blank_fields=blank_fields,
         warnings=warnings,
     )
+    result._context = context
+    return result

@@ -29,7 +29,7 @@ from fastapi import FastAPI, Header, HTTPException
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
-from . import accounts
+from . import accounts, leases
 from .core import fill_form
 from .registry import form_catalogue
 from .errors import (
@@ -76,6 +76,7 @@ def _fail_closed() -> None:
             "for local dev set PUBLIC_BASE_URL=http://localhost:8080)"
         )
     accounts.init_db()
+    leases.init()
 
 
 def _bearer(authorization: str) -> str:
@@ -535,6 +536,11 @@ def fill(payload: dict[str, Any], authorization: str = Header(default="")) -> An
     _require_auth(authorization)
     request_id = uuid.uuid4().hex
     out_dir = OUTPUT_ROOT / request_id
+    # The ingoing engine's move-in reference — not a form input, so it never
+    # reaches FillRequest (extra="forbid").
+    idem_key = payload.pop("idem_key", None)
+    if idem_key is not None and (not isinstance(idem_key, str) or not 0 < len(idem_key) <= 200):
+        return _err(400, "invalid_request", "idem_key must be a non-empty string (max 200)")
     try:
         request = build_request(json_payload=payload, out_dir=str(out_dir))
         result = fill_form(request)
@@ -552,6 +558,8 @@ def fill(payload: dict[str, Any], authorization: str = Header(default="")) -> An
         return _err(500, "template_error", str(exc))
 
     base = (os.environ.get("PUBLIC_BASE_URL") or "").rstrip("/")
+    if result.form == leases.LEASE_FORM:
+        leases.save(request_id, idem_key, result._context)
     body = result.model_dump()
     body["request_id"] = request_id
     # engine contract: files.* are absolute, token-protected URLs
