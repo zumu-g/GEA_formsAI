@@ -140,9 +140,18 @@ def test_merged_cell_ops_append_rather_than_overwrite(tmp_path):
     residential rental agreements)."""
     import docx
 
-    from forms_fill.forms.residential_rental_agreement.spec import SPEC
+    from forms_fill.formspec import FormSpec, TextOp
     from forms_fill.render import _apply_text_ops
 
+    # The old Word Form 1 (kept until U5) has the merged cell; the lease itself is html now.
+    template = Path(__file__).parents[1] / "forms_fill/forms/residential_rental_agreement/template.docx"
+    SPEC = FormSpec(
+        key="merged", template=template, declared_fields=(), checkbox_ops=(), build_context=lambda b, f: {},
+        text_ops=(
+            TextOp("provider_name", table_index=3, row_index=0, cell_index=1),
+            TextOp("provider_company_name", table_index=3, row_index=1, cell_index=1),
+        ),
+    )
     document = docx.Document(str(SPEC.template))
     ctx = {"provider_name": "Owner Person", "provider_company_name": "Owner Co Pty Ltd"}
     _apply_text_ops(SPEC, document, ctx)

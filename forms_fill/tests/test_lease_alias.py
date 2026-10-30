@@ -7,7 +7,6 @@ standard result contract.
 
 import json
 
-import docx
 
 from forms_fill.core import fill_form
 from forms_fill.models import FillRequest, TenancyBundle
@@ -39,14 +38,11 @@ def _lease_fields() -> dict:
     }
 
 
-def _all_text(path) -> str:
-    document = docx.Document(str(path))
-    return " ".join(
-        cell.text
-        for table in document.tables
-        for row in table.rows
-        for cell in row.cells
-    )
+def _pdf_text(path) -> str:
+    import fitz
+
+    with fitz.open(str(path)) as doc:
+        return " ".join(page.get_text() for page in doc)
 
 
 def test_lease_resolves_to_rental_agreement_spec():
@@ -65,7 +61,7 @@ def test_lease_full_payload_fills(tmp_path):
     result = fill_form(req, provider=FixtureProvider())
     assert result.ok
     assert result.form == "lease"
-    assert result.files.docx is not None
+    assert result.files.docx is None and result.files.pdf is not None
     assert "renter1_name" in result.filled_fields
     assert "rent_amount" in result.filled_fields
     # nothing this payload supplies is reported blank
@@ -98,7 +94,7 @@ def test_lease_dates_pass_through_verbatim(tmp_path):
         out_dir=str(tmp_path),
     )
     result = fill_form(req, provider=FixtureProvider())
-    text = _all_text(result.files.docx)
+    text = _pdf_text(result.files.pdf)
     assert "15/08/2026" in text
     assert "14/08/2027" in text
     assert "01/08/2026" in text

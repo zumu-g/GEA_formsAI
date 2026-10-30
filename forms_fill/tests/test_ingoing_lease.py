@@ -164,10 +164,12 @@ def _lease_pdf():
 
 @pytest.fixture()
 def lease(client):
-    """A filled lease with a PDF on disk (render skipped for speed)."""
+    """A filled lease whose rendered PDF is swapped for a minimal one (U4 uses a real render)."""
 
     request_id = _fill_lease(client, idem_key="OAK12:ingoing")
     leases.update(request_id, facts=json.dumps({**FACTS, **TENANTS}))
+    for rendered in (OUTPUT_ROOT / request_id).glob("*.pdf"):
+        rendered.unlink()
     (OUTPUT_ROOT / request_id / "lease.pdf").write_bytes(_lease_pdf())
     yield request_id
     shutil.rmtree(OUTPUT_ROOT / request_id, ignore_errors=True)
