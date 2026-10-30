@@ -80,6 +80,44 @@ def test_files_require_bearer_token(client, caller_fields):
     assert client.get(url, headers=AUTH).status_code == 200
 
 
+# 30 Oct 2026: staff clicked files.* from GEA LLM and got 401 — those links need the
+# machine token. review_url is a signed, expiring link a person can open in a browser.
+
+
+def test_review_url_opens_the_draft_without_a_token(client, caller_fields):
+    body = _fill(client, caller_fields, pdf=False).json()
+    url = body["review_url"]
+    assert url.startswith(body["files"]["docx"] + "?")
+    resp = client.get(url)
+    assert resp.status_code == 200 and len(resp.content) > 0
+
+
+@pytest.mark.parametrize("tamper", ["sig", "exp", "file"])
+def test_tampered_review_url_is_refused(client, caller_fields, tamper):
+    from urllib.parse import parse_qs, urlsplit
+
+    body = _fill(client, caller_fields, pdf=False).json()
+    parts = urlsplit(body["review_url"])
+    q = {k: v[0] for k, v in parse_qs(parts.query).items()}
+    path = parts.path
+    if tamper == "sig":
+        q["sig"] = "0" * len(q["sig"])
+    elif tamper == "exp":
+        q["exp"] = str(int(q["exp"]) + 86400)  # extending the expiry breaks the signature
+    else:
+        other = _fill(client, caller_fields, pdf=False).json()["request_id"]
+        path = path.replace(body["request_id"], other)  # a valid signature for another file
+    assert client.get(f"{path}?exp={q['exp']}&sig={q['sig']}").status_code == 401
+
+
+def test_expired_review_url_is_refused(client, caller_fields, monkeypatch):
+    from forms_fill import api
+
+    body = _fill(client, caller_fields, pdf=False).json()
+    monkeypatch.setattr(api.time, "time", lambda: 10**11)  # far past the 7-day expiry
+    assert client.get(body["review_url"]).status_code == 401
+
+
 def test_post_fill_returns_contract_shape(client, caller_fields):
     resp = _fill(client, caller_fields)
     assert resp.status_code == 200, resp.text

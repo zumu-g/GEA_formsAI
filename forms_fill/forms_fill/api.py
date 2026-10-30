@@ -19,8 +19,10 @@ Error responses use the engine's machine codes:
 
 from __future__ import annotations
 
+import hashlib
 import hmac
 import os
+import time
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -812,6 +814,9 @@ def fill(payload: dict[str, Any], authorization: str = Header(default="")) -> An
         "pdf": f"{base}/files/{request_id}/pdf" if result.files.pdf else None,
         "docx": f"{base}/files/{request_id}/docx" if result.files.docx else None,
     }
+    # files.* need the machine token; a person clicking a link from GEA LLM needs this one
+    kind = "pdf" if result.files.pdf else "docx"
+    body["review_url"] = f"{base}{_review_path(request_id, kind)}"
     return body
 
 
@@ -920,11 +925,36 @@ def get_pps_public(public_id: str) -> FileResponse:
     return FileResponse(str(matches[0]), media_type="application/pdf")
 
 
+REVIEW_LINK_DAYS = 7
+
+
+def _review_sig(request_id: str, kind: str, exp: int) -> str:
+    # key derived from the API token: no new secret; rotating the token kills every link
+    key = hmac.new(os.environ.get("FORMS_API_TOKEN", "").encode(), b"review-link-v1", hashlib.sha256).digest()
+    return hmac.new(key, f"{request_id}/{kind}:{exp}".encode(), hashlib.sha256).hexdigest()
+
+
+def _review_path(request_id: str, kind: str) -> str:
+    exp = int(time.time()) + REVIEW_LINK_DAYS * 86400
+    return f"/files/{request_id}/{kind}?exp={exp}&sig={_review_sig(request_id, kind, exp)}"
+
+
+def _valid_review_link(request_id: str, kind: str, exp: str, sig: str) -> bool:
+    if not (exp.isdigit() and sig) or int(exp) < time.time():
+        return False
+    return hmac.compare_digest(sig, _review_sig(request_id, kind, int(exp)))
+
+
 @app.get("/files/{request_id}/{kind}")
 def get_file(
-    request_id: str, kind: str, authorization: str = Header(default="")
+    request_id: str,
+    kind: str,
+    authorization: str = Header(default=""),
+    exp: str = "",
+    sig: str = "",
 ) -> FileResponse:
-    _require_auth(authorization)
+    if not _valid_review_link(request_id, kind, exp, sig):
+        _require_auth(authorization)
     if kind not in ("pdf", "docx", "signed"):
         raise HTTPException(
             status_code=400,
