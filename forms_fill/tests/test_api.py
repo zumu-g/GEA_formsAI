@@ -346,3 +346,21 @@ def test_tenancy_preview_provider_value_error_returns_400(client, monkeypatch):
     resp = client.get("/tenancy/preview?tenancy_id=T-1", headers=AUTH)
     assert resp.status_code == 400
     assert resp.json()["error"] == "invalid_request"
+
+
+def test_post_fill_lease_keeps_contract_keys_docx_may_be_null(client):
+    from tests.test_lease_alias import _lease_fields
+
+    resp = client.post(
+        "/fill",
+        json={"form": "lease", "identifiers": {"lot_id": "L-2002"}, "fields": _lease_fields()},
+        headers=AUTH,
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    for key in ("ok", "form", "contract", "files", "filled_fields", "blank_fields", "warnings", "request_id"):
+        assert key in body
+    assert set(body["files"]) == {"pdf", "docx"}
+    assert body["files"]["pdf"].startswith("http://testserver/files/")
+    # The html lease engine is PDF-only: files.docx is null, never absent.
+    assert body["files"]["docx"] is None or body["files"]["docx"].startswith("http://testserver/files/")

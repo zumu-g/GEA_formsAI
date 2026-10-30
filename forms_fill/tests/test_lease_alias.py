@@ -7,7 +7,7 @@ standard result contract.
 
 import json
 
-import docx
+import fitz
 
 from forms_fill.core import fill_form
 from forms_fill.models import FillRequest, TenancyBundle
@@ -39,14 +39,10 @@ def _lease_fields() -> dict:
     }
 
 
-def _all_text(path) -> str:
-    document = docx.Document(str(path))
-    return " ".join(
-        cell.text
-        for table in document.tables
-        for row in table.rows
-        for cell in row.cells
-    )
+def _pdf_text(path) -> str:
+    # Engine-neutral: both the DOCX and the html engine deliver files.pdf.
+    with fitz.open(path) as doc:
+        return " ".join(page.get_text() for page in doc)
 
 
 def test_lease_resolves_to_rental_agreement_spec():
@@ -65,7 +61,7 @@ def test_lease_full_payload_fills(tmp_path):
     result = fill_form(req, provider=FixtureProvider())
     assert result.ok
     assert result.form == "lease"
-    assert result.files.docx is not None
+    assert result.files.pdf is not None
     assert "renter1_name" in result.filled_fields
     assert "rent_amount" in result.filled_fields
     # nothing this payload supplies is reported blank
@@ -98,7 +94,11 @@ def test_lease_dates_pass_through_verbatim(tmp_path):
         out_dir=str(tmp_path),
     )
     result = fill_form(req, provider=FixtureProvider())
-    text = _all_text(result.files.docx)
+    ctx = result._context
+    assert ctx["fixed_start_date"] == "15/08/2026"
+    assert ctx["fixed_end_date"] == "14/08/2027"
+    assert ctx["agreement_date"] == "01/08/2026"
+    text = _pdf_text(result.files.pdf)
     assert "15/08/2026" in text
     assert "14/08/2027" in text
     assert "01/08/2026" in text

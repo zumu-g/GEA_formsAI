@@ -90,11 +90,12 @@ def test_form1_end_date_before_start_date_not_validated_by_spec(sample_bundle_di
     assert ctx["fixed_end_date"] == "2026-01-01"
 
 
-def test_form1_fill_renders_docx(tmp_path, sample_bundle_dict):
+def test_form1_fill_renders_pdf(tmp_path, sample_bundle_dict):
+    # Engine-neutral: the lease is judged by its PDF, never its DOCX.
     fields = dict(_base_fields(), term_type="fixed")
     ctx = form1_context(_bundle(sample_bundle_dict), fields)
-    docx_path, _, _ = render(FORM1_SPEC, ctx, tmp_path)
-    assert docx_path.exists()
+    _, pdf_path, _ = render(FORM1_SPEC, ctx, tmp_path)
+    assert pdf_path is not None and pdf_path.exists()
 
 
 # ── U5: agent + lease auto-fill ─────────────────────────────────────────────

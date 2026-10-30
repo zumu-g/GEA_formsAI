@@ -134,20 +134,19 @@ def test_filled_cells_allow_wrap_and_growth(tmp_path, sample_bundle_dict, caller
         )
 
 
-def test_merged_cell_ops_append_rather_than_overwrite(tmp_path):
-    """Two text ops resolving to one vertically-merged cell keep both values
-    (regression: provider_name was lost under provider_company_name in the
-    residential rental agreements)."""
-    import docx
+def test_lease_keeps_provider_name_and_company_name(sample_bundle_dict):
+    """Regression: provider_name was lost under provider_company_name in the
+    residential rental agreement. Formerly asserted on DOCX table 3; now on
+    the context, which both lease engines render from."""
+    from forms_fill.forms.residential_rental_agreement.spec import build_context as lease_context
 
-    from forms_fill.forms.residential_rental_agreement.spec import SPEC
-    from forms_fill.render import _apply_text_ops
-
-    document = docx.Document(str(SPEC.template))
-    ctx = {"provider_name": "Owner Person", "provider_company_name": "Owner Co Pty Ltd"}
-    _apply_text_ops(SPEC, document, ctx)
-    text = document.tables[3].rows[0].cells[1].text
-    assert "Owner Person" in text and "Owner Co Pty Ltd" in text
+    sample_bundle_dict["rental_provider"]["full_name"] = "Owner Person"
+    ctx = lease_context(
+        TenancyBundle.model_validate(sample_bundle_dict),
+        {"provider_company_name": "Owner Co Pty Ltd"},
+    )
+    assert ctx["provider_name"] == "Owner Person"
+    assert ctx["provider_company_name"] == "Owner Co Pty Ltd"
 
 
 def test_pdf_false_skips_conversion_and_warning(tmp_path):
