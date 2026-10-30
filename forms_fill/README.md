@@ -127,7 +127,8 @@ The engine contract the rent-review system is built against.
 - **File delivery:** `files.pdf` / `files.docx` are **absolute, token-protected
   URLs** built from `PUBLIC_BASE_URL` — fetch with the same bearer token.
   Files live on the instance's disk (ephemeral across redeploys) — callers
-  should fetch promptly after the fill.
+  should fetch promptly after the fill. The lease (`residential_rental_agreement`,
+  alias `lease`) is PDF-only: `files.docx` is `null` for it.
 - **Error codes** (`{"ok":false,"error":<code>,"message":...}`):
   `unauthorized` (401), `invalid_request` (400), `no_current_tenancy` (404),
   `fetch_failed` (502 upstream / 500 provider config), `template_error` (500).
@@ -348,6 +349,12 @@ skipped entirely. Overlay forms (`engine: pdf_overlay`) are always fast
 
 Leases are signed in formsAI itself. They don't go through Annature, and
 `/esign/send` refuses them. Other forms can still use Annature's `/esign/send`.
+
+The lease is delivered as a PDF only: a GEA-designed document using the CAV
+Form 1 (v009) wording, laid out in the Studio Minimalist style. `files.docx`
+is `null` for the lease; read `files.pdf`. The rest of the `/fill` contract
+(`ok`, `form`, `contract`, `filled_fields`, `blank_fields`, `warnings`,
+`request_id`) is unchanged.
 
 1. **Draft:** the Ingoing workflow calls `POST /fill` for `residential_rental_agreement`
    with an optional top-level `"idem_key": "OAK12:ingoing"`. The lease is stored as a draft.
