@@ -157,7 +157,7 @@ def test_pdf_false_skips_conversion_and_warning(tmp_path):
     result = fill_form(
         FillRequest(
             form="general_notice",
-            identifiers={"lot_id": "mp_xyz789", "tenancy_id": "lease_abc123"},
+            identifiers={"lot_id": "L-2002", "tenancy_id": "T-1001"},
             fields={"reason_for_notice": "s55 test"},
             out_dir=str(tmp_path),
             provider="fixture",
