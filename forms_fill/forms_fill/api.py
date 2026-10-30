@@ -26,6 +26,7 @@ import time
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
+from urllib.parse import urlsplit
 from typing import Any
 
 from fastapi import BackgroundTasks, FastAPI, Header, HTTPException, Request
@@ -77,6 +78,13 @@ def _fail_closed() -> None:
         raise RuntimeError(
             f"refusing to start: {', '.join(missing)} not set (fail-closed; "
             "for local dev set PUBLIC_BASE_URL=http://localhost:8080)"
+        )
+    host = (urlsplit(os.environ["PUBLIC_BASE_URL"]).hostname or "").lower()
+    if host not in ("localhost", "127.0.0.1", "testserver") and not os.environ.get("FORMS_DATA_PROVIDER"):
+        # an unset provider silently meant fixture (sample) data for real tenancies
+        raise RuntimeError(
+            "refusing to start: FORMS_DATA_PROVIDER not set on a shared server "
+            "(propertyme, gea_crm, vaultre — or fixture explicitly for a demo)"
         )
     accounts.init_db()
     leases.init()

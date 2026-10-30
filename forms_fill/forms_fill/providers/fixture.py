@@ -28,6 +28,15 @@ class FixtureProvider(PropertyDataProvider):
         if not self.path.exists():
             raise TenancyNotFoundError(f"fixture not found: {self.path}")
         data = json.loads(self.path.read_text(encoding="utf-8"))
+        # Never make up data: a real tenancy/lot id must not get the sample's
+        # landlord and premises (30 Oct 2026). Only the fixture's own ids resolve.
+        own = data.get("meta", {})
+        for key in ("tenancy_id", "lot_id"):
+            if key in identifiers and str(identifiers[key]) != str(own.get(key)):
+                raise TenancyNotFoundError(
+                    f"fixture data has no {key} {identifiers[key]!r} — set "
+                    "FORMS_DATA_PROVIDER to a real source (propertyme, gea_crm)"
+                )
         # Echo identifiers into meta so callers see what was requested.
         meta = data.setdefault("meta", {})
         meta.setdefault("source", "fixture")

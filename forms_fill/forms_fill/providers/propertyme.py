@@ -71,6 +71,9 @@ class PropertyMeProvider(PropertyDataProvider):
         api_base: str | None = None,
         token_url: str | None = None,
     ) -> None:
+        # Read-only mode: borrow the gea-mcp gateway's current access token. The
+        # gateway is the only writer of that login; refreshing here could break it.
+        self.access_token_file = os.environ.get("PME_ACCESS_TOKEN_FILE")
         self.client_id = client_id or os.environ.get("PME_CLIENT_ID")
         self.client_secret = client_secret or os.environ.get("PME_CLIENT_SECRET")
         self.token_file = token_file or os.environ.get("PME_TOKEN_FILE")
@@ -82,7 +85,7 @@ class PropertyMeProvider(PropertyDataProvider):
                 )
             except (OSError, ValueError) as exc:
                 raise ProviderConfigError(f"PME_TOKEN_FILE unreadable: {exc}") from exc
-        if not (self.client_id and self.client_secret and self.refresh_token):
+        if not self.access_token_file and not (self.client_id and self.client_secret and self.refresh_token):
             raise ProviderConfigError(
                 "propertyme provider needs PME_CLIENT_ID, PME_CLIENT_SECRET and a "
                 "refresh token (PME_REFRESH_TOKEN or PME_TOKEN_FILE)"
@@ -144,7 +147,21 @@ class PropertyMeProvider(PropertyDataProvider):
                     # ponytail: best-effort persist; env-supplied tokens can't be written back
                     pass
 
+    def _borrowed_token(self) -> str:
+        try:
+            tok = json.loads(Path(self.access_token_file).read_text())
+        except (OSError, ValueError) as exc:
+            raise ProviderConfigError(f"PME_ACCESS_TOKEN_FILE unreadable: {exc}") from exc
+        if not tok.get("access_token") or tok.get("expires_at", 0) / 1000 <= time.time():
+            raise ProviderConfigError(
+                "PropertyMe login token has expired; GEA LLM's gateway renews it, "
+                "so try again in a minute (if it persists, run gea-mcp-propertyme-login)"
+            )
+        return tok["access_token"]
+
     def _token(self) -> str:
+        if self.access_token_file:
+            return self._borrowed_token()  # re-read every call: picks up the gateway's renewals
         if not self._access_token or time.time() >= self._expires_at:
             self._refresh()
         assert self._access_token is not None
@@ -162,9 +179,12 @@ class PropertyMeProvider(PropertyDataProvider):
         try:
             resp = httpx.get(url, headers=headers, params=params or {}, timeout=60.0)
             if resp.status_code == 401:
-                # stale access token — refresh once and retry
-                self._refresh()
-                headers["Authorization"] = f"Bearer {self._access_token}"
+                # stale access token — renew once and retry (borrowed: re-read, never refresh)
+                if self.access_token_file:
+                    headers["Authorization"] = f"Bearer {self._borrowed_token()}"
+                else:
+                    self._refresh()
+                    headers["Authorization"] = f"Bearer {self._access_token}"
                 resp = httpx.get(
                     url, headers=headers, params=params or {}, timeout=60.0
                 )

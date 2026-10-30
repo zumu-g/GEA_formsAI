@@ -279,3 +279,62 @@ def test_multiple_active_tenancies_still_notes_and_selects_most_recent(monkeypat
     assert bundle.meta.note and "2 active tenancies" in bundle.meta.note
     assert bundle.meta.tenancy_id == "T-NEW"
     assert bundle.lease.rent_amount == "700"
+
+
+# ── 30 Oct 2026: never make up data ──────────────────────────────────────────
+# A real PropertyMe tenancy id got the fixture's fake landlord and premises.
+
+
+@pytest.mark.parametrize("identifiers", [{"tenancy_id": "a1b2c3-real-pme-id"}, {"lot_id": "L-9999"}])
+def test_fixture_refuses_ids_that_are_not_its_own(identifiers):
+    with pytest.raises(TenancyNotFoundError, match="fixture"):
+        FixtureProvider().fetch_bundle(identifiers)
+
+
+def test_fixture_still_serves_its_own_ids():
+    assert FixtureProvider().fetch_bundle({"tenancy_id": "T-1001"}).meta.tenancy_id == "T-1001"
+
+
+def _gateway_token_file(tmp_path, token="gw-access", expires_in=600):
+    import json
+    import time
+
+    path = tmp_path / "propertyme-token.json"
+    path.write_text(json.dumps({"access_token": token, "refresh_token": "gw-refresh",
+                                "expires_at": int((time.time() + expires_in) * 1000), "scope": "x"}))
+    return path
+
+
+def _read_only_provider(monkeypatch, path):
+    for var in ("PME_CLIENT_ID", "PME_CLIENT_SECRET", "PME_REFRESH_TOKEN", "PME_TOKEN_FILE"):
+        monkeypatch.delenv(var, raising=False)
+    monkeypatch.setenv("PME_ACCESS_TOKEN_FILE", str(path))
+    return PropertyMeProvider()
+
+
+def test_propertyme_borrows_the_gateways_access_token_and_never_refreshes(monkeypatch, tmp_path):
+    path = _gateway_token_file(tmp_path)
+    seen = []
+
+    def fake_get(url, headers=None, params=None, timeout=None):
+        seen.append(headers["Authorization"])
+        return httpx.Response(200, json=[], request=httpx.Request("GET", url))
+
+    def no_refresh(*a, **k):
+        raise AssertionError("must never call PropertyMe's token endpoint")
+
+    monkeypatch.setattr(httpx, "get", fake_get)
+    monkeypatch.setattr(httpx, "post", no_refresh)
+    p = _read_only_provider(monkeypatch, path)
+    p._get("/v1/lots")
+    _gateway_token_file(tmp_path, token="gw-access-2")  # gateway refreshed meanwhile
+    p._get("/v1/lots")
+    assert seen == ["Bearer gw-access", "Bearer gw-access-2"]
+
+
+def test_propertyme_expired_gateway_token_asks_for_a_retry_not_a_refresh(monkeypatch, tmp_path):
+    path = _gateway_token_file(tmp_path, expires_in=-60)
+    monkeypatch.setattr(httpx, "post", lambda *a, **k: (_ for _ in ()).throw(AssertionError("no refresh")))
+    p = _read_only_provider(monkeypatch, path)
+    with pytest.raises(ProviderConfigError, match="PropertyMe login"):
+        p._get("/v1/lots")

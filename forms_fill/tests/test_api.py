@@ -392,3 +392,12 @@ def test_tenancy_preview_provider_value_error_returns_400(client, monkeypatch):
     resp = client.get("/tenancy/preview?tenancy_id=T-1", headers=AUTH)
     assert resp.status_code == 400
     assert resp.json()["error"] == "invalid_request"
+
+
+def test_server_refuses_to_start_without_a_real_data_provider(monkeypatch):
+    # 30 Oct 2026: unset FORMS_DATA_PROVIDER silently served fixture data to GEA LLM.
+    monkeypatch.setenv("PUBLIC_BASE_URL", "http://100.125.137.39:8790")
+    monkeypatch.delenv("FORMS_DATA_PROVIDER", raising=False)
+    with pytest.raises(RuntimeError, match="FORMS_DATA_PROVIDER"):
+        with TestClient(app):
+            pass
