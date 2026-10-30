@@ -88,6 +88,16 @@ class StrikeOp:
 
 
 @dataclass(frozen=True)
+class HtmlDocument:
+    """What an html-engine spec hands the renderer: body HTML plus chrome text."""
+
+    html: str
+    title: str  # header, top-right, on every non-cover page
+    footer_left: str  # footer, bottom-left (e.g. the premises address)
+    cover: bool = True  # page 1 is a bare cover
+
+
+@dataclass(frozen=True)
 class FormSpec:
     key: str
     template: Path
@@ -152,3 +162,8 @@ class FormSpec:
     # Optional non-blocking checks run after context build; returned strings
     # become result warnings (e.g. estimate range spread >10%).
     validate_warnings: Callable[[dict], list[str]] | None = None
+    # --- html engine (KTD7, U2) ----------------------------------------------
+    # With engine="html", render() calls this with the resolved context and
+    # lays the returned document out via render_html. template/text_ops/
+    # checkbox_ops are unused: pass Path(), (), ().
+    build_html: Callable[[dict[str, str]], "HtmlDocument"] | None = None

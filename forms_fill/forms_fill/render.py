@@ -49,8 +49,24 @@ def render(
     """Render the form. Returns ``(docx_path_or_None, pdf_path_or_None, warnings)``.
 
     Dispatches on ``spec.engine``: "docx" fills the Word template below;
-    "pdf_overlay" stamps a scanned-PDF template (no DOCX output).
+    "pdf_overlay" stamps a scanned-PDF template (no DOCX output); "html" lays
+    out the HTML from ``spec.build_html`` as a branded A4 PDF (no DOCX output).
     """
+
+    if spec.engine == "html":
+        from .render_html import render_html_pdf
+
+        if spec.build_html is None:
+            raise RenderError(f"html-engine form {spec.key!r} has no build_html")
+        doc = spec.build_html(context)
+        pdf_path = render_html_pdf(
+            doc.html,
+            Path(out_dir) / f"{basename or spec.key}.pdf",
+            title=doc.title,
+            footer_left=doc.footer_left,
+            cover=doc.cover,
+        )
+        return None, pdf_path, []
 
     if spec.engine == "pdf_overlay":
         from .render_overlay import render_overlay
