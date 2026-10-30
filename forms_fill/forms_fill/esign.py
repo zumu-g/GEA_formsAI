@@ -111,3 +111,24 @@ def send_for_signing(
     payload["account_id"] = _account_id()
     body = _post_envelope(payload)
     return {"envelope_id": body.get("id", ""), "status": body.get("status", "sent")}
+
+
+def get_envelope(envelope_id: str) -> dict:
+    """Current envelope state straight from Annature — the webhook body is
+    never trusted, only this (its signature scheme is undocumented)."""
+
+    resp = httpx.get(
+        f"{ANNATURE_BASE}/envelopes/{envelope_id}", headers=_headers(), timeout=8.0
+    )
+    if resp.status_code >= 400:
+        raise EsignUpstreamError(f"Annature envelope {resp.status_code}: {resp.text[:300]}")
+    return resp.json()
+
+
+def download(url: str) -> bytes:
+    """Fetch a signed-document URL from an envelope (they expire in 60 min)."""
+
+    resp = httpx.get(url, timeout=20.0)
+    if resp.status_code >= 400:
+        raise EsignUpstreamError(f"Annature download {resp.status_code}")
+    return resp.content

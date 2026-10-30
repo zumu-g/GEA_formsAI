@@ -25,6 +25,8 @@ log = logging.getLogger("forms_fill.ingoing")
 TIMEOUT_S = 15
 BACKOFF_S = (5, 30, 120)  # waits before retries 1-3
 MELBOURNE = ZoneInfo("Australia/Melbourne")
+_post = httpx.post  # module seams so the webhook path can be tested offline
+_sleep = time.sleep
 
 
 def build_body(row: dict) -> dict:
@@ -54,9 +56,10 @@ def _record(request_id: str, status: str, attempts: int, response: str) -> None:
     leases.update(request_id, **changes)
 
 
-def notify_lease_signed(request_id: str, post=httpx.post, sleep=time.sleep) -> str:
+def notify_lease_signed(request_id: str, post=None, sleep=None) -> str:
     """Returns the resulting notify_status."""
 
+    post, sleep = post or _post, sleep or _sleep
     row = leases.get(request_id)
     if row is None or row["status"] != "signed" or row["notify_status"] == "sent":
         return row["notify_status"] if row else "missing"

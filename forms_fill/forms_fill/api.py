@@ -22,10 +22,11 @@ from __future__ import annotations
 import hmac
 import os
 import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, Header, HTTPException
+from fastapi import BackgroundTasks, FastAPI, Header, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -333,6 +334,56 @@ def lease_approve_send(
         signers_expected=len(signers),
     )
     return {"ok": True, "envelope_id": result["envelope_id"], "signers": len(signers)}
+
+
+@app.post("/esign/annature-webhook")
+async def annature_webhook(request: Request, background: BackgroundTasks) -> Any:
+    """Annature event → re-fetch the envelope → act on its real state.
+
+    No bearer auth (Annature can't send one); safety comes from ignoring the
+    body beyond envelope_id and asking Annature directly. Non-2xx makes
+    Annature retry hourly, so upstream failures return 502.
+    """
+
+    from . import esign, ingoing
+
+    try:
+        event = await request.json()
+    except ValueError:
+        event = {}
+    envelope_id = str(event.get("envelope_id", "")) if isinstance(event, dict) else ""
+    # looked up by bound parameter only, never used in a path
+    row = leases.get_by_envelope(envelope_id) if 0 < len(envelope_id) <= 100 else None
+    if row is None or row["status"] not in ("sent", "signed"):
+        return {"ok": True, "ignored": True}
+    try:
+        envelope = esign.get_envelope(envelope_id)
+    except Exception as exc:
+        return _err(502, "upstream_error", str(exc))
+
+    request_id = row["request_id"]
+    signers = [r for r in envelope.get("recipients") or [] if r.get("type", "signer") == "signer"]
+    if envelope.get("status") == "voided":
+        leases.update(request_id, status="voided")
+    elif any(r.get("status") == "declined" for r in signers):
+        leases.update(request_id, status="declined")
+    elif envelope.get("status") == "completed" and row["status"] == "sent":
+        try:
+            pdf = esign.download(envelope["combined"])
+        except Exception as exc:
+            return _err(502, "upstream_error", str(exc))
+        signed_dir = OUTPUT_ROOT / request_id / "signed"
+        signed_dir.mkdir(parents=True, exist_ok=True)
+        (signed_dir / "lease-signed.pdf").write_bytes(pdf)
+        leases.update(
+            request_id, status="signed",
+            signed_at=envelope.get("completed") or datetime.now(timezone.utc).isoformat(),
+            signers=sum(1 for r in signers if r.get("status") == "completed"),
+        )
+    if leases.get(request_id)["status"] == "signed":
+        # off the request path: Annature times out at 10 s, retries take minutes
+        background.add_task(ingoing.notify_lease_signed, request_id)
+    return {"ok": True}
 
 
 # ── per-agent sticky defaults (U3) ───────────────────────────────────────────
@@ -752,10 +803,10 @@ def get_file(
     request_id: str, kind: str, authorization: str = Header(default="")
 ) -> FileResponse:
     _require_auth(authorization)
-    if kind not in ("pdf", "docx"):
+    if kind not in ("pdf", "docx", "signed"):
         raise HTTPException(
             status_code=400,
-            detail={"error": "invalid_request", "message": "kind must be 'pdf' or 'docx'"},
+            detail={"error": "invalid_request", "message": "kind must be 'pdf', 'docx' or 'signed'"},
         )
     # request_id is a hex uuid; reject anything else to avoid path traversal.
     if not request_id.isalnum():
@@ -764,13 +815,16 @@ def get_file(
             detail={"error": "invalid_request", "message": "invalid request id"},
         )
     directory = OUTPUT_ROOT / request_id
-    matches = sorted(directory.glob(f"*.{kind}")) if directory.exists() else []
+    if kind == "signed":  # fully signed lease from Annature
+        matches = sorted((directory / "signed").glob("*.pdf")) if directory.exists() else []
+    else:
+        matches = sorted(directory.glob(f"*.{kind}")) if directory.exists() else []
     if not matches:
         raise HTTPException(
             status_code=404,
             detail={"error": "invalid_request", "message": f"no {kind} for request {request_id}"},
         )
-    media = "application/pdf" if kind == "pdf" else (
+    media = "application/pdf" if kind in ("pdf", "signed") else (
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
     )
     return FileResponse(str(matches[0]), media_type=media, filename=matches[0].name)

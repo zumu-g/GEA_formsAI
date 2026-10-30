@@ -208,3 +208,111 @@ def test_plain_esign_send_refuses_a_lease(client, lease, envelopes):
     )
     assert resp.status_code == 409
     assert envelopes == []
+
+
+# ── U4: Annature webhook → one notification when ALL tenants have signed ─────
+
+from forms_fill import ingoing  # noqa: E402
+
+
+@pytest.fixture()
+def engine(monkeypatch):
+    """Records posts to the ingoing engine; never touches the network."""
+
+    import httpx
+
+    monkeypatch.setenv("INGOING_ENGINE_WEBHOOK", "https://example.invalid/hook")
+    monkeypatch.setenv("INGOING_WEBHOOK_SECRET", "s")
+    calls = []
+
+    def fake_post(url, json=None, headers=None, timeout=None):
+        calls.append(json)
+        return httpx.Response(200, text="ok", request=httpx.Request("POST", url))
+
+    monkeypatch.setattr(ingoing, "_post", fake_post)
+    monkeypatch.setattr(ingoing, "_sleep", lambda s: None)
+    return calls
+
+
+@pytest.fixture()
+def annature(monkeypatch):
+    """The envelope state Annature will report when we re-fetch it."""
+
+    state = {"status": "sent", "recipients": []}
+    monkeypatch.setattr(esign, "get_envelope", lambda envelope_id: {"id": envelope_id, **state})
+    monkeypatch.setattr(esign, "download", lambda url: b"%PDF-1.4 signed")
+    return state
+
+
+def _signer(status):
+    return {"type": "signer", "status": status}
+
+
+@pytest.fixture()
+def sent_lease(client, lease, envelopes, agency_file):
+    assert _approve_send(client, lease).status_code == 200
+    return lease
+
+
+def _hook(client, event, envelope_id="env_1"):
+    return client.post("/esign/annature-webhook", json={"event": event, "envelope_id": envelope_id})
+
+
+def test_first_of_two_signatures_does_not_post(client, sent_lease, annature, engine):
+    annature["recipients"] = [_signer("completed"), _signer("sent")]
+    assert _hook(client, "recipient_completed").status_code == 200
+    assert engine == []
+    assert leases.get(sent_lease)["status"] == "sent"
+
+
+def test_second_signature_posts_once(client, sent_lease, annature, engine):
+    annature["recipients"] = [_signer("completed"), _signer("sent")]
+    _hook(client, "recipient_completed")
+    annature.update(status="completed", combined="https://annature.invalid/c.pdf",
+                    completed="2026-10-30T02:00:00Z",
+                    recipients=[_signer("completed"), _signer("completed")])
+    _hook(client, "recipient_completed")
+    _hook(client, "envelope_completed")  # Annature fires both — still one post
+    assert len(engine) == 1
+    assert engine[0]["idem_key"] == "OAK12:ingoing"
+    assert engine[0]["figures"]["signers"] == 2
+    assert engine[0]["figures"]["lease_signed_date"] == "2026-10-30"
+    row = leases.get(sent_lease)
+    assert (row["status"], row["notify_status"]) == ("signed", "sent")
+    signed = client.get(f"/files/{sent_lease}/signed", headers=AUTH)
+    assert signed.status_code == 200 and signed.content == b"%PDF-1.4 signed"
+
+
+def test_reprocessing_a_completed_envelope_does_not_post_again(client, sent_lease, annature, engine):
+    annature.update(status="completed", combined="https://annature.invalid/c.pdf",
+                    completed="2026-10-30T02:00:00Z",
+                    recipients=[_signer("completed"), _signer("completed")])
+    _hook(client, "envelope_completed")
+    _hook(client, "envelope_completed")
+    assert len(engine) == 1
+
+
+def test_declined_does_not_post(client, sent_lease, annature, engine):
+    annature["recipients"] = [_signer("completed"), _signer("declined")]
+    _hook(client, "recipient_declined")
+    assert engine == []
+    assert leases.get(sent_lease)["status"] == "declined"
+
+
+def test_voided_does_not_post(client, sent_lease, annature, engine):
+    annature["status"] = "voided"
+    _hook(client, "envelope_voided")
+    assert engine == []
+    assert leases.get(sent_lease)["status"] == "voided"
+
+
+def test_webhook_trusts_annature_not_the_body(client, sent_lease, annature, engine):
+    # A forged "completed" event changes nothing: the re-fetched envelope says sent.
+    _hook(client, "envelope_completed")
+    assert engine == []
+    assert leases.get(sent_lease)["status"] == "sent"
+
+
+def test_unknown_envelope_is_acknowledged_and_ignored(client, annature, engine):
+    assert _hook(client, "envelope_completed", envelope_id="someone_else").status_code == 200
+    assert engine == []
