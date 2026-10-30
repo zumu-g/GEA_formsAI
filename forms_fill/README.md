@@ -344,6 +344,46 @@ skipped entirely. Overlay forms (`engine: pdf_overlay`) are always fast
 
 ---
 
+## Ingoing lease: approval, e-signature and the "lease signed" hook
+
+Flow: the Ingoing workflow calls `POST /fill` for `residential_rental_agreement`
+with an optional top-level `"idem_key": "OAK12:ingoing"`. The PM then approves the
+lease in the UI. **Approve and send to tenants** calls
+`POST /lease/{request_id}/approve-send` with the approval credential, and Annature
+emails every renter named on the lease. Nothing reaches tenants before that.
+Sending is blocked, and the PM is shown what is missing, if any of these are
+missing: rent amount, first rent due date, bond amount, or the agency payment details.
+
+When Annature reports that **all** tenants have signed, formsAI stores the signed
+PDF (`GET /files/{request_id}/signed`) and makes one POST of the `lease_signed`
+step action to the ingoing engine. A declined signature or a voided envelope never
+posts; the PM sees the status under **Lease signing**.
+
+| Setting | Where | Purpose |
+|---|---|---|
+| `INGOING_ENGINE_WEBHOOK` | env | ingoing engine URL (n8n `gea-pm-ingoing-engine`) |
+| `INGOING_WEBHOOK_SECRET` | env | sent as `X-GEA-Secret`; never logged |
+| `FORMS_APPROVE_TOKEN` | env (existing) | approval credential for approve-send and resend |
+| `ANNATURE_API_ID` / `ANNATURE_API_KEY` | env (existing) | Annature keys |
+| `payments.rent_payment_details`, `payments.bond_payment_instructions` | agency config (`FORMS_AGENCY_FILE`) | rent-in-advance and bond payment text in the signing email |
+
+One-off setup: register `{PUBLIC_BASE_URL}/esign/annature-webhook` as an endpoint
+in Annature (Developers section). The endpoint ignores the webhook body except
+`envelope_id`, and re-fetches the envelope from Annature before acting.
+
+- **Where the signed hook lives:** `forms_fill/ingoing.py` (`notify_lease_signed`).
+  The webhook receiver is in `api.py` (`annature_webhook`), and lease records are in
+  `forms_fill/leases.py` (table `lease_signings`).
+- **Once only:** a successful post is recorded (`notify_sent_at`, response) and is
+  never repeated. Each attempt has a 15 s timeout. If it fails, it is retried after
+  5 s, 30 s and 2 min, and then marked `ingoing_notify_failed`. Signing status is
+  never changed by this step.
+- **PM resend:** failed rows show **Resend to Ingoing** under **Lease signing**. It
+  asks for the approval credential and calls
+  `POST /lease/{request_id}/resend-ingoing`, which only runs for failed rows.
+- **No idem_key:** formsAI doesn't post. The row shows "Not linked to a move-in",
+  and the PM updates ClickUp by hand.
+
 ## Deploy (Railway)
 
 The `Dockerfile` installs **LibreOffice** so DOCX→PDF works in the container,
