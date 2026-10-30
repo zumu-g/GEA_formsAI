@@ -953,7 +953,8 @@ def get_file(
     exp: str = "",
     sig: str = "",
 ) -> FileResponse:
-    if not _valid_review_link(request_id, kind, exp, sig):
+    review_link = _valid_review_link(request_id, kind, exp, sig)
+    if not review_link:
         _require_auth(authorization)
     if kind not in ("pdf", "docx", "signed"):
         raise HTTPException(
@@ -979,7 +980,12 @@ def get_file(
     media = "application/pdf" if kind in ("pdf", "signed") else (
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
     )
-    return FileResponse(str(matches[0]), media_type=media, filename=matches[0].name)
+    # A person's review link opens in the browser's viewer: Chrome holds http:// downloads
+    # as "Unconfirmed …crdownload". Machine (bearer) callers keep the attachment download.
+    return FileResponse(
+        str(matches[0]), media_type=media, filename=matches[0].name,
+        content_disposition_type="inline" if review_link else "attachment",
+    )
 
 
 def _require_approve_auth(authorization: str) -> None:

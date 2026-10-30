@@ -92,6 +92,14 @@ def test_review_url_opens_the_draft_without_a_token(client, caller_fields):
     assert resp.status_code == 200 and len(resp.content) > 0
 
 
+def test_review_url_opens_in_the_browser_instead_of_downloading(client, caller_fields):
+    # Chrome holds an http:// *download* as "Unconfirmed NNN.crdownload"; viewing inline is not a download.
+    body = _fill(client, caller_fields, pdf=False).json()
+    assert client.get(body["review_url"]).headers["content-disposition"].startswith("inline")
+    machine = client.get(body["files"]["docx"], headers=AUTH)
+    assert machine.headers["content-disposition"].startswith("attachment")  # engine downloads unchanged
+
+
 @pytest.mark.parametrize("tamper", ["sig", "exp", "file"])
 def test_tampered_review_url_is_refused(client, caller_fields, tamper):
     from urllib.parse import parse_qs, urlsplit
