@@ -65,3 +65,12 @@ def test_decline_stops_further_signing():
     assert leases.record_decline(tokens[1], "rent is wrong") == "declined"
     assert leases.get("lease1")["status"] == "declined"
     assert leases.record_signature(tokens[2], **SIG) == "invalid"
+
+
+def test_tenants_keep_their_renter_number_when_an_earlier_slot_is_blank():
+    facts = {"renter2_name": "Sam Renter", "renter2_email": "sam@example.com"}
+    assert leases.tenants(facts) == [{"slot": 2, "name": "Sam Renter", "email": "sam@example.com"}]
+    leases.save("gap", None, facts)
+    tokens = leases.create_signers("gap", leases.tenants(facts))
+    assert set(tokens) == {2}
+    assert leases.signer_by_token(tokens[2])["slot"] == 2

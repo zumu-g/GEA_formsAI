@@ -7,7 +7,7 @@ import shutil
 import pytest
 from fastapi.testclient import TestClient
 
-from forms_fill import esign, leases
+from forms_fill import esign, leases, signing
 from forms_fill.api import OUTPUT_ROOT, app
 
 TOKEN = "test-token"
@@ -130,15 +130,36 @@ def agency_file(tmp_path, monkeypatch):
 
 
 @pytest.fixture()
-def envelopes(monkeypatch):
+def emails(monkeypatch):
+    """Signing-link emails handed to Resend (never really sent)."""
+
+    import httpx
+
+    monkeypatch.setenv("RESEND_API_KEY", "re_test")
     calls = []
 
-    def fake_post(payload):
-        calls.append(payload)
-        return {"id": f"env_{len(calls)}", "status": "sent"}
+    def fake_post(url, json=None, headers=None, timeout=None):
+        calls.append(json)
+        return httpx.Response(200, json={"id": "em"}, request=httpx.Request("POST", url))
 
-    monkeypatch.setattr(esign, "_post_envelope", fake_post)
+    monkeypatch.setattr(signing, "_post", fake_post)
     return calls
+
+
+def _link_token(email):
+    import re
+
+    return re.search(r"/sign/([\w-]+)", email["html"]).group(1)
+
+
+def _lease_pdf():
+    import fitz
+
+    doc = fitz.open()
+    page = doc.new_page()
+    for slot in (1, 2, 3, 4):
+        page.insert_text((72, 120 + 90 * slot), f"Signature of renter {slot}")
+    return doc.tobytes()
 
 
 @pytest.fixture()
@@ -147,7 +168,7 @@ def lease(client):
 
     request_id = _fill_lease(client, idem_key="OAK12:ingoing")
     leases.update(request_id, facts=json.dumps({**FACTS, **TENANTS}))
-    (OUTPUT_ROOT / request_id / "lease.pdf").write_bytes(b"%PDF-1.4 fake")
+    (OUTPUT_ROOT / request_id / "lease.pdf").write_bytes(_lease_pdf())
     yield request_id
     shutil.rmtree(OUTPUT_ROOT / request_id, ignore_errors=True)
 
@@ -158,59 +179,87 @@ def _approve_send(client, request_id, headers=APPROVE):
     )
 
 
-def test_nothing_sent_before_pm_approval(client, lease, envelopes, agency_file):
-    assert envelopes == []
+def test_nothing_sent_before_pm_approval(client, lease, emails, agency_file):
+    assert emails == []
     assert leases.get(lease)["status"] == "draft"
 
 
-def test_approve_send_needs_the_approval_credential(client, lease, envelopes, agency_file):
+def test_approve_send_needs_the_approval_credential(client, lease, emails, agency_file):
     assert _approve_send(client, lease, headers=AUTH).status_code == 401
-    assert envelopes == []
+    assert emails == []
 
 
-def test_approve_send_reaches_every_tenant_with_the_payment_pack(client, lease, envelopes, agency_file):
+def test_approve_send_reaches_every_tenant_with_the_payment_pack(client, lease, emails, agency_file):
     resp = _approve_send(client, lease)
     assert resp.status_code == 200, resp.text
-    (payload,) = envelopes
-    assert [r["email"] for r in payload["recipients"]] == ["jane@example.com", "sam@example.com"]
-    assert "Residential Tenancies Bond Authority" in payload["message"]
+    assert [e["to"] for e in emails] == [["jane@example.com"], ["sam@example.com"]]
+    tokens = [_link_token(e) for e in emails]
+    assert tokens[0] != tokens[1]  # each tenant gets their own link
+    assert leases.signer_by_token(tokens[1])["email"] == "sam@example.com"
+    for e in emails:
+        assert "http://testserver/sign/" in e["html"]
+        assert "Residential Tenancies Bond Authority" in e["html"]
+        assert "$2600" in e["html"]
     row = leases.get(lease)
-    assert (row["status"], row["envelope_id"], row["signers_expected"]) == ("sent", "env_1", 2)
+    assert (row["status"], row["signers_expected"]) == ("sent", 2)
 
 
-def test_missing_payment_values_block_the_send(client, lease, envelopes, agency_file):
+def test_email_failure_leaves_the_lease_a_draft(client, lease, emails, agency_file, monkeypatch):
+    import httpx
+
+    def down(url, json=None, headers=None, timeout=None):
+        return httpx.Response(500, text="boom", request=httpx.Request("POST", url))
+
+    monkeypatch.setattr(signing, "_post", down)
+    resp = _approve_send(client, lease)
+    assert resp.status_code == 502
+    assert leases.get(lease)["status"] == "draft"
+    assert leases.signers_for(lease) == []
+
+
+def test_unconfigured_email_blocks_the_send(client, lease, emails, agency_file, monkeypatch):
+    monkeypatch.delenv("RESEND_API_KEY")
+    assert _approve_send(client, lease).status_code == 503
+    assert emails == [] and leases.get(lease)["status"] == "draft"
+
+
+def test_missing_payment_values_block_the_send(client, lease, emails, agency_file):
     leases.update(lease, facts=json.dumps({**FACTS, **TENANTS, "bond_amount": ""}))
     resp = _approve_send(client, lease)
     assert resp.status_code == 422
     assert resp.json()["missing"] == ["bond_amount"]
-    assert envelopes == []
+    assert emails == []
     assert leases.get(lease)["status"] == "draft"
 
 
-def test_missing_agency_payment_config_blocks_the_send(client, lease, envelopes):
+def test_missing_agency_payment_config_blocks_the_send(client, lease, emails):
     resp = _approve_send(client, lease)
     assert resp.status_code == 422
     assert set(resp.json()["missing"]) == set(PAYMENTS)
-    assert envelopes == []
+    assert emails == []
 
 
-def test_lease_cannot_be_sent_twice(client, lease, envelopes, agency_file):
+def test_lease_cannot_be_sent_twice(client, lease, emails, agency_file):
     _approve_send(client, lease)
     assert _approve_send(client, lease).status_code == 409
-    assert len(envelopes) == 1
+    assert len(emails) == 2  # one per tenant, once
 
 
-def test_plain_esign_send_refuses_a_lease(client, lease, envelopes):
+def test_plain_esign_send_refuses_a_lease(client, lease, emails):
     resp = client.post(
         "/esign/send",
         json={"request_id": lease, "recipients": [{"name": "J", "email": "j@x.co"}]},
         headers=AUTH,
     )
     assert resp.status_code == 409
-    assert envelopes == []
+    assert emails == []
 
 
-# ── U4: Annature webhook → one notification when ALL tenants have signed ─────
+# ── S3: tenants sign in formsAI; one notification when ALL have signed ─────
+
+import base64  # noqa: E402
+from datetime import datetime  # noqa: E402
+from zoneinfo import ZoneInfo  # noqa: E402
 
 from forms_fill import ingoing  # noqa: E402
 
@@ -235,126 +284,142 @@ def engine(monkeypatch):
 
 
 @pytest.fixture()
-def annature(monkeypatch):
-    """The envelope state Annature will report when we re-fetch it."""
-
-    state = {"status": "sent", "recipients": []}
-    monkeypatch.setattr(esign, "get_envelope", lambda envelope_id: {"id": envelope_id, **state})
-    monkeypatch.setattr(esign, "download", lambda url: b"%PDF-1.4 signed")
-    return state
-
-
-def _signer(status):
-    return {"type": "signer", "status": status}
-
-
-@pytest.fixture()
-def sent_lease(client, lease, envelopes, agency_file):
+def sent_lease(client, lease, emails, agency_file):
     assert _approve_send(client, lease).status_code == 200
-    return lease
+    return lease, [_link_token(e) for e in emails]
 
 
-def _hook(client, event, envelope_id="env_1"):
-    return client.post("/esign/annature-webhook", json={"event": event, "envelope_id": envelope_id})
+def _png_data_url():
+    import fitz
+
+    pix = fitz.Pixmap(fitz.csRGB, fitz.IRect(0, 0, 40, 12), False)
+    pix.set_rect(pix.irect, (10, 10, 10))
+    return "data:image/png;base64," + base64.b64encode(pix.tobytes("png")).decode()
 
 
-def test_first_of_two_signatures_does_not_post(client, sent_lease, annature, engine):
-    annature["recipients"] = [_signer("completed"), _signer("sent")]
-    assert _hook(client, "recipient_completed").status_code == 200
+def _sign(client, token, **overrides):
+    body = {"consent": True, "full_name": "Jane Renter", "signature_png": _png_data_url(), **overrides}
+    return client.post(f"/sign/{token}", json=body)
+
+
+def test_signing_page_opens_for_a_valid_link(client, sent_lease):
+    _, tokens = sent_lease
+    page = client.get(f"/sign/{tokens[0]}")
+    assert page.status_code == 200 and "sign" in page.text.lower()
+    info = client.get(f"/sign/{tokens[0]}/info").json()
+    assert info["name"] == "Jane Renter" and "Residential Tenancies Bond Authority" in info["message"]
+    pdf = client.get(f"/sign/{tokens[0]}/pdf")
+    assert pdf.status_code == 200 and pdf.content.startswith(b"%PDF")
+
+
+def test_unknown_link_is_refused(client):
+    assert client.get("/sign/not-a-real-token").status_code == 404
+    assert _sign(client, "not-a-real-token").status_code == 404
+
+
+def test_first_of_two_signatures_does_not_post(client, sent_lease, engine):
+    request_id, tokens = sent_lease
+    assert _sign(client, tokens[0]).status_code == 200
     assert engine == []
-    assert leases.get(sent_lease)["status"] == "sent"
+    row = leases.get(request_id)
+    assert (row["status"], row["signers"]) == ("sent", 1)
 
 
-def test_second_signature_posts_once(client, sent_lease, annature, engine):
-    annature["recipients"] = [_signer("completed"), _signer("sent")]
-    _hook(client, "recipient_completed")
-    annature.update(status="completed", combined="https://annature.invalid/c.pdf",
-                    completed="2026-10-30T02:00:00Z",
-                    recipients=[_signer("completed"), _signer("completed")])
-    _hook(client, "recipient_completed")
-    _hook(client, "envelope_completed")  # Annature fires both — still one post
-    assert len(engine) == 1
-    assert engine[0]["idem_key"] == "OAK12:ingoing"
-    assert engine[0]["figures"]["signers"] == 2
-    assert engine[0]["figures"]["lease_signed_date"] == "2026-10-30"
-    row = leases.get(sent_lease)
+def test_second_signature_posts_once_with_the_spec_body(client, sent_lease, engine):
+    request_id, tokens = sent_lease
+    _sign(client, tokens[0])
+    assert _sign(client, tokens[1], full_name="Sam Renter").status_code == 200
+    today = datetime.now(ZoneInfo("Australia/Melbourne")).date().isoformat()
+    assert engine == [{
+        "workflow_type": "ingoing", "intake_mode": "step_action", "source": "formsai",
+        "sender": "formsai", "idem_key": "OAK12:ingoing", "step": 3, "answer": "lease_signed",
+        "figures": {"lease_signed_date": today, "signers": 2,
+                    "signed_pdf_url": f"http://testserver/files/{request_id}/signed",
+                    "formsai_document_id": request_id},
+    }]
+    row = leases.get(request_id)
     assert (row["status"], row["notify_status"]) == ("signed", "sent")
-    signed = client.get(f"/files/{sent_lease}/signed", headers=AUTH)
-    assert signed.status_code == 200 and signed.content == b"%PDF-1.4 signed"
+    signed = client.get(f"/files/{request_id}/signed", headers=AUTH)
+    assert signed.status_code == 200 and signed.content.startswith(b"%PDF")
 
 
-def test_reprocessing_a_completed_envelope_does_not_post_again(client, sent_lease, annature, engine):
-    annature.update(status="completed", combined="https://annature.invalid/c.pdf",
-                    completed="2026-10-30T02:00:00Z",
-                    recipients=[_signer("completed"), _signer("completed")])
-    _hook(client, "envelope_completed")
-    _hook(client, "envelope_completed")
+def test_a_used_link_cannot_sign_again_or_repost(client, sent_lease, engine):
+    _, tokens = sent_lease
+    _sign(client, tokens[0])
+    _sign(client, tokens[1])
+    assert _sign(client, tokens[1]).status_code == 409
     assert len(engine) == 1
 
 
-def test_declined_does_not_post(client, sent_lease, annature, engine):
-    annature["recipients"] = [_signer("completed"), _signer("declined")]
-    _hook(client, "recipient_declined")
+def test_declined_does_not_post(client, sent_lease, engine):
+    request_id, tokens = sent_lease
+    _sign(client, tokens[0])
+    resp = client.post(f"/sign/{tokens[1]}/decline", json={"reason": "Rent is wrong"})
+    assert resp.status_code == 200
+    assert _sign(client, tokens[1]).status_code == 409
     assert engine == []
-    assert leases.get(sent_lease)["status"] == "declined"
+    assert leases.get(request_id)["status"] == "declined"
 
 
-def test_voided_does_not_post(client, sent_lease, annature, engine):
-    annature["status"] = "voided"
-    _hook(client, "envelope_voided")
-    assert engine == []
-    assert leases.get(sent_lease)["status"] == "voided"
-
-
-def test_webhook_trusts_annature_not_the_body(client, sent_lease, annature, engine):
-    # A forged "completed" event changes nothing: the re-fetched envelope says sent.
-    _hook(client, "envelope_completed")
-    assert engine == []
-    assert leases.get(sent_lease)["status"] == "sent"
-
-
-def test_unknown_envelope_is_acknowledged_and_ignored(client, annature, engine):
-    assert _hook(client, "envelope_completed", envelope_id="someone_else").status_code == 200
-    assert engine == []
+@pytest.mark.parametrize("bad", [
+    {"consent": False}, {"full_name": "  "}, {"signature_png": "data:image/jpeg;base64,AAAA"},
+    {"signature_png": "data:image/png;base64,bm90IGEgcG5n"},
+])
+def test_incomplete_signatures_are_rejected(client, sent_lease, engine, bad):
+    _, tokens = sent_lease
+    assert _sign(client, tokens[0], **bad).status_code == 422
+    assert leases.signer_by_token(tokens[0])["status"] == "pending"
 
 
 # ── U6: PM sees status and can "Resend to Ingoing" ───────────────────────────
 
 
-def _complete(client, annature):
-    annature.update(status="completed", combined="https://annature.invalid/c.pdf",
-                    completed="2026-10-30T02:00:00Z",
-                    recipients=[_signer("completed"), _signer("completed")])
-    _hook(client, "envelope_completed")
+def _complete(client, tokens):
+    for t in tokens:
+        _sign(client, t)
 
 
-def test_resend_after_failure_posts_once(client, sent_lease, annature, engine, monkeypatch):
+def test_resend_after_failure_posts_once(client, sent_lease, engine, monkeypatch):
+    request_id, tokens = sent_lease
     monkeypatch.delenv("INGOING_WEBHOOK_SECRET")
-    _complete(client, annature)
-    assert leases.get(sent_lease)["notify_status"] == "ingoing_notify_failed"
+    _complete(client, tokens)
+    assert leases.get(request_id)["notify_status"] == "ingoing_notify_failed"
     monkeypatch.setenv("INGOING_WEBHOOK_SECRET", "s")
-    resp = client.post(f"/lease/{sent_lease}/resend-ingoing", headers=APPROVE)
+    resp = client.post(f"/lease/{request_id}/resend-ingoing", headers=APPROVE)
     assert resp.status_code == 202, resp.text  # retries can take minutes: runs in background
-    assert leases.get(sent_lease)["notify_status"] == "sent"
+    assert leases.get(request_id)["notify_status"] == "sent"
     assert len(engine) == 1
 
 
-def test_resend_after_success_is_refused(client, sent_lease, annature, engine):
-    _complete(client, annature)
-    resp = client.post(f"/lease/{sent_lease}/resend-ingoing", headers=APPROVE)
-    assert resp.status_code == 409
+def test_resend_after_success_is_refused(client, sent_lease, engine):
+    request_id, tokens = sent_lease
+    _complete(client, tokens)
+    assert client.post(f"/lease/{request_id}/resend-ingoing", headers=APPROVE).status_code == 409
     assert len(engine) == 1
 
 
 def test_resend_needs_the_approval_credential(client, sent_lease):
-    assert client.post(f"/lease/{sent_lease}/resend-ingoing", headers=AUTH).status_code == 401
+    request_id, _ = sent_lease
+    assert client.post(f"/lease/{request_id}/resend-ingoing", headers=AUTH).status_code == 401
 
 
-def test_lease_list_shows_signing_and_notify_status(client, sent_lease, annature, engine):
-    annature["recipients"] = [_signer("completed"), _signer("declined")]
-    _hook(client, "recipient_declined")
+def test_lease_list_shows_signing_and_notify_status(client, sent_lease, engine):
+    request_id, tokens = sent_lease
+    _sign(client, tokens[0])
     (row,) = [r for r in client.get("/leases", headers=AUTH).json()["leases"]
-              if r["request_id"] == sent_lease]
-    assert row["status"] == "declined"
+              if r["request_id"] == request_id]
+    assert (row["status"], row["signers"], row["signers_expected"]) == ("sent", 1, 2)
     assert row["idem_key"] == "OAK12:ingoing"
     assert "facts" not in row  # tenant details stay out of the list
+
+
+def test_lease_without_renter_signature_boxes_is_not_sent(client, lease, emails, agency_file):
+    import fitz
+
+    doc = fitz.open()
+    doc.new_page().insert_text((72, 100), "no signature boxes here")
+    (OUTPUT_ROOT / lease / "lease.pdf").write_bytes(doc.tobytes())
+    resp = _approve_send(client, lease)
+    assert resp.status_code == 422
+    assert "renter 1" in resp.json()["message"]
+    assert emails == []

@@ -37,6 +37,14 @@ def _label(doc, slot: int):
     raise SigningError(f"no 'Signature of renter {slot}' box in the lease PDF")
 
 
+def missing_boxes(pdf: bytes, slots: list[int]) -> list[int]:
+    """Renter slots with no signature box — checked before links go out."""
+
+    doc = fitz.open(stream=pdf, filetype="pdf")
+    found = {s for s in slots for page in doc if page.search_for(f"Signature of renter {s}")}
+    return [s for s in slots if s not in found]
+
+
 def build_signed_pdf(original: bytes, signers: list[dict]) -> bytes:
     doc = fitz.open(stream=original, filetype="pdf")
     for s in signers:

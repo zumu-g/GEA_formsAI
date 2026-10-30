@@ -27,7 +27,7 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import BackgroundTasks, FastAPI, Header, HTTPException, Request
-from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from . import accounts, leases
@@ -291,7 +291,7 @@ def lease_approve_send(
     """PM approves the drafted lease; only then does it go to every tenant."""
 
     _require_approve_auth(authorization)
-    from . import esign
+    from . import signing
     from .agency import load_agency_config
     from .approval import ApprovalError, approve
 
@@ -317,73 +317,155 @@ def lease_approve_send(
     pdfs = sorted((OUTPUT_ROOT / request_id).glob("*.pdf"))
     if len(pdfs) != 1:
         return _err(409, "invalid_request", "lease needs exactly one generated PDF to send")
+    from .sign_pdf import missing_boxes
+
+    no_box = missing_boxes(pdfs[0].read_bytes(), [t["slot"] for t in signers])
+    if no_box:
+        return _err(422, "template_error", "lease PDF has no signature box for "
+                    + ", ".join(f"renter {n}" for n in no_box))
     try:
         approve(pdfs[0], str(payload.get("approver", "")))
-        result = esign.send_for_signing(
-            pdfs[0], "Residential rental agreement", signers,
-            leases.signing_message(facts, payments),
-        )
+        signing.send_signing_links(request_id, signers, leases.signing_message(facts, payments))
     except ApprovalError as exc:
         return _err(400, "invalid_request", str(exc))
-    except esign.EsignConfigError as exc:
+    except signing.SigningConfigError as exc:
         return _err(503, "not_configured", str(exc))
-    except Exception as exc:  # Annature/network — the lease stays a draft, PM can retry
+    except signing.SigningSendError as exc:  # lease stays a draft, PM can retry
         return _err(502, "upstream_error", str(exc))
-    leases.update(
-        request_id, status="sent", envelope_id=result["envelope_id"],
-        signers_expected=len(signers),
-    )
-    return {"ok": True, "envelope_id": result["envelope_id"], "signers": len(signers)}
+    leases.update(request_id, status="sent", signers_expected=len(signers))
+    return {"ok": True, "signers": len(signers)}
 
 
-@app.post("/esign/annature-webhook")
-async def annature_webhook(request: Request, background: BackgroundTasks) -> Any:
-    """Annature event → re-fetch the envelope → act on its real state.
+# ── tenant signing pages (public: the link token is the credential) ─────────
 
-    No bearer auth (Annature can't send one); safety comes from ignoring the
-    body beyond envelope_id and asking Annature directly. Non-2xx makes
-    Annature retry hourly, so upstream failures return 502.
-    """
+_INVALID_LINK = HTMLResponse(
+    "<!doctype html><meta charset=utf-8><meta name=viewport content='width=device-width'>"
+    "<title>Link not valid</title><body style='font-family:system-ui;padding:2rem;max-width:32rem'>"
+    "<h1>This signing link is no longer valid</h1>"
+    "<p>It may already have been used, or the lease was withdrawn. Contact Grants Estate Agents "
+    "if you think this is wrong.</p>",
+    status_code=404,
+)
 
-    from . import esign, ingoing
 
+def _open_signer_or_none(token: str) -> dict | None:
+    s = leases.signer_by_token(token) if 0 < len(token) <= 100 else None
+    return s if s and s["status"] == "pending" and s["lease_status"] == "sent" else None
+
+
+def _signer_or_error(token: str) -> dict:
+    s = leases.signer_by_token(token) if 0 < len(token) <= 100 else None
+    if s is None:
+        raise HTTPException(status_code=404, detail={"error": "not_found", "message": "unknown signing link"})
+    if s["status"] != "pending" or s["lease_status"] != "sent":
+        raise HTTPException(status_code=409, detail={"error": "invalid_request", "message": "this link is no longer open for signing"})
+    return s
+
+
+@app.get("/sign/{token}", include_in_schema=False)
+def sign_page(token: str) -> Any:
+    if _open_signer_or_none(token) is None:
+        return _INVALID_LINK
+    return FileResponse(STATIC_DIR / "sign.html", media_type="text/html")
+
+
+@app.get("/sign/{token}/info")
+def sign_info(token: str) -> Any:
+    from .agency import load_agency_config
+
+    s = _signer_or_error(token)
+    row = leases.get(s["request_id"])
+    payments = load_agency_config().get("payments") or {}
+    return {"name": s["name"], "message": leases.signing_message(row["facts"], payments)}
+
+
+@app.get("/sign/{token}/pdf")
+def sign_pdf_view(token: str) -> FileResponse:
+    s = _signer_or_error(token)
+    (pdf,) = sorted((OUTPUT_ROOT / s["request_id"]).glob("*.pdf"))
+    return FileResponse(str(pdf), media_type="application/pdf", filename="lease.pdf")
+
+
+def _client_ip(request: Request) -> str:
+    # Railway terminates TLS at a proxy; the first forwarded hop is the tenant
+    forwarded = request.headers.get("x-forwarded-for", "")
+    return forwarded.split(",")[0].strip() or (request.client.host if request.client else "")
+
+
+def _signature_bytes(data_url: Any) -> bytes | None:
+    import base64
+    import binascii
+
+    prefix = "data:image/png;base64,"
+    if not isinstance(data_url, str) or not data_url.startswith(prefix) or len(data_url) > 300_000:
+        return None
     try:
-        event = await request.json()
+        png = base64.b64decode(data_url[len(prefix):], validate=True)
+    except (binascii.Error, ValueError):
+        return None
+    return png if png.startswith(b"\x89PNG\r\n\x1a\n") else None
+
+
+def _finish_lease(request_id: str) -> None:
+    """Last tenant signed: stamp the approved PDF and mark the lease signed."""
+
+    import logging
+
+    from .approval import ApprovalError, verify_approval
+    from .sign_pdf import SigningError, build_signed_pdf
+
+    (pdf,) = sorted((OUTPUT_ROOT / request_id).glob("*.pdf"))
+    try:
+        verify_approval(pdf)  # tenants signed exactly what the PM approved
+        signed = build_signed_pdf(pdf.read_bytes(), leases.signers_for(request_id))
+    except (ApprovalError, SigningError) as exc:
+        logging.getLogger("forms_fill").error("lease %s could not be finalised: %s", request_id, exc)
+        leases.update(request_id, status="signing_error")
+        return
+    signed_dir = OUTPUT_ROOT / request_id / "signed"
+    signed_dir.mkdir(parents=True, exist_ok=True)
+    (signed_dir / "lease-signed.pdf").write_bytes(signed)
+    leases.update(request_id, status="signed", signed_at=datetime.now(timezone.utc).isoformat())
+
+
+@app.post("/sign/{token}")
+async def sign_submit(token: str, request: Request, background: BackgroundTasks) -> Any:
+    from . import ingoing
+
+    _signer_or_error(token)
+    try:
+        body = await request.json()
     except ValueError:
-        event = {}
-    envelope_id = str(event.get("envelope_id", "")) if isinstance(event, dict) else ""
-    # looked up by bound parameter only, never used in a path
-    row = leases.get_by_envelope(envelope_id) if 0 < len(envelope_id) <= 100 else None
-    if row is None or row["status"] not in ("sent", "signed"):
-        return {"ok": True, "ignored": True}
-    try:
-        envelope = esign.get_envelope(envelope_id)
-    except Exception as exc:
-        return _err(502, "upstream_error", str(exc))
+        body = None
+    body = body if isinstance(body, dict) else {}
+    full_name = str(body.get("full_name") or "").strip()[:200]
+    png = _signature_bytes(body.get("signature_png"))
+    problems = [msg for ok, msg in (
+        (body.get("consent") is True, "tick the box to agree to sign electronically"),
+        (bool(full_name), "type your full name"),
+        (png is not None, "draw your signature"),
+    ) if not ok]
+    if problems:
+        return _err(422, "invalid_request", "Please " + " and ".join(problems) + ".")
+    outcome = leases.record_signature(
+        token, full_name, png, _client_ip(request), request.headers.get("user-agent", "")[:300]
+    )
+    if outcome == "invalid":
+        return _err(409, "invalid_request", "this link is no longer open for signing")
+    if outcome == "complete":
+        request_id = leases.signer_by_token(token)["request_id"]
+        _finish_lease(request_id)
+        if leases.get(request_id)["status"] == "signed":
+            background.add_task(ingoing.notify_lease_signed, request_id)
+    return {"ok": True, "signed": True}
 
-    request_id = row["request_id"]
-    signers = [r for r in envelope.get("recipients") or [] if r.get("type", "signer") == "signer"]
-    if envelope.get("status") == "voided":
-        leases.update(request_id, status="voided")
-    elif any(r.get("status") == "declined" for r in signers):
-        leases.update(request_id, status="declined")
-    elif envelope.get("status") == "completed" and row["status"] == "sent":
-        try:
-            pdf = esign.download(envelope["combined"])
-        except Exception as exc:
-            return _err(502, "upstream_error", str(exc))
-        signed_dir = OUTPUT_ROOT / request_id / "signed"
-        signed_dir.mkdir(parents=True, exist_ok=True)
-        (signed_dir / "lease-signed.pdf").write_bytes(pdf)
-        leases.update(
-            request_id, status="signed",
-            signed_at=envelope.get("completed") or datetime.now(timezone.utc).isoformat(),
-            signers=sum(1 for r in signers if r.get("status") == "completed"),
-        )
-    if leases.get(request_id)["status"] == "signed":
-        # off the request path: Annature times out at 10 s, retries take minutes
-        background.add_task(ingoing.notify_lease_signed, request_id)
-    return {"ok": True}
+
+@app.post("/sign/{token}/decline")
+def sign_decline(token: str, payload: dict[str, Any]) -> Any:
+    _signer_or_error(token)
+    if leases.record_decline(token, str(payload.get("reason") or "").strip()) == "invalid":
+        return _err(409, "invalid_request", "this link is no longer open for signing")
+    return {"ok": True, "declined": True}
 
 
 @app.post("/lease/{request_id}/resend-ingoing", status_code=202)

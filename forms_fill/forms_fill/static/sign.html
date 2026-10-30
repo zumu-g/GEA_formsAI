@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex" />
+<title>Sign your lease — Grants Estate Agents</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400&family=DM+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --ink: #1A1814; --paper: #FAF8F4; --surface: #F2EEE8; --rule: #E0DBD4; --muted: #66605A;
+    --gold: #C8A96E; --gold-soft: #E8D4A8; --ok: #4A7C6F; --ok-bg: #E7F0EC; --bad: #9A5B5B; --bad-bg: #F3E9E9;
+    --font-display: 'Playfair Display', Georgia, serif;
+    --font-body: 'DM Sans', system-ui, sans-serif;
+    --font-mono: 'IBM Plex Mono', 'Courier New', monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --ink: #F0EDE8; --paper: #141210; --surface: #1C1A17; --rule: #2A2825; --muted: #A39D96; --ok-bg: #1E2B27; --bad-bg: #2E2222; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--font-body); font-size: 16px; line-height: 1.55; }
+  .hero {
+    background-image: linear-gradient(to bottom, rgba(26,24,20,0.82), rgba(26,24,20,0.68)), url('/ui/header-bg.jpg');
+    background-size: cover; background-position: center top; text-align: center; padding: 2.25rem 1rem 2.5rem;
+  }
+  .hero img { height: 40px; opacity: 0.9; display: block; margin: 0 auto 0.9rem; }
+  .hero h1 { font-family: var(--font-display); font-weight: 400; font-size: clamp(1.6rem, 5vw, 2.2rem); letter-spacing: -0.02em; color: #FAF8F4; margin: 0; }
+  .hero .gold-rule { height: 1px; width: 3.5rem; background: var(--gold); border: 0; margin: 0.85rem auto 0; }
+  main { max-width: 640px; margin: 0 auto; padding: 1.75rem 1rem 4rem; }
+  section { border: 1px solid var(--rule); border-radius: 10px; background: var(--surface); padding: 1.1rem 1.15rem; margin-bottom: 1.1rem; }
+  h2 { font-family: var(--font-display); font-weight: 400; font-size: 1.25rem; margin: 0 0 0.6rem; }
+  .pack { white-space: pre-line; font-size: 0.95rem; }
+  .pack strong { font-weight: 600; }
+  .muted { color: var(--muted); font-size: 0.88rem; }
+  a.doc { display: inline-flex; align-items: center; min-height: 44px; color: var(--ink); font-weight: 500; text-decoration: underline; text-decoration-color: var(--gold); text-underline-offset: 3px; }
+  label { display: block; font-size: 0.9rem; margin: 0.9rem 0 0.3rem; }
+  input[type=text], textarea { width: 100%; min-height: 44px; padding: 0.6rem 0.75rem; font: inherit; color: var(--ink); background: var(--paper); border: 1px solid var(--rule); border-radius: 8px; }
+  input:focus-visible, textarea:focus-visible, button:focus-visible, a:focus-visible, canvas:focus-visible, .check input:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--paper), 0 0 0 4px var(--gold); }
+  .check { display: flex; gap: 0.7rem; align-items: flex-start; margin-top: 0.4rem; }
+  .check input { width: 22px; height: 22px; margin-top: 2px; accent-color: var(--gold); flex: none; }
+  .check label { margin: 0; }
+  .pad-wrap { position: relative; margin-top: 0.3rem; }
+  canvas { display: block; width: 100%; height: 160px; background: #FAF8F4; /* always light: dark ink, stamped onto a white PDF */ border: 1px solid var(--rule); border-radius: 8px; touch-action: none; cursor: crosshair; }
+  .pad-hint { position: absolute; left: 0.9rem; bottom: 0.6rem; color: #66605A; font-size: 0.85rem; pointer-events: none; }
+  .row { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-top: 0.6rem; }
+  button { min-height: 44px; padding: 0.6rem 1.1rem; font: inherit; font-weight: 500; border-radius: 8px; border: 1px solid var(--gold); background: var(--gold); color: #1A1814; cursor: pointer; transition: opacity 160ms ease-in-out, transform 100ms; }
+  button:hover { opacity: 0.88; }
+  button:active { transform: scale(0.97); }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+  button.secondary { background: transparent; color: var(--ink); border-color: var(--rule); }
+  button.primary { width: 100%; margin-top: 1.1rem; font-size: 1.02rem; }
+  .msg { margin-top: 0.9rem; padding: 0.8rem 0.95rem; border-radius: 8px; display: none; }
+  .msg.show { display: block; }
+  .msg.ok { background: var(--ok-bg); border: 1px solid var(--ok); }
+  .msg.bad { background: var(--bad-bg); border: 1px solid var(--bad); }
+  details summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; color: var(--muted); }
+  .done h2 { margin-bottom: 0.3rem; }
+</style>
+</head>
+<body>
+<header class="hero">
+  <img src="/ui/logo.png" alt="Grants Estate Agents" />
+  <h1>Your rental agreement</h1>
+  <hr class="gold-rule" />
+</header>
+
+<main id="main">
+  <p id="loading" class="muted">Loading your lease…</p>
+
+  <div id="signing" hidden>
+    <section>
+      <h2 id="greeting">Hello</h2>
+      <p class="muted">Please read the lease before you sign. Each renter signs with their own link.</p>
+      <a class="doc" id="pdf-link" href="#" target="_blank" rel="noopener">Open the lease (PDF)</a>
+    </section>
+
+    <section>
+      <h2>Rent in advance and bond</h2>
+      <div class="pack" id="pack"></div>
+    </section>
+
+    <section aria-labelledby="sign-h">
+      <h2 id="sign-h">Sign</h2>
+      <div class="check">
+        <input type="checkbox" id="consent" />
+        <label for="consent">I have read the lease and I agree to sign it electronically. I understand my electronic signature has the same effect as signing on paper.</label>
+      </div>
+
+      <label for="full-name">Your full name</label>
+      <input type="text" id="full-name" autocomplete="name" />
+
+      <label id="pad-label" for="pad">Your signature</label>
+      <div class="pad-wrap">
+        <canvas id="pad" tabindex="0" role="img" aria-labelledby="pad-label" aria-describedby="pad-help"></canvas>
+        <span class="pad-hint" id="pad-hint">Draw here with your finger or mouse</span>
+      </div>
+      <p class="muted" id="pad-help">Can't draw? Use "Sign with my typed name" instead.</p>
+      <div class="row">
+        <button type="button" class="secondary" id="clear">Clear</button>
+        <button type="button" class="secondary" id="typed">Sign with my typed name</button>
+      </div>
+
+      <button type="button" class="primary" id="submit">Sign the lease</button>
+      <div class="msg" id="msg" role="alert"></div>
+
+      <details>
+        <summary>I don't want to sign</summary>
+        <label for="reason">Tell us why (optional)</label>
+        <textarea id="reason" rows="3"></textarea>
+        <div class="row"><button type="button" class="secondary" id="decline">Decline to sign</button></div>
+      </details>
+    </section>
+  </div>
+
+  <section class="done" id="done" hidden>
+    <h2 id="done-title">Thank you</h2>
+    <p id="done-text"></p>
+  </section>
+</main>
+
+<script>
+(function () {
+  const base = location.pathname.replace(/\/$/, '');
+  const $ = (id) => document.getElementById(id);
+  const pad = $('pad');
+  const ctx = pad.getContext('2d');
+  let drawn = false;
+
+  function sizePad() {
+    const ratio = window.devicePixelRatio || 1;
+    const rect = pad.getBoundingClientRect();
+    pad.width = Math.round(rect.width * ratio);
+    pad.height = Math.round(rect.height * ratio);
+    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+    ctx.lineWidth = 2.2; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.strokeStyle = '#1A1814'; // ink stays dark: it is stamped onto a white PDF
+    drawn = false; $('pad-hint').hidden = false;
+  }
+
+  function point(e) {
+    const r = pad.getBoundingClientRect();
+    return [e.clientX - r.left, e.clientY - r.top];
+  }
+
+  let down = false;
+  pad.addEventListener('pointerdown', (e) => {
+    down = true; pad.setPointerCapture(e.pointerId);
+    const [x, y] = point(e); ctx.beginPath(); ctx.moveTo(x, y);
+  });
+  pad.addEventListener('pointermove', (e) => {
+    if (!down) return;
+    const [x, y] = point(e); ctx.lineTo(x, y); ctx.stroke();
+    drawn = true; $('pad-hint').hidden = true;
+  });
+  ['pointerup', 'pointercancel', 'pointerleave'].forEach((t) => pad.addEventListener(t, () => { down = false; }));
+
+  $('clear').addEventListener('click', sizePad);
+  $('typed').addEventListener('click', () => {
+    const name = $('full-name').value.trim();
+    if (!name) { show('Type your full name first.', false); $('full-name').focus(); return; }
+    sizePad();
+    const r = pad.getBoundingClientRect();
+    ctx.fillStyle = '#1A1814';
+    ctx.font = 'italic 34px "Playfair Display", Georgia, serif';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(name, 16, r.height / 2, r.width - 32);
+    drawn = true; $('pad-hint').hidden = true; hide();
+  });
+
+  function show(text, ok) { const m = $('msg'); m.textContent = text; m.className = 'msg show ' + (ok ? 'ok' : 'bad'); }
+  function hide() { $('msg').className = 'msg'; }
+  function finish(title, text) {
+    $('signing').hidden = true; $('done').hidden = false;
+    $('done-title').textContent = title; $('done-text').textContent = text;
+    $('done').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  async function post(path, body) {
+    const resp = await fetch(base + path, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+    });
+    let data = {};
+    try { data = await resp.json(); } catch (e) { /* non-JSON error */ }
+    return { ok: resp.ok, data: data };
+  }
+
+  $('submit').addEventListener('click', async () => {
+    hide();
+    if (!$('consent').checked) { show('Tick the box to agree to sign electronically.', false); return; }
+    if (!$('full-name').value.trim()) { show('Type your full name.', false); $('full-name').focus(); return; }
+    if (!drawn) { show('Draw your signature, or use "Sign with my typed name".', false); return; }
+    $('submit').disabled = true;
+    const r = await post('', {
+      consent: true, full_name: $('full-name').value.trim(), signature_png: pad.toDataURL('image/png'),
+    });
+    if (r.ok) {
+      finish('Thank you, you have signed', 'We will email you a copy of the signed lease once every renter has signed. You can close this page.');
+    } else {
+      $('submit').disabled = false;
+      show(r.data.message || 'Something went wrong. Please try again.', false);
+    }
+  });
+
+  $('decline').addEventListener('click', async () => {
+    if (!confirm('Decline to sign this lease? Your property manager will be told.')) return;
+    const r = await post('/decline', { reason: $('reason').value });
+    if (r.ok) finish('You have declined', 'Your property manager has been told and will be in touch.');
+    else show(r.data.message || 'Something went wrong. Please try again.', false);
+  });
+
+  fetch(base + '/info').then((r) => (r.ok ? r.json() : Promise.reject(r))).then((info) => {
+    $('greeting').textContent = 'Hello ' + info.name;
+    $('pack').textContent = info.message;
+    $('pdf-link').href = base + '/pdf';
+    $('loading').hidden = true; $('signing').hidden = false;
+    sizePad();
+  }).catch(() => {
+    $('loading').textContent = 'This signing link is no longer valid. Contact Grants Estate Agents if you think this is wrong.';
+  });
+  window.addEventListener('resize', () => { if (!drawn) sizePad(); });
+})();
+</script>
+</body>
+</html>

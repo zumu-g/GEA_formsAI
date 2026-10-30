@@ -180,7 +180,7 @@ def tenants(facts: dict) -> list[dict]:
         name = str(facts.get(f"renter{n}_name") or "").strip()
         email = str(facts.get(f"renter{n}_email") or "").strip()
         if name or email:
-            out.append({"name": name, "email": email})
+            out.append({"slot": n, "name": name, "email": email})
     return out
 
 
@@ -210,12 +210,14 @@ def create_signers(request_id: str, tenants: list[dict]) -> dict[int, str]:
     """One signing link per tenant. Returns {slot: raw token}; only the hash
     is stored, so the DB alone can't be used to sign."""
 
-    tokens = {slot: secrets.token_urlsafe(32) for slot in range(1, len(tenants) + 1)}
+    # slot = renter number on the lease, so each signature lands in its own box
+    slots = [t.get("slot", i) for i, t in enumerate(tenants, start=1)]
+    tokens = {slot: secrets.token_urlsafe(32) for slot in slots}
     with _connect() as conn:
         conn.executemany(
             "INSERT INTO lease_signers (request_id, slot, name, email, token_hash) VALUES (?, ?, ?, ?, ?)",
             [(request_id, slot, t["name"], t["email"], _hash(tokens[slot]))
-             for slot, t in zip(tokens, tenants)],
+             for slot, t in zip(slots, tenants)],
         )
     return tokens
 

@@ -56,3 +56,10 @@ def test_audit_page_lists_every_signer_and_the_document_hash():
 def test_a_missing_renter_box_raises_instead_of_dropping_a_signature():
     with pytest.raises(SigningError, match="renter 3"):
         build_signed_pdf(_lease_pdf(), [_signer(3, "Alex Renter")])
+
+
+def test_missing_boxes_names_each_slot_without_a_box():
+    from forms_fill.sign_pdf import missing_boxes
+
+    assert missing_boxes(_lease_pdf(), [1, 2]) == []
+    assert missing_boxes(_lease_pdf(), [1, 3]) == [3]
