@@ -37,6 +37,32 @@ def _label(doc, slot: int):
     raise SigningError(f"no 'Signature of renter {slot}' box in the lease PDF")
 
 
+def _ink_only(png: bytes) -> fitz.Pixmap:
+    """Crop the signing pad's transparent canvas to the drawn ink."""
+
+    pix = fitz.Pixmap(png)
+    if not pix.alpha:
+        return pix
+    w, h = pix.width, pix.height
+    alpha = pix.samples[pix.n - 1 :: pix.n]
+    rows = [y for y in range(h) if alpha[y * w : (y + 1) * w].strip(b"\0")]
+    if not rows:
+        return pix
+    left = min(w - len(alpha[y * w : (y + 1) * w].lstrip(b"\0")) for y in rows)
+    right = max(len(alpha[y * w : (y + 1) * w].rstrip(b"\0")) for y in rows)
+    ink = fitz.IRect(left, rows[0], right, rows[-1] + 1)
+    cropped = fitz.Pixmap(pix.colorspace, ink, True)
+    cropped.copy(pix, ink)
+    return cropped
+
+
+def _date_label_below(page, label):
+    """The renter's own Date box label: the first "Date" just below."""
+
+    below = [d for d in page.search_for("Date") if label.y1 <= d.y0 <= label.y1 + 70]
+    return min(below, key=lambda d: d.y0) if below else None
+
+
 def missing_boxes(pdf: bytes, slots: list[int]) -> list[int]:
     """Renter slots with no signature box — checked before links go out."""
 
@@ -49,9 +75,16 @@ def build_signed_pdf(original: bytes, signers: list[dict]) -> bytes:
     doc = fitz.open(stream=original, filetype="pdf")
     for s in signers:
         page, label = _label(doc, s["slot"])
+        ink = _ink_only(s["signature_png"])
         mid = (label.y0 + label.y1) / 2
-        box = fitz.Rect(label.x1 + 8, mid - 14, page.rect.width - 36, mid + 14)
-        page.insert_image(box, stream=s["signature_png"], keep_proportion=True)
+        height = 26.0
+        width = min(height * ink.width / ink.height, page.rect.width - 36 - (label.x1 + 24))
+        page.insert_image(fitz.Rect(label.x1 + 24, mid - height / 2, label.x1 + 24 + width, mid + height / 2),
+                          pixmap=ink, keep_proportion=True)
+        date_label = _date_label_below(page, label)
+        if date_label is not None:
+            signed_on = datetime.fromisoformat(s["signed_at"]).astimezone(MELBOURNE)
+            page.insert_text((label.x1 + 24, date_label.y1 - 2), f"{signed_on:%d/%m/%Y}", fontsize=10)
 
     audit = doc.new_page()
     lines = [
@@ -66,7 +99,7 @@ def build_signed_pdf(original: bytes, signers: list[dict]) -> bytes:
             f"  Typed name: {s['signed_name']}",
             f"  Signed: {_local(s['signed_at'])}",
             f"  IP address: {s['ip']}",
-            f"  Device: {(s['user_agent'] or '')[:90]}",
+            f"  Device: {s['user_agent'] or ''}",
             "",
         ]
     lines.append(CONSENT)

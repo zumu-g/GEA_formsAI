@@ -9,8 +9,15 @@ from forms_fill.sign_pdf import SigningError, build_signed_pdf
 
 
 def _png():
-    pix = fitz.Pixmap(fitz.csRGB, fitz.IRect(0, 0, 60, 20), False)
-    pix.set_rect(pix.irect, (20, 20, 20))
+    """A wide transparent canvas with a small ink stroke near its middle, like
+    the signing pad produces."""
+
+    pix = fitz.Pixmap(fitz.csRGB, fitz.IRect(0, 0, 600, 200), True)
+    pix.set_rect(pix.irect, (20, 20, 20, 255))
+    alpha = bytearray(600 * 200)  # transparent except the stroke
+    for y in range(90, 110):
+        alpha[y * 600 + 250 : y * 600 + 350] = b"\xff" * 100
+    pix.set_alpha(bytes(alpha))
     return pix.tobytes("png")
 
 
@@ -20,6 +27,7 @@ def _lease_pdf(slots=(1, 2)):
     page.insert_text((72, 100), "Signature of rental provider 1")
     for i, slot in enumerate(slots):
         page.insert_text((72, 200 + 80 * i), f"Signature of renter {slot}")
+        page.insert_text((72, 230 + 80 * i), "Date")
     return doc.tobytes()
 
 
@@ -63,3 +71,30 @@ def test_missing_boxes_names_each_slot_without_a_box():
 
     assert missing_boxes(_lease_pdf(), [1, 2]) == []
     assert missing_boxes(_lease_pdf(), [1, 3]) == [3]
+
+
+def test_signature_is_cropped_to_the_ink_and_starts_at_the_box():
+    out = fitz.open(stream=build_signed_pdf(_lease_pdf(), [_signer(1, "Jane Renter")]))
+    page = out[0]
+    (label,) = page.search_for("Signature of renter 1")
+    (info,) = page.get_image_info()
+    rect = fitz.Rect(info["bbox"])
+    assert rect.x0 - label.x1 < 30  # starts at the box, not floating right
+    assert rect.width / rect.height == pytest.approx(100 / 20, rel=0.1)  # ink only
+
+
+def test_each_renter_date_box_gets_the_melbourne_signing_date():
+    out = fitz.open(stream=build_signed_pdf(_lease_pdf(), [_signer(1, "Jane Renter"), _signer(2, "Sam Renter")]))
+    page = out[0]
+    dates = page.search_for("30/10/2026")
+    labels = page.search_for("Date")
+    assert len(dates) == 2
+    for d in dates:
+        assert any(abs(d.y0 - l.y0) < 4 and d.x0 > l.x1 for l in labels)
+
+
+def test_audit_page_keeps_the_whole_device_string():
+    s = _signer(1, "Jane Renter")
+    s["user_agent"] = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/140.0 Safari/537.36"
+    out = fitz.open(stream=build_signed_pdf(_lease_pdf(), [s]))
+    assert "Safari/537.36" in out[-1].get_text().replace("\n", " ")
