@@ -423,3 +423,31 @@ def test_lease_without_renter_signature_boxes_is_not_sent(client, lease, emails,
     assert resp.status_code == 422
     assert "renter 1" in resp.json()["message"]
     assert emails == []
+
+
+# ── S5: PM voids a lease out for signing ─────────────────────────────────────
+
+
+def test_void_kills_every_link_and_never_posts(client, sent_lease, engine):
+    request_id, tokens = sent_lease
+    _sign(client, tokens[0])
+    assert client.post(f"/lease/{request_id}/void", headers=APPROVE).status_code == 200
+    assert leases.get(request_id)["status"] == "voided"
+    assert client.get(f"/sign/{tokens[1]}").status_code == 404
+    assert _sign(client, tokens[1]).status_code == 409
+    assert engine == []
+
+
+def test_void_needs_the_approval_credential_and_a_sent_lease(client, sent_lease, lease):
+    request_id, _ = sent_lease
+    assert client.post(f"/lease/{request_id}/void", headers=AUTH).status_code == 401
+    client.post(f"/lease/{request_id}/void", headers=APPROVE)
+    assert client.post(f"/lease/{request_id}/void", headers=APPROVE).status_code == 409
+
+
+def test_missing_agency_config_is_a_clear_error_not_a_crash(client, lease, emails, monkeypatch, tmp_path):
+    monkeypatch.setenv("FORMS_AGENCY_FILE", str(tmp_path / "missing.json"))
+    resp = _approve_send(client, lease)
+    assert resp.status_code == 503
+    assert "agency" in resp.json()["message"]
+    assert emails == []

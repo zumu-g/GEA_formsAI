@@ -17,7 +17,7 @@ from .accounts import _connect
 LEASE_FORM = "residential_rental_agreement"
 
 _COLUMNS = (
-    "idem_key", "facts", "status", "envelope_id", "signers_expected", "signers",
+    "idem_key", "facts", "status", "signers_expected", "signers",
     "signed_at", "notify_status", "notify_attempts", "notify_sent_at",
     "notify_response", "updated_at",
 )
@@ -32,7 +32,6 @@ def init() -> None:
               idem_key TEXT,
               facts TEXT NOT NULL,
               status TEXT NOT NULL,
-              envelope_id TEXT UNIQUE,
               signers_expected INTEGER,
               signers INTEGER,
               signed_at TEXT,
@@ -94,15 +93,6 @@ def get(request_id: str) -> dict | None:
         return _row(
             conn.execute(
                 "SELECT * FROM lease_signings WHERE request_id = ?", (request_id,)
-            ).fetchone()
-        )
-
-
-def get_by_envelope(envelope_id: str) -> dict | None:
-    with _connect() as conn:
-        return _row(
-            conn.execute(
-                "SELECT * FROM lease_signings WHERE envelope_id = ?", (envelope_id,)
             ).fetchone()
         )
 
@@ -304,3 +294,14 @@ def record_decline(token: str, reason: str) -> str:
             (now, row["request_id"]),
         )
         return "declined"
+
+
+def void(request_id: str) -> bool:
+    """Atomic: only a lease still awaiting signatures can be voided."""
+
+    with _connect() as conn:
+        cur = conn.execute(
+            "UPDATE lease_signings SET status = 'voided', updated_at = ? WHERE request_id = ? AND status = 'sent'",
+            (_now(), request_id),
+        )
+        return cur.rowcount == 1

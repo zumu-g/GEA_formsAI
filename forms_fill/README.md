@@ -344,43 +344,62 @@ skipped entirely. Overlay forms (`engine: pdf_overlay`) are always fast
 
 ---
 
-## Ingoing lease: approval, e-signature and the "lease signed" hook
+## Ingoing lease: approval, formsAI e-signing and the "lease signed" hook
 
-Flow: the Ingoing workflow calls `POST /fill` for `residential_rental_agreement`
-with an optional top-level `"idem_key": "OAK12:ingoing"`. The PM then approves the
-lease in the UI. **Approve and send to tenants** calls
-`POST /lease/{request_id}/approve-send` with the approval credential, and Annature
-emails every renter named on the lease. Nothing reaches tenants before that.
-Sending is blocked, and the PM is shown what is missing, if any of these are
-missing: rent amount, first rent due date, bond amount, or the agency payment details.
+Leases are signed in formsAI itself. They don't go through Annature, and
+`/esign/send` refuses them. Other forms can still use Annature's `/esign/send`.
 
-When Annature reports that **all** tenants have signed, formsAI stores the signed
-PDF (`GET /files/{request_id}/signed`) and makes one POST of the `lease_signed`
-step action to the ingoing engine. A declined signature or a voided envelope never
-posts; the PM sees the status under **Lease signing**.
+1. **Draft:** the Ingoing workflow calls `POST /fill` for `residential_rental_agreement`
+   with an optional top-level `"idem_key": "OAK12:ingoing"`. The lease is stored as a draft.
+2. **PM approval:** the PM clicks **Approve and send to tenants**, which calls
+   `POST /lease/{request_id}/approve-send` with the approval credential. Nothing
+   reaches tenants before this. Sending is blocked, and the PM is shown what is
+   missing, if any of these are missing: rent amount, first rent due date, bond
+   amount, the agency payment details, a renter name or email, or a renter
+   signature box in the PDF.
+3. **Signing links:** each renter is emailed a private link (`/sign/{token}`,
+   stored only as a hash). The email includes the rent-in-advance and bond details
+   and the RTBA note. If any email fails, every link is withdrawn and the lease
+   stays a draft.
+4. **Tenant signs:** the page shows the lease PDF and the payment details. The
+   tenant ticks consent (Electronic Transactions (Victoria) Act 2000), types their
+   full name, and draws a signature or uses their typed name. Tenants can also
+   decline.
+5. **All signed:** when the last renter signs, formsAI checks the PDF is the one
+   the PM approved. It then stamps each signature into that renter's "Signature
+   of renter N" box, adds an audit page (document SHA-256, names, emails, times,
+   IP addresses, devices), and serves the result at `GET /files/{request_id}/signed`.
+   After that it makes one POST of the `lease_signed` step action to the ingoing
+   engine. A single signature, a decline or a void never posts.
 
 | Setting | Where | Purpose |
 |---|---|---|
 | `INGOING_ENGINE_WEBHOOK` | env | ingoing engine URL (n8n `gea-pm-ingoing-engine`) |
 | `INGOING_WEBHOOK_SECRET` | env | sent as `X-GEA-Secret`; never logged |
-| `FORMS_APPROVE_TOKEN` | env (existing) | approval credential for approve-send and resend |
-| `ANNATURE_API_ID` / `ANNATURE_API_KEY` | env (existing) | Annature keys |
-| `payments.rent_payment_details`, `payments.bond_payment_instructions` | agency config (`FORMS_AGENCY_FILE`) | rent-in-advance and bond payment text in the signing email |
+| `RESEND_API_KEY`, `MAIL_FROM` | env (existing, used for invites) | sends the signing-link emails |
+| `FORMS_APPROVE_TOKEN` | env (existing) | approval credential for approve-send, void and resend |
+| `PUBLIC_BASE_URL` | env (existing) | builds the signing links and `signed_pdf_url` |
+| `payments.rent_payment_details`, `payments.bond_payment_instructions` | agency config (`FORMS_AGENCY_FILE`) | payment text in the signing email and page |
 
-One-off setup: register `{PUBLIC_BASE_URL}/esign/annature-webhook` as an endpoint
-in Annature (Developers section). The endpoint ignores the webhook body except
-`envelope_id`, and re-fetches the envelope from Annature before acting.
+Where things live:
 
-- **Where the signed hook lives:** `forms_fill/ingoing.py` (`notify_lease_signed`).
-  The webhook receiver is in `api.py` (`annature_webhook`), and lease records are in
-  `forms_fill/leases.py` (table `lease_signings`).
+- **Signed hook:** `forms_fill/ingoing.py` (`notify_lease_signed`)
+- **Signing routes:** `api.py` (`/sign/{token}`, `/lease/{id}/approve-send`, `/void`, `/resend-ingoing`)
+- **Signing links:** `forms_fill/signing.py`
+- **PDF stamping:** `forms_fill/sign_pdf.py`
+- **Records:** `forms_fill/leases.py` (tables `lease_signings`, `lease_signers`)
+- **Signing page:** `static/sign.html`
+
+How the notification behaves:
+
 - **Once only:** a successful post is recorded (`notify_sent_at`, response) and is
   never repeated. Each attempt has a 15 s timeout. If it fails, it is retried after
-  5 s, 30 s and 2 min, and then marked `ingoing_notify_failed`. Signing status is
-  never changed by this step.
-- **PM resend:** failed rows show **Resend to Ingoing** under **Lease signing**. It
-  asks for the approval credential and calls
-  `POST /lease/{request_id}/resend-ingoing`, which only runs for failed rows.
+  5 s, 30 s and 2 min, and then marked `ingoing_notify_failed`. Signing is never
+  affected.
+- **PM resend:** failed rows under **Lease signing** show **Resend to Ingoing**. It
+  asks for the approval credential and calls `POST /lease/{request_id}/resend-ingoing`.
+- **PM void:** rows awaiting signatures show **Void**. Every link stops working
+  and nothing is posted.
 - **No idem_key:** formsAI doesn't post. The row shows "Not linked to a move-in",
   and the PM updates ClickUp by hand.
 

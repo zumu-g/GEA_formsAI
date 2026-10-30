@@ -1882,7 +1882,7 @@
         return;
       }
       if (lastFill.lease) {
-        approveResult.textContent = 'Approved and sent to ' + body.signers + ' tenant(s) for signing.';
+        approveResult.textContent = 'Approved. Signing links emailed to ' + body.signers + ' tenant(s).';
         refreshLeases();
         return;
       }
@@ -2382,7 +2382,8 @@
   const leaseBanner = document.getElementById('lease-banner');
   const leaseList = document.getElementById('lease-list');
   const LEASE_STATUS = {
-    sent: 'Awaiting signatures', signed: 'Signed', declined: 'Declined by a tenant', voided: 'Envelope voided',
+    sent: 'Awaiting signatures', signed: 'Signed', declined: 'Declined by a tenant', voided: 'Voided',
+    signing_error: 'Signed, but the signed PDF could not be built — contact support',
   };
   const NOTIFY_STATUS = {
     sent: 'Ingoing told', sending: 'Telling Ingoing…', ingoing_notify_failed: 'Ingoing not told',
@@ -2403,13 +2404,31 @@
         li.style.gap = '0.5rem';
         li.style.alignItems = 'center';
         const label = document.createElement('span');
-        const problem = ['declined', 'voided'].includes(r.status)
+        const problem = ['declined', 'voided', 'signing_error'].includes(r.status)
           || ['ingoing_notify_failed', 'no_idem_key'].includes(r.notify_status);
         label.textContent = (r.idem_key || 'Lease ' + r.request_id.slice(0, 8)) + ' · '
           + (LEASE_STATUS[r.status] || r.status)
+          + (r.status === 'sent' ? ' (' + (r.signers || 0) + ' of ' + r.signers_expected + ' signed)' : '')
           + (r.status === 'signed' && r.notify_status ? ' · ' + (NOTIFY_STATUS[r.notify_status] || r.notify_status) : '');
         if (problem) label.style.color = '#9A5B5B';
         li.appendChild(label);
+        if (r.status === 'sent') {
+          const voidBtn = document.createElement('button');
+          voidBtn.type = 'button';
+          voidBtn.className = 'linklike';
+          voidBtn.textContent = 'Void';
+          voidBtn.addEventListener('click', async () => {
+            if (!confirm('Void this lease? Every tenant signing link stops working.')) return;
+            const cred = prompt('Approval credential:');
+            if (!cred) return;
+            const out = await fetch(API + '/lease/' + r.request_id + '/void', {
+              method: 'POST', headers: { Authorization: 'Bearer ' + cred.trim() },
+            });
+            if (!out.ok) alert('Void failed: ' + ((await out.json()).message || out.status));
+            refreshLeases();
+          });
+          li.appendChild(voidBtn);
+        }
         if (r.notify_status === 'ingoing_notify_failed') {
           const btn = document.createElement('button');
           btn.type = 'button';

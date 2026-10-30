@@ -299,7 +299,10 @@ def lease_approve_send(
     if row["status"] != "draft":
         return _err(409, "invalid_request", f"lease already {row['status']}")
     facts = row["facts"]
-    payments = load_agency_config().get("payments") or {}
+    try:
+        payments = load_agency_config().get("payments") or {}
+    except ProviderConfigError as exc:
+        return _err(503, "not_configured", str(exc))
     missing = leases.missing_payment_facts(facts, payments)
     signers = leases.tenants(facts)
     if not signers or any(not s["name"] or "@" not in s["email"] for s in signers):
@@ -375,7 +378,10 @@ def sign_info(token: str) -> Any:
 
     s = _signer_or_error(token)
     row = leases.get(s["request_id"])
-    payments = load_agency_config().get("payments") or {}
+    try:
+        payments = load_agency_config().get("payments") or {}
+    except ProviderConfigError as exc:
+        return _err(503, "not_configured", str(exc))
     return {"name": s["name"], "message": leases.signing_message(row["facts"], payments)}
 
 
@@ -482,6 +488,16 @@ def lease_resend_ingoing(
         return _err(409, "invalid_request", f"nothing to resend (notify status: {row['notify_status']})")
     background.add_task(ingoing.notify_lease_signed, request_id)
     return {"ok": True, "notify_status": "sending"}
+
+
+@app.post("/lease/{request_id}/void")
+def lease_void(request_id: str, authorization: str = Header(default="")) -> Any:
+    """PM withdraws a lease out for signing: every link stops working."""
+
+    _require_approve_auth(authorization)
+    if not leases.void(_lease_or_404(request_id)["request_id"]):
+        return _err(409, "invalid_request", "only a lease awaiting signatures can be voided")
+    return {"ok": True, "status": "voided"}
 
 
 @app.get("/leases")
@@ -921,7 +937,7 @@ def get_file(
             detail={"error": "invalid_request", "message": "invalid request id"},
         )
     directory = OUTPUT_ROOT / request_id
-    if kind == "signed":  # fully signed lease from Annature
+    if kind == "signed":  # fully signed lease (formsAI signing)
         matches = sorted((directory / "signed").glob("*.pdf")) if directory.exists() else []
     else:
         matches = sorted(directory.glob(f"*.{kind}")) if directory.exists() else []
