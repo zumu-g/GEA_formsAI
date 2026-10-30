@@ -7,7 +7,9 @@ Lives in the accounts SQLite file (same volume) but owns its own table.
 
 from __future__ import annotations
 
+import hashlib
 import json
+import secrets
 from datetime import datetime, timezone
 
 from .accounts import _connect
@@ -40,6 +42,25 @@ def init() -> None:
               notify_response TEXT,
               created_at TEXT NOT NULL,
               updated_at TEXT NOT NULL
+            )
+            """
+        )
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS lease_signers (
+              request_id TEXT NOT NULL REFERENCES lease_signings(request_id),
+              slot INTEGER NOT NULL,
+              name TEXT NOT NULL,
+              email TEXT NOT NULL,
+              token_hash TEXT UNIQUE NOT NULL,
+              status TEXT NOT NULL DEFAULT 'pending',
+              signed_name TEXT,
+              signature_png BLOB,
+              signed_at TEXT,
+              ip TEXT,
+              user_agent TEXT,
+              declined_reason TEXT,
+              PRIMARY KEY (request_id, slot)
             )
             """
         )
@@ -176,3 +197,108 @@ def claim_notify(request_id: str) -> bool:
             (_now(), request_id),
         )
         return cur.rowcount == 1
+
+
+# ── tenant signers: formsAI's own e-signing ──────────────────────────────────
+
+
+def _hash(token: str) -> str:
+    return hashlib.sha256(token.encode()).hexdigest()
+
+
+def create_signers(request_id: str, tenants: list[dict]) -> dict[int, str]:
+    """One signing link per tenant. Returns {slot: raw token}; only the hash
+    is stored, so the DB alone can't be used to sign."""
+
+    tokens = {slot: secrets.token_urlsafe(32) for slot in range(1, len(tenants) + 1)}
+    with _connect() as conn:
+        conn.executemany(
+            "INSERT INTO lease_signers (request_id, slot, name, email, token_hash) VALUES (?, ?, ?, ?, ?)",
+            [(request_id, slot, t["name"], t["email"], _hash(tokens[slot]))
+             for slot, t in zip(tokens, tenants)],
+        )
+    return tokens
+
+
+def delete_signers(request_id: str) -> None:
+    with _connect() as conn:
+        conn.execute("DELETE FROM lease_signers WHERE request_id = ?", (request_id,))
+
+
+def signer_by_token(token: str) -> dict | None:
+    with _connect() as conn:
+        r = conn.execute(
+            """SELECT s.*, l.status AS lease_status FROM lease_signers s
+               JOIN lease_signings l USING (request_id) WHERE s.token_hash = ?""",
+            (_hash(token),),
+        ).fetchone()
+    return dict(r) if r else None
+
+
+def signers_for(request_id: str) -> list[dict]:
+    with _connect() as conn:
+        rows = conn.execute(
+            "SELECT * FROM lease_signers WHERE request_id = ? ORDER BY slot", (request_id,)
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def _open_signer(conn, token: str):
+    """The pending signer for a token on a lease still out for signing."""
+
+    return conn.execute(
+        """SELECT s.request_id, s.slot FROM lease_signers s
+           JOIN lease_signings l USING (request_id)
+           WHERE s.token_hash = ? AND s.status = 'pending' AND l.status = 'sent'""",
+        (_hash(token),),
+    ).fetchone()
+
+
+def record_signature(token: str, signed_name: str, signature_png: bytes, ip: str, user_agent: str) -> str:
+    """'signed', 'complete' (this was the last tenant), or 'invalid'.
+
+    BEGIN IMMEDIATE serialises concurrent signers, so exactly one call can
+    ever see the lease become complete."""
+
+    with _connect() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        row = _open_signer(conn, token)
+        if row is None:
+            return "invalid"
+        now = _now()
+        conn.execute(
+            """UPDATE lease_signers SET status = 'signed', signed_name = ?, signature_png = ?,
+               signed_at = ?, ip = ?, user_agent = ? WHERE request_id = ? AND slot = ?""",
+            (signed_name, signature_png, now, ip, user_agent, row["request_id"], row["slot"]),
+        )
+        pending = conn.execute(
+            "SELECT COUNT(*) FROM lease_signers WHERE request_id = ? AND status != 'signed'",
+            (row["request_id"],),
+        ).fetchone()[0]
+        signed = conn.execute(
+            "SELECT COUNT(*) FROM lease_signers WHERE request_id = ? AND status = 'signed'",
+            (row["request_id"],),
+        ).fetchone()[0]
+        conn.execute(
+            "UPDATE lease_signings SET signers = ?, updated_at = ? WHERE request_id = ?",
+            (signed, now, row["request_id"]),
+        )
+        return "signed" if pending else "complete"
+
+
+def record_decline(token: str, reason: str) -> str:
+    with _connect() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        row = _open_signer(conn, token)
+        if row is None:
+            return "invalid"
+        now = _now()
+        conn.execute(
+            "UPDATE lease_signers SET status = 'declined', declined_reason = ? WHERE request_id = ? AND slot = ?",
+            (reason[:1000], row["request_id"], row["slot"]),
+        )
+        conn.execute(
+            "UPDATE lease_signings SET status = 'declined', updated_at = ? WHERE request_id = ?",
+            (now, row["request_id"]),
+        )
+        return "declined"
