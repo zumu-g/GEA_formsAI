@@ -130,3 +130,12 @@ def test_iso_dates_print_in_australian_format(tmp_path):
 def test_non_iso_dates_print_exactly_as_given(tmp_path):
     text = _flat("".join(_pages(_pdf(tmp_path, agreement_date="1 July 2026"))))
     assert "1 July 2026" in text
+
+
+def test_lease_never_shows_the_owners_address_or_contact_details():
+    # Stuart, 11/11/2026: the owner is always care of the office, with no contact details.
+    bundle = FixtureProvider().fetch_bundle({"tenancy_id": "T-1001"})
+    ctx = build_context(bundle, {**FIELDS, "provider_address": "8 Bangalay Place", "provider_phone": "0429 321 086", "provider_email": "owner@example.com"})
+    assert ctx["provider_address"] == "c/- 3a Gloucester Ave Berwick"
+    assert ctx["provider_postcode"] == "3806"
+    assert ctx["provider_phone"] == ctx["provider_email"] == ""

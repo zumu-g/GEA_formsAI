@@ -143,6 +143,15 @@ def build_context(bundle: TenancyBundle, fields: dict) -> dict[str, str]:
 
     ctx["rent_period"] = normalise_period(ctx.get("rent_period", ""))
 
+    # GEA policy: the owner's own address and contact details never appear on
+    # a lease, whatever the provider or caller sends — always care of the office.
+    ctx.update(
+        provider_address="c/- 3a Gloucester Ave Berwick",
+        provider_postcode="3806",
+        provider_phone="",
+        provider_email="",
+    )
+
     return ctx
 
 
