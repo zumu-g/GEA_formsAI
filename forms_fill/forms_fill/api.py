@@ -143,7 +143,25 @@ async def _http_exc(request: Any, exc: HTTPException) -> JSONResponse:
 
 
 @app.get("/health")
-def health() -> dict[str, str]:
+def health() -> Any:
+    # Stale-venv guard: a venv rebuilt under a running process deletes the
+    # CA bundle, and every PropertyMe call then 500s. Prove TLS works here.
+    import ssl
+
+    cafile = "(unknown)"
+    try:
+        import certifi
+        import httpx  # noqa: F401 — import failure is the signal
+
+        cafile = certifi.where()
+        ssl.create_default_context(cafile=cafile)
+    except (ImportError, OSError) as exc:
+        return _err(
+            503,
+            "tls_unavailable",
+            f"TLS CA bundle not loadable ({cafile}): {exc}. "
+            "The venv likely changed under the running process — restart the service.",
+        )
     return {"status": "ok"}
 
 

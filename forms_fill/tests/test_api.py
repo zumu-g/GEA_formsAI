@@ -31,7 +31,23 @@ def _fill(client, caller_fields, **overrides):
 
 
 def test_health(client):
-    assert client.get("/health").json() == {"status": "ok"}
+    resp = client.get("/health")
+    assert resp.status_code == 200
+    assert resp.json() == {"status": "ok"}
+
+
+def test_health_503_when_tls_ca_bundle_missing(client, monkeypatch):
+    # Stale venv (site-packages deleted under a running process): every
+    # PropertyMe call would 500, so health must say so before callers hit it.
+    import certifi
+
+    monkeypatch.setattr(certifi, "where", lambda: "/nonexistent/cacert.pem")
+    resp = client.get("/health")
+    assert resp.status_code == 503
+    body = resp.json()
+    assert body["error"] == "tls_unavailable"
+    assert "/nonexistent/cacert.pem" in body["message"]
+    assert "restart" in body["message"]
 
 
 def test_startup_fails_closed_without_token(monkeypatch):
