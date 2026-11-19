@@ -8,6 +8,7 @@ the result with blank/filled accounting.
 
 from __future__ import annotations
 
+from .errors import MissingIdentifiersError
 from .models import FillFiles, FillRequest, FillResult, apply_service_address_defaults
 from .providers.base import PropertyDataProvider, select_provider
 from .registry import get_form_spec
@@ -21,6 +22,11 @@ def fill_form(
     spec = get_form_spec(request.form)
 
     if spec.requires_bundle:
+        ids = request.identifiers
+        if not any(str(ids.get(k) or "").strip() for k in ("lot_id", "tenancy_id")):
+            raise MissingIdentifiersError(
+                f"form '{request.form}' needs identifiers.lot_id or identifiers.tenancy_id"
+            )
         provider = provider or select_provider(request.provider)
         bundle = provider.fetch_bundle(request.identifiers)
         bundle = apply_service_address_defaults(bundle)

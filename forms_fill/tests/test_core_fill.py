@@ -36,7 +36,7 @@ def test_fill_form_happy_path(tmp_path, caller_fields):
 def test_caller_values_verbatim_in_output(tmp_path, caller_fields):
     req = FillRequest(
         form="cav_rent_increase_notice",
-        identifiers={},
+        identifiers={"lot_id": "L-2002", "tenancy_id": "T-1001"},
         fields=caller_fields,
         out_dir=str(tmp_path),
     )
@@ -60,7 +60,7 @@ def test_blank_fields_listed_for_missing_value(tmp_path, caller_fields, monkeypa
 
     req = FillRequest(
         form="cav_rent_increase_notice",
-        identifiers={},
+        identifiers={"lot_id": "L-2002", "tenancy_id": "T-1001"},
         fields=caller_fields,
         out_dir=str(tmp_path),
     )
@@ -100,7 +100,7 @@ def test_blank_renter_service_address_defaults_to_premises(tmp_path, caller_fiel
 
     req = FillRequest(
         form="cav_rent_increase_notice",
-        identifiers={},
+        identifiers={"lot_id": "L-2002", "tenancy_id": "T-1001"},
         fields=caller_fields,
         out_dir=str(tmp_path),
     )

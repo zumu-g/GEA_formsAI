@@ -15,6 +15,10 @@ class ProviderConfigError(FormsFillError):
     """Data provider is misconfigured (e.g. missing API key)."""
 
 
+class MissingIdentifiersError(FormsFillError):
+    """Caller sent no lot_id/tenancy_id for a form that needs a tenancy fetch."""
+
+
 class TenancyNotFoundError(FormsFillError):
     """No tenancy/property matched the supplied identifiers."""
 

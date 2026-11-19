@@ -77,7 +77,7 @@ def test_lease_missing_renter_name_listed_blank_still_ok(tmp_path):
 
     req = FillRequest(
         form="lease",
-        identifiers={},
+        identifiers={"lot_id": "L-2002", "tenancy_id": "T-1001"},
         fields=_lease_fields(),
         out_dir=str(tmp_path),
     )
@@ -89,7 +89,7 @@ def test_lease_missing_renter_name_listed_blank_still_ok(tmp_path):
 def test_lease_dates_pass_through_verbatim(tmp_path):
     req = FillRequest(
         form="lease",
-        identifiers={},
+        identifiers={"lot_id": "L-2002", "tenancy_id": "T-1001"},
         fields=_lease_fields(),
         out_dir=str(tmp_path),
     )

@@ -435,3 +435,19 @@ def test_post_fill_lease_keeps_contract_keys_docx_may_be_null(client):
     assert body["files"]["pdf"].startswith("http://testserver/files/")
     # The html lease engine is PDF-only: files.docx is null, never absent.
     assert body["files"]["docx"] is None
+
+
+@pytest.mark.parametrize("identifiers", [{}, {"lot_id": "", "tenancy_id": "  "}])
+def test_fill_without_identifiers_is_400_missing_identifiers(client, identifiers):
+    # Caller error, not a PropertyMe miss — must not read as no_current_tenancy.
+    resp = _fill(client, {}, identifiers=identifiers)
+    assert resp.status_code == 400
+    body = resp.json()
+    assert body["error"] == "missing_identifiers"
+    assert "lot_id" in body["message"] and "tenancy_id" in body["message"]
+
+
+def test_fill_unknown_lot_is_still_404_no_current_tenancy(client):
+    resp = _fill(client, {}, identifiers={"lot_id": "L-DOES-NOT-EXIST"})
+    assert resp.status_code == 404
+    assert resp.json()["error"] == "no_current_tenancy"

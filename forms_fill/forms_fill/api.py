@@ -38,6 +38,7 @@ from .core import fill_form
 from .registry import form_catalogue
 from .errors import (
     FormsFillError,
+    MissingIdentifiersError,
     ProviderConfigError,
     RenderError,
     TenancyNotFoundError,
@@ -817,6 +818,8 @@ def fill(payload: dict[str, Any], authorization: str = Header(default="")) -> An
     try:
         request = build_request(json_payload=payload, out_dir=str(out_dir))
         result = fill_form(request)
+    except MissingIdentifiersError as exc:
+        return _err(400, "missing_identifiers", str(exc))
     except (UnknownFormError, ValueError) as exc:
         return _err(400, "invalid_request", str(exc))
     except TenancyNotFoundError as exc:
