@@ -9,6 +9,7 @@ signatures) print as empty labelled fields for the PM or renters to complete.
 
 from __future__ import annotations
 
+from datetime import date, datetime
 from pathlib import Path
 
 from ...formspec import FormSpec
@@ -92,13 +93,61 @@ def _s(value: object) -> str:
     return "" if value is None else str(value)
 
 
+_PERIOD_WORDS = {"weekly": "week", "fortnightly": "fortnight",
+                 "monthly": "calendar month", "month": "calendar month"}
+
+
 def normalise_period(value: str) -> str:
-    return str(value or "").strip().lower()
+    v = str(value or "").strip().lower()
+    return _PERIOD_WORDS.get(v, v)
+
+
+# Connector-facing names for the new term (gea-mcp, 19/11/2026) → spec fields.
+TERM_ALIASES = {"start_date": "fixed_start_date", "end_date": "fixed_end_date", "rent": "rent_amount"}
+_ISO = "%Y-%m-%d"
+
+
+def _parse_date(value: str) -> date | None:
+    for fmt in (_ISO, "%d/%m/%Y"):
+        try:
+            return datetime.strptime(value, fmt).date()
+        except ValueError:
+            pass
+    return None
+
+
+def apply_term_aliases(fields: dict) -> dict:
+    """Map start_date/end_date/rent onto the spec fields and check the term.
+
+    Raises ValueError (→ 400 invalid_request) for a non-ISO alias date, an
+    alias that disagrees with its spec-field twin, or end on/before start.
+    """
+
+    out = dict(fields)
+    for alias, canon in TERM_ALIASES.items():
+        value = _s(fields.get(alias)).strip()
+        if not value:
+            continue
+        if alias != "rent":
+            try:
+                datetime.strptime(value, _ISO)
+            except ValueError:
+                raise ValueError(f"{alias} must be YYYY-MM-DD, got {value!r}") from None
+        twin = _s(fields.get(canon)).strip()
+        if twin and twin != value:
+            raise ValueError(f"{alias} {value!r} and {canon} {twin!r} disagree — send one")
+        out[canon] = value
+    start = _parse_date(_s(out.get("fixed_start_date")).strip())
+    end = _parse_date(_s(out.get("fixed_end_date")).strip())
+    if start and end and end <= start:
+        raise ValueError(f"end_date ({end.isoformat()}) must be after start_date ({start.isoformat()})")
+    return out
 
 
 def build_context(bundle: TenancyBundle, fields: dict) -> dict[str, str]:
     """Merge fetched bundle data with verbatim caller fields into a flat context."""
 
+    fields = apply_term_aliases(fields)
     renters = list(bundle.renters)
 
     def renter(i: int):

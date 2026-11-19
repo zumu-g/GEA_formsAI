@@ -1,3 +1,5 @@
+import pytest
+
 from forms_fill.forms.residential_rental_agreement.spec import SPEC as FORM1_SPEC
 from forms_fill.forms.residential_rental_agreement.spec import (
     build_context as form1_context,
@@ -82,12 +84,11 @@ def test_form1_leaves_additional_terms_and_signatures_undeclared():
         assert forbidden not in joined
 
 
-def test_form1_end_date_before_start_date_not_validated_by_spec(sample_bundle_dict):
-    # The spec renders verbatim; date ordering is the caller's responsibility.
+def test_form1_end_date_before_start_date_is_rejected(sample_bundle_dict):
+    # Reversed 19/11/2026 (Stuart): a term ending before it starts never prints.
     fields = dict(_base_fields(), term_type="fixed", fixed_start_date="2027-01-01", fixed_end_date="2026-01-01")
-    ctx = form1_context(_bundle(sample_bundle_dict), fields)
-    assert ctx["fixed_start_date"] == "2027-01-01"
-    assert ctx["fixed_end_date"] == "2026-01-01"
+    with pytest.raises(ValueError, match="must be after start_date"):
+        form1_context(_bundle(sample_bundle_dict), fields)
 
 
 def test_form1_fill_renders_pdf_only(tmp_path, sample_bundle_dict):
