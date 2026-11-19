@@ -44,7 +44,7 @@ def test_forms_carry_display_category_and_short_title(client):
         assert f["category"] in {"GEA Sales", "GEA PM", "Notices", "Bond"}
         assert f["short_title"]
     sales = {f["key"] for f in forms if f["category"] == "GEA Sales"}
-    assert sales == {"reiv_exclusive_sale_authority"}
+    assert sales == {"reiv_exclusive_sale_authority", "property_price_statement"}
     bond = {f["key"] for f in forms if f["category"] == "Bond"}
     assert bond == {"notice_requesting_additional_bond"}
     notices = {f["key"] for f in forms if f["category"] == "Notices"}
