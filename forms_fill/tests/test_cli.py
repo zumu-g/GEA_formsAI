@@ -73,6 +73,8 @@ def test_cli_reports_blank_fields(tmp_path):
         [
             "--form",
             "cav_rent_increase_notice",
+            "--identifiers",
+            json.dumps({"lot_id": "L-2002"}),
             "--fields",
             json.dumps({"current_rent": 615}),
             "--out",
