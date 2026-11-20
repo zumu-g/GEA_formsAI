@@ -417,6 +417,26 @@
       <!-- U4 (R10): blank fields split by consequence -->
       <div id="review-blank-blocking"><strong>Needed to complete the agreement</strong><span></span></div>
       <div id="review-blank-informational"><strong>Commonly left blank — check these are meant to be empty</strong><span></span></div>
+      <div id="lease-confirm" hidden>
+        <strong>Confirm each item before generating</strong>
+        <div id="lease-confirm-items"></div>
+        <div class="review-row"><div class="review-label">Owners corporation applies?</div>
+          <div class="review-value-col">
+            <label><input type="radio" name="owners_corp" value="yes" /> Yes</label>
+            <label><input type="radio" name="owners_corp" value="no" /> No</label>
+          </div></div>
+        <div class="review-row"><div class="review-label">Condition report attached?</div>
+          <div class="review-value-col">
+            <label><input type="radio" name="condition_report" value="yes" /> Yes</label>
+            <label><input type="radio" name="condition_report" value="no" /> No</label>
+          </div></div>
+        <div class="review-row"><div class="review-label">Special conditions</div>
+          <div class="review-value-col">
+            <textarea id="special_conditions" rows="3"></textarea>
+            <label><input type="checkbox" id="special-none" /> None</label>
+          </div></div>
+        <p class="hint" id="lease-confirm-msg"></p>
+      </div>
       <div id="review-confirm-row">
         <input type="checkbox" id="review-confirm-check" />
         <label for="review-confirm-check">I've checked every value above</label>
@@ -666,6 +686,43 @@
       out.textContent = ' — seeded ' + Math.min(crmRenters.length, 4) + ' renter(s) from GEA CRM (check section 4).';
     } catch (err) {
       out.textContent = ' — GEA CRM fetch failed: ' + err;
+    }
+  }
+
+  // Approved applications (applicationAI) for the property. The PM picks one;
+  // nothing is ever auto-selected. seedField keeps a PM-typed value (PM edit wins).
+  async function findApplications() {
+    const gen = fetchGen;
+    const out = document.getElementById('app-find-result');
+    const list = document.getElementById('app-find-list');
+    list.innerHTML = '';
+    const address = (lastPreviewBundle && lastPreviewBundle.premises.address_line) || queryInput.value.trim();
+    if (address.length < 8) { out.textContent = ' — search a property first.'; return; }
+    out.textContent = ' — searching applications…';
+    try {
+      const resp = await fetch(API + '/applications/search?' + new URLSearchParams({ address: address }), { headers: authHeaders() });
+      const body = await resp.json().catch(() => ({}));
+      if (gen !== fetchGen) return;
+      if (!resp.ok || body.ok === false) { out.textContent = ' — application lookup failed: ' + (body.message || resp.status) + '. Use GEA CRM or type the renter.'; return; }
+      const apps = body.applications || [];
+      if (!apps.length) { out.textContent = ' — no approved application found; use GEA CRM or type the renter.'; return; }
+      out.textContent = ' — pick the application:';
+      apps.forEach((a) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'secondary';
+        b.textContent = joinParts([a.renter1_name, a.address, a.weekly_rent ? '$' + a.weekly_rent + '/wk' : '', a.proposed_lease_start]);
+        b.addEventListener('click', () => {
+          seedField('renter1_name', a.renter1_name || '', 'applicationAI');
+          seedField('renter1_phone', a.renter1_phone || '', 'applicationAI');
+          seedField('renter1_email', a.renter1_email || '', 'applicationAI');
+          out.textContent = ' — renter 1 filled from application (check section 4).';
+          list.innerHTML = '';
+        });
+        list.appendChild(b);
+      });
+    } catch (err) {
+      out.textContent = ' — application lookup failed: ' + err;
     }
   }
 
@@ -1569,11 +1626,14 @@
       html += '<div class="hint" style="margin-top:0.5rem">New lease — enter the new tenants under '
         + '<strong>4. Renters — details</strong> below, or '
         + '<button type="button" class="linklike" id="crm-tenants-btn">autopopulate from GEA CRM</button>'
-        + '<span id="crm-tenants-result"></span></div>';
+        + '<span id="crm-tenants-result"></span> · '
+        + '<button type="button" class="linklike" id="app-find-btn">Find approved application</button>'
+        + '<span id="app-find-result"></span><div id="app-find-list"></div></div>';
     }
     previewBox.innerHTML = html;
     if (outgoing) {
       document.getElementById('crm-tenants-btn').addEventListener('click', fetchCrmTenants);
+      document.getElementById('app-find-btn').addEventListener('click', findApplications);
     }
     previewBox.classList.add('show');
     lastPreviewBundle = bundle;
@@ -1802,14 +1862,102 @@
     fillList('review-blank-informational', blankInformational);
   }
 
+  // Lease only: one tick per CONFIRM_ITEMS entry (KTD1/KTD3). Mirrors confirm.py.
+  const leaseConfirm = document.getElementById('lease-confirm');
+  const confirmDefs = [
+    ['agreement_date', 'Date of agreement', ['agreement_date']],
+    ['renters', 'Renters', ['renter1_name', 'renter1_phone', 'renter1_email', 'renter1_current_address']],
+    ['fixed_end_date', 'Fixed-term end date', ['fixed_end_date']],
+    ['rent_amount', 'Rent amount', ['rent_amount']],
+    ['first_rent_due_date', 'First rent due', ['first_rent_due_date']],
+    ['bond', 'Bond', ['bond_amount', 'bond_due_date']],
+    ['payment_methods', 'Payment methods', ['payment_methods']],
+    ['provider_e_service', 'Provider e-service email', ['provider_e_service_email']],
+    ['emergency_contact', 'Emergency contact', ['emergency_contact_name', 'emergency_phone', 'emergency_email']],
+    ['owners_corp', 'Owners corporation', null],
+    ['condition_report', 'Condition report', null],
+    ['special_conditions', 'Special conditions', null],
+  ];
+  function leaseAnswer(key) {
+    if (key === 'special_conditions') {
+      if (document.getElementById('special-none').checked) return 'None';
+      return document.getElementById('special_conditions').value.trim();
+    }
+    const r = leaseConfirm.querySelector('input[name="' + key + '"]:checked');
+    return r ? r.value : '';
+  }
+  function updateLeaseGate() {
+    const ticks = Array.from(leaseConfirm.querySelectorAll('input[data-confirm]'));
+    const ticked = ticks.length > 0 && ticks.every((t) => t.checked);
+    const answered = ['owners_corp', 'condition_report', 'special_conditions'].every((k) => leaseAnswer(k));
+    reviewConfirmBtn.disabled = !(ticked && answered);
+    document.getElementById('lease-confirm-msg').textContent = answered ? '' : 'Answer owners corporation, condition report and special conditions.';
+  }
+  function buildLeaseConfirm() {
+    const box = document.getElementById('lease-confirm-items');
+    box.innerHTML = '';
+    confirmDefs.forEach(([key, label, names]) => {
+      const row = document.createElement('div');
+      row.className = 'review-row';
+      const lab = document.createElement('div');
+      lab.className = 'review-label';
+      lab.textContent = label;
+      const val = document.createElement('div');
+      val.className = 'review-value-col';
+      if (names) {
+        const parts = names.map((n) => { const el = inputEl(n); return el ? el.value : ''; });
+        const shown = parts.filter(Boolean).join(' · ');
+        const src = names.map((n) => fieldSource[n]).find(Boolean);
+        val.textContent = shown || 'PM to type'; // AE4: empty sourced field, not blocking
+        if (!shown) row.classList.add('blank');
+        const tag = document.createElement('span');
+        tag.className = 'source-tag' + (src === 'typed' ? ' typed' : '');
+        tag.textContent = shown ? (src === 'typed' ? 'typed' : src ? 'from ' + src : 'default') : '';
+        val.appendChild(tag);
+        const edit = document.createElement('button');
+        edit.type = 'button';
+        edit.className = 'linklike';
+        edit.textContent = 'Edit';
+        edit.addEventListener('click', () => {
+          hideReviewScreen();
+          expandedManually[names[0]] = true;
+          refreshFieldPresentation(names[0]);
+          const el = inputEl(names[0]);
+          if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); el.focus({ preventScroll: true }); }
+        });
+        val.appendChild(edit);
+      } else {
+        val.textContent = 'Answer below';
+      }
+      const tick = document.createElement('input');
+      tick.type = 'checkbox';
+      tick.dataset.confirm = key;
+      tick.setAttribute('aria-label', 'Confirm ' + label);
+      tick.addEventListener('change', updateLeaseGate);
+      row.appendChild(lab);
+      row.appendChild(val);
+      row.appendChild(tick);
+      box.appendChild(row);
+    });
+    leaseConfirm.querySelectorAll('input[name], #special_conditions, #special-none').forEach((el) => {
+      el.addEventListener('input', updateLeaseGate);
+      el.addEventListener('change', updateLeaseGate);
+    });
+    updateLeaseGate();
+  }
+
   function showReviewScreen() {
     buildReviewScreen();
+    const lease = isLeaseForm(currentSpec());
+    leaseConfirm.hidden = !lease;
+    document.getElementById('review-confirm-row').style.display = lease ? 'none' : '';
+    if (lease) buildLeaseConfirm();
     form.classList.add('hide-for-review');
     reviewScreen.classList.add('show');
     reviewConfirmCheck.checked = false;
-    reviewConfirmBtn.disabled = true;
+    if (!lease) reviewConfirmBtn.disabled = true;
     if (isGuided(currentSpec())) setStage(3); // stepper reflects Review (R1)
-    reviewConfirmCheck.focus(); // U5 (R9): Space ticks, then Enter generates
+    if (!lease) reviewConfirmCheck.focus(); // U5 (R9): Space ticks, then Enter generates
   }
 
   function hideReviewScreen() {
@@ -1919,6 +2067,10 @@
         },
         fields: fields,
       };
+      if (isLeaseForm(currentSpec())) {
+        ['owners_corp', 'condition_report', 'special_conditions'].forEach((k) => { fields[k] = leaseAnswer(k); });
+        payload.confirmed = Array.from(leaseConfirm.querySelectorAll('input[data-confirm]:checked')).map((t) => t.dataset.confirm);
+      }
       const resp = await fetch(API + '/fill', {
         method: 'POST',
         headers: Object.assign({ 'Content-Type': 'application/json' }, authHeaders()),
@@ -1926,6 +2078,12 @@
       });
       const body = await resp.json();
       if (!resp.ok || body.ok === false) {
+        if (body.error === 'unconfirmed_items') {
+          const names = body.items || body.unconfirmed || body.missing || [];
+          showResult('Confirm these items first: ' + esc(names.join(', ') || body.message), false);
+          reviewConfirmBtn.disabled = false;
+          return;
+        }
         showResult('Fill failed: ' + esc(body.message || body.error || resp.status), false);
         return;
       }

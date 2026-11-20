@@ -380,3 +380,35 @@ def test_ui_crm_tenant_lookup_reports_search_error_not_no_match(client):
     # A misconfigured CRM (500 provider config) must not read as "no match".
     text = client.get("/ui/").text
     assert "GEA CRM lookup failed: " in text
+
+
+# ── U5: application picker + per-item lease confirmation ─────────────────────
+
+
+def test_ui_application_picker_calls_search_and_never_auto_selects(client):
+    text = client.get("/ui/").text
+    assert "/applications/search" in text
+    assert "Find approved application" in text
+    assert "'applicationAI'" in text  # source tag on seeded renter fields
+
+
+def test_ui_review_lists_every_confirm_item(client):
+    from forms_fill.forms.residential_rental_agreement.confirm import CONFIRM_ITEMS
+
+    text = client.get("/ui/").text
+    for key in CONFIRM_ITEMS:
+        assert "'" + key + "'" in text, key
+    assert "PM to type" in text
+
+
+def test_ui_review_has_lease_question_controls(client):
+    text = client.get("/ui/").text
+    for name in ("owners_corp", "condition_report", "special_conditions"):
+        assert 'name="' + name + '"' in text or 'id="' + name + '"' in text, name
+    assert 'id="special-none"' in text
+
+
+def test_ui_fill_payload_sends_confirmed_and_handles_unconfirmed_422(client):
+    text = client.get("/ui/").text
+    assert "payload.confirmed" in text
+    assert "unconfirmed_items" in text
