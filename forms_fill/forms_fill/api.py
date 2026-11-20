@@ -37,6 +37,7 @@ from . import accounts, leases
 from .core import fill_form
 from .registry import form_catalogue
 from .errors import (
+    ApplicationAiError,
     FormsFillError,
     MissingIdentifiersError,
     ProviderConfigError,
@@ -210,6 +211,28 @@ def auth_me(authorization: str = Header(default="")) -> Any:
     agent = accounts.session_agent(supplied)
     return {"ok": True, "machine": False, **{k: agent[k] for k in ("email", "name", "mobile")},
             "is_admin": bool(agent["is_admin"])}
+
+
+@app.get("/applications/search")
+def applications_search(address: str = "", authorization: str = Header(default="")) -> Any:
+    # Agent session only: the machine token has no agent identity to act as.
+    agent = accounts.session_agent(_bearer(authorization))
+    if not agent:
+        raise HTTPException(
+            status_code=401,
+            detail={"error": "unauthorized", "message": "agent sign-in required"},
+        )
+    address = address.strip()
+    if len(address) < 8:
+        return _err(400, "invalid_request", "address must be at least 8 characters")
+    from .providers import applicationai
+
+    try:
+        apps = applicationai.search_by_address(address, agent["email"])
+    except ApplicationAiError as exc:
+        status = 503 if exc.code == "applicationai_not_configured" else 502
+        return _err(status, exc.code, exc.code.replace("_", " "))
+    return {"ok": True, "applications": apps}
 
 
 @app.post("/agents/invite")

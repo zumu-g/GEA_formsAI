@@ -43,3 +43,11 @@ class FetchUnsupportedError(FormsFillError):
     """The selected data provider can find a property but not its contact/
     tenancy details — the caller should fall back to manual field entry
     rather than treat this as an upstream failure."""
+
+
+class ApplicationAiError(FormsFillError):
+    """applicationAI lookup failed. ``code`` is the only thing callers expose."""
+
+    def __init__(self, code: str) -> None:
+        super().__init__(code)
+        self.code = code
