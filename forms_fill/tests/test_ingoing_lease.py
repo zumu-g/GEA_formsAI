@@ -9,6 +9,7 @@ from fastapi.testclient import TestClient
 
 from forms_fill import esign, leases, signing
 from forms_fill.api import OUTPUT_ROOT, app
+from forms_fill.forms.residential_rental_agreement.confirm import CONFIRM_ITEMS
 
 TOKEN = "test-token"
 AUTH = {"Authorization": f"Bearer {TOKEN}"}
@@ -38,6 +39,7 @@ def _fill_lease(client, **extra):
         "identifiers": {"lot_id": "L-2002"},
         "fields": {"rent_amount": "650", "bond_amount": "2600"},
         "pdf": False,
+        "confirmed": list(CONFIRM_ITEMS),
         **extra,
     }
     resp = client.post("/fill", json=payload, headers=AUTH)

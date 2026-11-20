@@ -43,6 +43,7 @@ from .errors import (
     ProviderConfigError,
     RenderError,
     TenancyNotFoundError,
+    UnconfirmedItemsError,
     UnknownFormError,
     UpstreamError,
 )
@@ -131,9 +132,9 @@ def _require_admin(authorization: str) -> None:
     )
 
 
-def _err(status: int, code: str, message: str) -> JSONResponse:
+def _err(status: int, code: str, message: str, **extra: Any) -> JSONResponse:
     return JSONResponse(
-        status_code=status, content={"ok": False, "error": code, "message": message}
+        status_code=status, content={"ok": False, "error": code, "message": message, **extra}
     )
 
 
@@ -838,9 +839,15 @@ def fill(payload: dict[str, Any], authorization: str = Header(default="")) -> An
     idem_key = payload.pop("idem_key", None)
     if idem_key is not None and (not isinstance(idem_key, str) or not 0 < len(idem_key) <= 200):
         return _err(400, "invalid_request", "idem_key must be a non-empty string (max 200)")
+    # The PM's review-step answers (KTD7) — gate input, not a form field.
+    confirmed = payload.pop("confirmed", None) or []
+    if not isinstance(confirmed, list):
+        return _err(400, "invalid_request", "confirmed must be a list of item names")
     try:
         request = build_request(json_payload=payload, out_dir=str(out_dir))
-        result = fill_form(request)
+        result = fill_form(request, confirmed=confirmed)
+    except UnconfirmedItemsError as exc:
+        return _err(422, "unconfirmed_items", str(exc), items=exc.items)
     except MissingIdentifiersError as exc:
         return _err(400, "missing_identifiers", str(exc))
     except (UnknownFormError, ValueError) as exc:

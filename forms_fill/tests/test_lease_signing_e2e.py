@@ -5,6 +5,7 @@ both renters sign, and the stamped PDF must carry each signature and date in
 the renter's own row. Only Resend and the ingoing engine are mocked."""
 
 import base64
+from forms_fill.forms.residential_rental_agreement.confirm import CONFIRM_ITEMS
 import shutil
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -28,7 +29,7 @@ def _png_data_url():
 def rendered_lease(client):
     resp = client.post("/fill", headers=AUTH, json={
         "form": LEASE, "identifiers": {"tenancy_id": "T-1001"}, "idem_key": "OAK12:ingoing",
-        "fields": {**FACTS, **TENANTS}, "pdf": True,
+        "fields": {**FACTS, **TENANTS}, "pdf": True, "confirmed": list(CONFIRM_ITEMS),
     })
     if resp.status_code != 200 or not resp.json()["files"]["pdf"]:
         pytest.skip(f"lease renderer can't produce a PDF here: {resp.status_code} {resp.text[:300]}")

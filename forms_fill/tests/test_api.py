@@ -171,7 +171,7 @@ def test_no_tenancy_maps_to_machine_code(client, caller_fields, monkeypatch):
     from forms_fill import api as api_mod
     from forms_fill.errors import TenancyNotFoundError
 
-    def boom(request, provider=None):
+    def boom(request, provider=None, **_):
         raise TenancyNotFoundError("no current tenancy")
 
     monkeypatch.setattr(api_mod, "fill_form", boom)
@@ -184,7 +184,7 @@ def test_upstream_maps_to_fetch_failed(client, caller_fields, monkeypatch):
     from forms_fill import api as api_mod
     from forms_fill.errors import UpstreamError
 
-    def boom(request, provider=None):
+    def boom(request, provider=None, **_):
         raise UpstreamError("propertyme 503")
 
     monkeypatch.setattr(api_mod, "fill_form", boom)
@@ -420,11 +420,12 @@ def test_server_refuses_to_start_without_a_real_data_provider(monkeypatch):
 
 
 def test_post_fill_lease_keeps_contract_keys_docx_may_be_null(client):
-    from tests.test_lease_alias import _lease_fields
+    from tests.test_lease_alias import CONFIRM_ITEMS, _lease_fields
 
     resp = client.post(
         "/fill",
-        json={"form": "lease", "identifiers": {"lot_id": "L-2002"}, "fields": _lease_fields()},
+        json={"form": "lease", "identifiers": {"lot_id": "L-2002"}, "fields": _lease_fields(),
+              "confirmed": list(CONFIRM_ITEMS)},
         headers=AUTH,
     )
     assert resp.status_code == 200, resp.text
@@ -451,3 +452,32 @@ def test_fill_unknown_lot_is_still_404_no_current_tenancy(client):
     resp = _fill(client, {}, identifiers={"lot_id": "L-DOES-NOT-EXIST"})
     assert resp.status_code == 404
     assert resp.json()["error"] == "no_current_tenancy"
+
+
+def _lease(client, caller_fields, confirmed):
+    from forms_fill.forms.residential_rental_agreement.confirm import CONFIRM_ITEMS  # noqa: F401
+    return client.post("/fill", headers=AUTH, json={
+        "form": "residential_rental_agreement", "identifiers": {"tenancy_id": "T-1001"},
+        "fields": caller_fields, "pdf": False, "confirmed": list(confirmed),
+    })
+
+
+def test_lease_fill_with_every_item_confirmed_is_200(client, caller_fields):
+    from forms_fill.forms.residential_rental_agreement.confirm import CONFIRM_ITEMS
+    resp = _lease(client, caller_fields, CONFIRM_ITEMS)
+    assert resp.status_code == 200, resp.text
+
+
+def test_lease_fill_with_owners_corp_unconfirmed_is_422_naming_it(client, caller_fields):
+    from forms_fill.forms.residential_rental_agreement.confirm import CONFIRM_ITEMS
+    resp = _lease(client, caller_fields, [i for i in CONFIRM_ITEMS if i != "owners_corp"])
+    assert resp.status_code == 422, resp.text
+    body = resp.json()
+    assert body["ok"] is False and body["error"] == "unconfirmed_items"
+    assert body["items"] == ["owners_corp"]
+    assert "owners_corp" in body["message"]
+
+
+def test_other_forms_ignore_confirmed(client, caller_fields):
+    resp = _fill(client, caller_fields, pdf=False, confirmed=[])
+    assert resp.status_code == 200, resp.text

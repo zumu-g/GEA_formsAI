@@ -8,7 +8,8 @@ the result with blank/filled accounting.
 
 from __future__ import annotations
 
-from .errors import MissingIdentifiersError
+from .errors import MissingIdentifiersError, UnconfirmedItemsError
+from .forms.residential_rental_agreement.confirm import CONFIRM_ITEMS
 from .models import FillFiles, FillRequest, FillResult, apply_service_address_defaults
 from .providers.base import PropertyDataProvider, select_provider
 from .registry import get_form_spec
@@ -18,8 +19,14 @@ from .render import compute_blank_fields, render
 def fill_form(
     request: FillRequest,
     provider: PropertyDataProvider | None = None,
+    confirmed: list[str] | tuple[str, ...] = (),
 ) -> FillResult:
     spec = get_form_spec(request.form)
+    # R11/KTD7: no lease is made from any caller until the PM confirms every item.
+    if spec.key == "residential_rental_agreement":
+        missing = [i for i in CONFIRM_ITEMS if i not in confirmed]
+        if missing:
+            raise UnconfirmedItemsError(missing)
 
     if spec.requires_bundle:
         ids = request.identifiers

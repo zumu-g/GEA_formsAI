@@ -51,3 +51,11 @@ class ApplicationAiError(FormsFillError):
     def __init__(self, code: str) -> None:
         super().__init__(code)
         self.code = code
+
+
+class UnconfirmedItemsError(FormsFillError):
+    """The PM has not confirmed every review item for a lease (R11, KTD7)."""
+
+    def __init__(self, items: list[str]) -> None:
+        super().__init__(f"PM has not confirmed: {', '.join(items)}")
+        self.items = items

@@ -9,6 +9,7 @@ import json
 
 
 from forms_fill.core import fill_form
+from forms_fill.forms.residential_rental_agreement.confirm import CONFIRM_ITEMS
 from forms_fill.models import FillRequest, TenancyBundle
 from forms_fill.providers.fixture import FixtureProvider
 from forms_fill.registry import get_form_spec
@@ -58,7 +59,7 @@ def test_lease_full_payload_fills(tmp_path):
         fields=_lease_fields(),
         out_dir=str(tmp_path),
     )
-    result = fill_form(req, provider=FixtureProvider())
+    result = fill_form(req, provider=FixtureProvider(), confirmed=CONFIRM_ITEMS)
     assert result.ok
     assert result.form == "lease"
     assert result.files.docx is None and result.files.pdf is not None
@@ -81,7 +82,7 @@ def test_lease_missing_renter_name_listed_blank_still_ok(tmp_path):
         fields=_lease_fields(),
         out_dir=str(tmp_path),
     )
-    result = fill_form(req, provider=NoRenterNameProvider())
+    result = fill_form(req, provider=NoRenterNameProvider(), confirmed=CONFIRM_ITEMS)
     assert result.ok
     assert "renter1_name" in result.blank_fields
 
@@ -93,7 +94,7 @@ def test_lease_dates_pass_through_verbatim(tmp_path):
         fields=_lease_fields(),
         out_dir=str(tmp_path),
     )
-    result = fill_form(req, provider=FixtureProvider())
+    result = fill_form(req, provider=FixtureProvider(), confirmed=CONFIRM_ITEMS)
     text = _pdf_text(result.files.pdf)
     assert "15/08/2026" in text
     assert "14/08/2027" in text
