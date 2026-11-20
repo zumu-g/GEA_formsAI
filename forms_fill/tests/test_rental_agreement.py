@@ -148,7 +148,9 @@ def test_caller_supplied_agent_name_overrides_configured_agent(sample_bundle_dic
 def test_agent_block_fills_from_default_configured_agent(sample_bundle_dict):
     ctx = form1_context(_bundle(sample_bundle_dict), {})
     assert ctx["agent_name"] == "Stuart Grant"
-    assert ctx["agent_email"] == "stuart@grantsea.com.au"
+    # agent block is the office, not the person: office phone + PM inbox
+    assert ctx["agent_phone"] == "03 9707 5555"
+    assert ctx["agent_email"] == "propertymanagement@grantsea.com.au"
     assert "Gloucester" in ctx["agent_address"]
     assert ctx["handling_agent"] == "Stuart Grant"
 

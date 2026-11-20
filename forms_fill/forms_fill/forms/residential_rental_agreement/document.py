@@ -100,7 +100,7 @@ def _cover(ctx: dict, agency: str) -> str:
     renters = [_v(ctx, f"renter{i}_name") for i in range(1, 5)]
     pm = [
         _v(ctx, "agent_name"),
-        f"mobile: {_v(ctx, 'agent_phone')}" if _v(ctx, "agent_phone") else "",
+        f"phone: {_v(ctx, 'agent_phone')}" if _v(ctx, "agent_phone") else "",
         f"email: {_v(ctx, 'agent_email')}" if _v(ctx, "agent_email") else "",
     ]
     block = lambda lines: "".join(f"<p>{x}</p>" for x in lines if x)  # noqa: E731

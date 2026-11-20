@@ -374,3 +374,9 @@ def test_ui_start_next_button_loops_to_a_fresh_start_stage(client):
     assert "formSelect" not in fn
     assert "lease-mode" not in fn
     assert "is_renewal" in fn  # lease-mode carrier explicitly skipped
+
+
+def test_ui_crm_tenant_lookup_reports_search_error_not_no_match(client):
+    # A misconfigured CRM (500 provider config) must not read as "no match".
+    text = client.get("/ui/").text
+    assert "GEA CRM lookup failed: " in text

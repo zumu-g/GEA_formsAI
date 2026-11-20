@@ -57,8 +57,8 @@ def test_cover_shows_premises_agency_pm_and_renters(tmp_path):
         "12 Example Street, Richmond 3121",
         "Grants Estate Agents",
         "Stuart Grant",
-        "mobile: 0438 554 522",
-        "email: stuart@grantsea.com.au",
+        "phone: 03 9707 5555",
+        "email: propertymanagement@grantsea.com.au",
         "Alice Renter",
         "Bob Renter",
     ):

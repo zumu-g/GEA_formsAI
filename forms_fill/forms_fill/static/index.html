@@ -644,7 +644,10 @@
       const sParams = new URLSearchParams({ q: address, provider: 'gea_crm', listing: 'lease' });
       const sResp = await fetch(API + '/tenancy/search?' + sParams, { headers: authHeaders() });
       if (gen !== fetchGen) return; // stale — context changed while fetching
-      const matches = sResp.ok ? (await sResp.json()).matches || [] : [];
+      const sBody = await sResp.json().catch(() => ({}));
+      // A failed search (e.g. CRM not configured) is not "no match" — say why.
+      if (!sResp.ok) { out.textContent = ' — GEA CRM lookup failed: ' + (sBody.message || sResp.status) + '. Enter tenants manually.'; return; }
+      const matches = sBody.matches || [];
       if (!matches.length) { out.textContent = ' — no match in GEA CRM; enter tenants manually.'; return; }
       const pParams = new URLSearchParams({ provider: 'gea_crm' });
       if (matches[0].lot_id) pParams.set('lot_id', matches[0].lot_id);
