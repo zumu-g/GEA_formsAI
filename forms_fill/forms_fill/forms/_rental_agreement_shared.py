@@ -82,6 +82,15 @@ def apply_agent_autofill(ctx: dict[str, str], fields: dict) -> None:
     _seed(ctx, fields, "agent_email", agency_data.get("pm_email") or agent.get("email", ""))
     _seed(ctx, fields, "agent_acn", agent.get("acn") or agency_data.get("acn") or "")
 
+    maint = cfg["maintenance"]
+    _seed(ctx, fields, "emergency_contact_name", maint.get("name", ""))
+    _seed(ctx, fields, "emergency_phone", maint.get("phone", ""))
+    _seed(ctx, fields, "emergency_email", maint.get("email", ""))
+    # not declared fields yet (U3 declares and prints them); caller values win
+    defaults = cfg["lease_defaults"]
+    _seed(ctx, fields, "payment_methods", defaults.get("payment_methods", []))
+    _seed(ctx, fields, "provider_e_service_email", defaults.get("provider_e_service_email", ""))
+
     # Echo the resolved choice back (R5) — never blank once an agent exists,
     # whether the caller picked one explicitly or the default was used.
     ctx["handling_agent"] = requested or agent.get("full_name", "")

@@ -11,6 +11,15 @@
     "pm_email": "propertymanagement@grantsea.com.au",
     "acn": null
   },
+  "maintenance": {
+    "name": "Grants Property Maintenance",
+    "phone": "0438 100 545",
+    "email": "propertymanagement@grantsea.com.au"
+  },
+  "lease_defaults": {
+    "payment_methods": ["bank_transfer", "deft_bpay", "centrepay"],
+    "provider_e_service_email": "propertymanagement@grantsea.com.au"
+  },
   "agents": [
     {
       "full_name": "Stuart Grant",

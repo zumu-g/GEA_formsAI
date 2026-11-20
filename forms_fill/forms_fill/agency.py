@@ -51,6 +51,8 @@ def load_agency_config() -> dict:
         "meta": data.get("meta", {}),
         # trust-account / RTBA instructions for the lease signing pack
         "payments": data.get("payments", {}),
+        "maintenance": data.get("maintenance", {}),
+        "lease_defaults": data.get("lease_defaults", {}),
     }
 
 
