@@ -84,7 +84,8 @@ def test_periodic_ticks_periodic_and_omits_fixed_dates(tmp_path):
 
 
 def test_empty_bond_due_date_prints_label_only(tmp_path):
-    body = "\n".join(_pages(_pdf(tmp_path, bond_due_date=""))[1:])
+    # R7 defaults a blank bond due date to the start date, so blank both.
+    body = "\n".join(_pages(_pdf(tmp_path, bond_due_date="", fixed_start_date=""))[1:])
     line_after = body.split("Date bond payment due", 1)[1].lstrip("\n").splitlines()[0]
     assert line_after.startswith("PART B") or line_after == "", line_after
     for junk in ("N/A", "n/a", "TBC", "Sample", "example"):

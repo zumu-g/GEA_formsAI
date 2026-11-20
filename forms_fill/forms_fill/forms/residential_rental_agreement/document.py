@@ -10,6 +10,7 @@ field, never a placeholder (R3). The renter signature rows keep the literal
 from __future__ import annotations
 
 import re
+from decimal import Decimal, InvalidOperation
 from html import escape
 
 from ...agency import load_agency_config
@@ -60,6 +61,17 @@ def _keep_with_next(html: str) -> str:
 
 def _v(ctx: dict, key: str) -> str:
     return escape(str(ctx.get(key) or "").strip())
+
+
+def _money(ctx: dict, key: str) -> str:
+    """Dollars with cents ($3,867.00); a non-numeric value prints as given."""
+
+    value = str(ctx.get(key) or "").strip()
+    try:
+        amount = Decimal(value.lstrip("$").replace(",", ""))
+    except InvalidOperation:
+        return escape(value)
+    return escape(f"${amount:,.2f}" if amount.is_finite() else value)
 
 
 def _d(ctx: dict, key: str) -> str:
@@ -176,7 +188,7 @@ def _part_a(ctx: dict, agency: str) -> str:
         '<td class="s">To be paid per<br/>(tick one box only)</td>'
         '<td class="s">Day rent is to be paid<br/>(e.g. each Thursday or the 11th of each month)</td>'
         "</tr><tr>"
-        f'<td>{_v(ctx, "rent_amount")}</td><td>{ticks}</td><td>{_v(ctx, "rent_payment_day")}</td>'
+        f'<td>{_money(ctx, "rent_amount")}</td><td>{ticks}</td><td>{_v(ctx, "rent_payment_day")}</td>'
         "</tr></table>"
         + _rows(_row("Date first rent payment due", _d(ctx, "first_rent_due_date")))
         + "<h2>7. Bond</h2>"
@@ -191,7 +203,7 @@ def _part_a(ctx: dict, agency: str) -> str:
         )
         + _bullets("email the RTBA at rtba@justice.vic.gov.au; or", "call the RTBA on 1300 137 164.")
         + _rows(
-            _row("Bond amount ($)", _v(ctx, "bond_amount")),
+            _row("Bond amount ($)", _money(ctx, "bond_amount")),
             _row("Date bond payment due", _d(ctx, "bond_due_date")),
         )
     )

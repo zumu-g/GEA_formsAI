@@ -259,3 +259,66 @@ def test_is_renewal_never_appears_as_a_blank_field(sample_bundle_dict):
     ctx = form1_context(_bundle(sample_bundle_dict), {})
     blanks = compute_blank_fields(FORM1_SPEC, ctx)
     assert "is_renewal" not in blanks
+
+
+# ── Lease field defaults (U1) ───────────────────────────────────────────────
+
+import re
+from datetime import date
+
+from forms_fill.forms.residential_rental_agreement.document import build_html
+
+
+def _new_lease(sample_bundle_dict, **overrides):
+    fields = {"term_type": "fixed", "fixed_start_date": "2026-12-01", "rent_amount": "3867", "bond_amount": "3867"}
+    fields.update(overrides)
+    return form1_context(_bundle(sample_bundle_dict), fields)
+
+
+def test_defaults_seed_end_first_rent_bond_due_and_agreement_date(sample_bundle_dict):
+    ctx = _new_lease(sample_bundle_dict)
+    assert ctx["fixed_end_date"] == "2027-11-30"
+    assert ctx["first_rent_due_date"] == "2026-12-01"
+    assert ctx["bond_due_date"] == "2026-12-01"
+    assert ctx["agreement_date"] == date.today().isoformat()
+
+
+@pytest.mark.parametrize(
+    "start,end",
+    [("2026-01-31", "2027-01-30"), ("2024-02-29", "2025-02-28"), ("2026-01-01", "2026-12-31")],
+)
+def test_default_end_is_start_plus_12_months_less_one_day(sample_bundle_dict, start, end):
+    assert _new_lease(sample_bundle_dict, fixed_start_date=start)["fixed_end_date"] == end
+
+
+def test_caller_values_override_every_default(sample_bundle_dict):
+    ctx = _new_lease(
+        sample_bundle_dict,
+        agreement_date="2026-11-01",
+        fixed_end_date="2027-05-31",
+        first_rent_due_date="2026-12-08",
+        bond_due_date="2026-11-25",
+    )
+    assert ctx["agreement_date"] == "2026-11-01"
+    assert ctx["fixed_end_date"] == "2027-05-31"
+    assert ctx["first_rent_due_date"] == "2026-12-08"
+    assert ctx["bond_due_date"] == "2026-11-25"
+
+
+def test_periodic_term_gets_no_end_date(sample_bundle_dict):
+    ctx = _new_lease(sample_bundle_dict, term_type="periodic", fixed_start_date="", periodic_start_date="2026-12-01")
+    assert ctx["fixed_end_date"] == ""
+    assert ctx["first_rent_due_date"] == "2026-12-01"
+
+
+def test_rent_and_bond_print_in_dollars_with_cents(sample_bundle_dict):
+    ctx = _new_lease(sample_bundle_dict, rent_period="calendar month", bond_amount="16750")
+    text = re.sub(r"<[^>]+>", " ", build_html(ctx).html)
+    assert "$3,867.00" in text
+    assert "$16,750.00" in text
+    assert "$$" not in text
+
+
+def test_non_numeric_rent_prints_as_given(sample_bundle_dict):
+    ctx = _new_lease(sample_bundle_dict, rent_amount="TBC")
+    assert "TBC" in build_html(ctx).html

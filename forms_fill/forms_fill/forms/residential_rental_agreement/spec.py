@@ -9,7 +9,7 @@ signatures) print as empty labelled fields for the PM or renters to complete.
 
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
 from ...formspec import FormSpec
@@ -144,6 +144,34 @@ def apply_term_aliases(fields: dict) -> dict:
     return out
 
 
+def _default_end(start: date) -> date:
+    """Same day next year, less one day (a 29 Feb start ends 28 Feb)."""
+
+    try:
+        anniversary = start.replace(year=start.year + 1)
+    except ValueError:  # 29 Feb: the anniversary is 1 Mar
+        anniversary = date(start.year + 1, 3, 1)
+    return anniversary - timedelta(days=1)
+
+
+def apply_new_lease_defaults(ctx: dict[str, str]) -> None:
+    """Seed blank agreement date, end date and due dates on a new lease.
+
+    Caller values (already in ctx) always win; only blanks are filled.
+    """
+
+    term = ctx.get("term_type") or ("fixed" if ctx.get("fixed_start_date") else "")
+    if not ctx.get("agreement_date"):
+        ctx["agreement_date"] = date.today().isoformat()
+    start_value = ctx.get("periodic_start_date" if term == "periodic" else "fixed_start_date", "")
+    start = _parse_date(start_value.strip())
+    if term == "fixed" and start and not ctx.get("fixed_end_date"):
+        ctx["fixed_end_date"] = _default_end(start).isoformat()
+    for name in ("first_rent_due_date", "bond_due_date"):
+        if start_value and not ctx.get(name):
+            ctx[name] = start_value
+
+
 def build_context(bundle: TenancyBundle, fields: dict) -> dict[str, str]:
     """Merge fetched bundle data with verbatim caller fields into a flat context."""
 
@@ -189,6 +217,9 @@ def build_context(bundle: TenancyBundle, fields: dict) -> dict[str, str]:
     apply_lease_autofill(
         ctx, fields, bundle, lease_fields=lease_fields_for_mode(LEASE_FIELDS, fields)
     )
+
+    if not renewal:  # a renewal leaves the new term and agreement date to the PM
+        apply_new_lease_defaults(ctx)
 
     ctx["rent_period"] = normalise_period(ctx.get("rent_period", ""))
 
