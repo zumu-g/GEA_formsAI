@@ -78,10 +78,11 @@ def test_form1_agent_and_current_address_are_caller_fields(sample_bundle_dict):
     assert ctx["renter1_current_address"] == ""
 
 
-def test_form1_leaves_additional_terms_and_signatures_undeclared():
-    joined = " ".join(FORM1_SPEC.declared_fields)
-    for forbidden in ("signature", "additional_term"):
-        assert forbidden not in joined
+def test_form1_declares_pm_answers_but_leaves_signatures_undeclared():
+    declared = FORM1_SPEC.declared_fields
+    for name in ("payment_methods", "provider_e_service_email", "owners_corp", "condition_report", "special_conditions"):
+        assert name in declared
+    assert "signature" not in " ".join(declared)
 
 
 def test_form1_end_date_before_start_date_is_rejected(sample_bundle_dict):
@@ -169,10 +170,10 @@ def test_renter_current_address_stays_blank_even_with_known_premises(sample_bund
     assert ctx["renter1_current_address"] == ""
 
 
-def test_blank_field_accounting_still_lists_negotiated_and_signature_sections(sample_bundle_dict):
-    ctx = form1_context(_bundle(sample_bundle_dict), _base_fields())
+def test_blank_field_accounting_still_leaves_signatures_undeclared(sample_bundle_dict):
+    form1_context(_bundle(sample_bundle_dict), _base_fields())
     joined = " ".join(FORM1_SPEC.declared_fields)
-    for forbidden in ("signature", "additional_term", "payment_method", "electronic_service"):
+    for forbidden in ("signature", "additional_term", "electronic_service"):
         assert forbidden not in joined
 
 

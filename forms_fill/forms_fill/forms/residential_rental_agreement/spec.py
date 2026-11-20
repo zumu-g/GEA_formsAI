@@ -62,6 +62,11 @@ CALLER_FIELDS = (
     "emergency_contact_name",
     "emergency_phone",
     "emergency_email",
+    "payment_methods",
+    "provider_e_service_email",
+    "owners_corp",
+    "condition_report",
+    "special_conditions",
 )
 
 # Fetched-from-provider text fields.
@@ -212,6 +217,9 @@ def build_context(bundle: TenancyBundle, fields: dict) -> dict[str, str]:
 
     for name in CALLER_FIELDS:
         ctx[name] = _s(fields.get(name))
+    # A list, not text: the caller may override the agency default (comma string or list).
+    methods = fields.get("payment_methods")
+    ctx["payment_methods"] = [m.strip() for m in methods.split(",") if m.strip()] if isinstance(methods, str) else list(methods or [])
 
     apply_agent_autofill(ctx, fields)
     apply_lease_autofill(
@@ -298,6 +306,11 @@ SPEC = FormSpec(
         "emergency_contact_name": "Urgent-repairs emergency contact name",
         "emergency_phone": "Urgent-repairs emergency phone",
         "emergency_email": "Urgent-repairs emergency email",
+        "payment_methods": "Preferred payment methods (bank_transfer, deft_bpay, centrepay)",
+        "provider_e_service_email": "Rental provider email for electronic service of notices",
+        "owners_corp": "Do owners corporation rules apply? (yes/no)",
+        "condition_report": "Condition report already provided? (yes = provided, no = to be provided)",
+        "special_conditions": "Special conditions (type None if there are none)",
     },
     # U7: field kind/section metadata — matches the printed form's own
     # numbering (module docstring), so the review UI groups fields the way a
@@ -342,6 +355,9 @@ SPEC = FormSpec(
         "emergency_contact_name": "Nominee for urgent repairs (RTA s 72) — e.g. the managing agent or after-hours tradesperson.",
         "emergency_phone": "After-hours number for urgent repairs, e.g. 03 9707 5300.",
         "emergency_email": "Email for the urgent-repairs contact — leave blank if phone-only.",
+        "owners_corp": "yes if the premises are in an owners corporation (attach the rules), otherwise no.",
+        "condition_report": "yes if the condition report has been given to the renter, no if it will be given by the start date.",
+        "special_conditions": "Additional terms for Part E, or None.",
         "provider_acn": "9-digit ACN, e.g. 123 456 789 — leave blank for an individual provider.",
         "agent_acn": "The agency's 9-digit ACN, e.g. 123 456 789 — leave blank if none.",
         "provider_company_name": "Only if the rental provider is a company — otherwise leave blank.",
@@ -381,6 +397,11 @@ SPEC = FormSpec(
         "emergency_contact_name": "informational",
         "emergency_phone": "informational",
         "emergency_email": "informational",
+        "payment_methods": "informational",
+        "provider_e_service_email": "informational",
+        "owners_corp": "blocking",
+        "condition_report": "blocking",
+        "special_conditions": "blocking",
     },
     caller_field_sections={
         "is_renewal": "Renewal",
@@ -427,5 +448,10 @@ SPEC = FormSpec(
         "emergency_contact_name": "10. Urgent repairs contact",
         "emergency_phone": "10. Urgent repairs contact",
         "emergency_email": "10. Urgent repairs contact",
+        "payment_methods": "8. Payment methods",
+        "provider_e_service_email": "9. Electronic service",
+        "owners_corp": "12-13. Owners corporation & condition report",
+        "condition_report": "12-13. Owners corporation & condition report",
+        "special_conditions": "31. Additional terms",
     },
 )

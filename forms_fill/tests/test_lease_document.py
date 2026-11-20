@@ -140,3 +140,61 @@ def test_lease_never_shows_the_owners_address_or_contact_details():
     assert ctx["provider_address"] == "c/- 3a Gloucester Ave Berwick"
     assert ctx["provider_postcode"] == "3806"
     assert ctx["provider_phone"] == ctx["provider_email"] == ""
+
+
+# ── PM answers: payment methods, e-service, owners corp, condition report ────
+
+_ANSWERS = {
+    "owners_corp": "yes",
+    "condition_report": "no",
+    "special_conditions": "No smoking inside the premises.",
+}
+
+
+def _text(tmp_path, **overrides) -> str:
+    return _flat(" ".join(_pages(_pdf(tmp_path, **{**_ANSWERS, **overrides}))))
+
+
+def test_section_8_ticks_the_three_default_methods(tmp_path):
+    from forms_fill.forms.residential_rental_agreement.document import OFF, ON
+
+    html = FORM1_SPEC.build_html(build_context(FixtureProvider().fetch_bundle({"tenancy_id": "T-1001"}), {**FIELDS, **_ANSWERS})).html
+    for label in ("bank deposit", "BPAY", "other electronic form of payment, including Centrepay"):
+        assert f"{ON} {label}" in html
+    for label in ("direct debit", "cash", "cheque", "money order"):
+        assert f"{OFF} {label}" in html
+
+
+def test_caller_payment_methods_override_the_default(tmp_path):
+    from forms_fill.forms.residential_rental_agreement.document import ON
+
+    ctx = build_context(FixtureProvider().fetch_bundle({"tenancy_id": "T-1001"}), {**FIELDS, "payment_methods": "centrepay"})
+    html = FORM1_SPEC.build_html(ctx).html
+    assert f"{ON} BPAY" not in html and f"{ON} other electronic form of payment" in html
+
+
+def test_e_service_yes_with_email_printed(tmp_path):
+    from forms_fill.forms.residential_rental_agreement.document import ON
+
+    ctx = build_context(FixtureProvider().fetch_bundle({"tenancy_id": "T-1001"}), {**FIELDS, **_ANSWERS})
+    html = FORM1_SPEC.build_html(ctx).html
+    assert f"{ON} Yes" in html
+    assert "propertymanagement@grantsea.com.au" in _text(tmp_path)
+
+
+def test_owners_corp_yes_and_condition_report_no_are_ticked(tmp_path):
+    from forms_fill.forms.residential_rental_agreement.document import ON
+
+    ctx = build_context(FixtureProvider().fetch_bundle({"tenancy_id": "T-1001"}), {**FIELDS, **_ANSWERS})
+    html = FORM1_SPEC.build_html(ctx).html
+    assert f"{ON} Yes</p>" in html
+    assert f"{ON} The condition report will be provided" in html
+    assert f"{ON} The condition report has been provided" not in html
+    assert f"{ON} No</p>" not in html
+
+
+def test_special_conditions_and_renter_names_print(tmp_path):
+    text = _text(tmp_path)
+    assert "No smoking inside the premises." in text
+    sig_page = next(p for p in _pages(_pdf(tmp_path, **_ANSWERS)) if "Signature of renter 1" in p)
+    assert "Alice Renter" in sig_page and "Bob Renter" in sig_page

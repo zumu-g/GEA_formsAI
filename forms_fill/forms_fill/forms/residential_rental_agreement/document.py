@@ -95,6 +95,10 @@ def _tick(on: bool, label: str) -> str:
     return f'<p class="tick">{ON if on else OFF} {label}</p>'
 
 
+def _answer(ctx: dict, key: str) -> str:
+    return str(ctx.get(key) or "").strip().lower()
+
+
 def _addr(ctx: dict, addr: str, pc: str) -> str:
     a, p = _v(ctx, addr), _v(ctx, pc)
     return a if p and a.endswith(p) else " ".join(x for x in (a, p) if x)
@@ -209,18 +213,23 @@ def _part_a(ctx: dict, agency: str) -> str:
     )
 
 
-def _yes_no(label: str = "") -> str:
+def _yes_no(label: str = "", email: str = "") -> str:
     lead = f"<h3>{label}</h3>" if label else ""
     return lead + _rows(
-        _row(f"{OFF} Yes", '<span class="s">Email address, mobile phone number or other electronic contact details</span>'),
+        _row(
+            f"{ON if email else OFF} Yes",
+            email or '<span class="s">Email address, mobile phone number or other electronic contact details</span>',
+        ),
         _row(f"{OFF} No"),
     )
 
 
 def _part_b(ctx: dict) -> str:
+    # (context key or "", printed Form 1 label)
     methods = (
-        "direct debit", "bank deposit", "cash", "cheque", "money order", "BPAY",
-        "other electronic form of payment, including Centrepay",
+        ("", "direct debit"), ("bank_transfer", "bank deposit"), ("", "cash"), ("", "cheque"),
+        ("", "money order"), ("deft_bpay", "BPAY"),
+        ("centrepay", "other electronic form of payment, including Centrepay"),
     )
     renters = "".join(_yes_no(f"Renter {i}") for i in range(1, 5))
     return (
@@ -231,7 +240,7 @@ def _part_b(ctx: dict) -> str:
             '<span class="s">Note: The renter is entitled to receive a receipt from the rental provider confirming payment of rent.</span>',
             '<span class="s">(rental provider to tick available methods of rent payment)</span>',
         )
-        + "".join(_tick(False, m) for m in methods)
+        + "".join(_tick(key in ctx.get("payment_methods", []), m) for key, m in methods)
         + _rows(_row("Payment details"))
         + "<h2>9. Service of notices and other documents by electronic methods</h2>"
         + _paras(
@@ -245,7 +254,7 @@ def _part_b(ctx: dict) -> str:
             "The rental provider must complete this section before giving the agreement to the renter.",
             '<span class="s">(rental provider to tick as appropriate)</span>',
         )
-        + _yes_no()
+        + _yes_no(email=_v(ctx, "provider_e_service_email"))
         + "<h3>9.2 Does the renter agree to the service of notices and other documents by electronic methods such as email?</h3>"
         + _paras(
             '<span class="s">(renter to tick as appropriate)</span>',
@@ -277,15 +286,15 @@ def _part_b(ctx: dict) -> str:
             "Do owners corporation rules apply to the premises?",
             '<span class="s">(rental provider to tick as appropriate)</span>',
         )
-        + _tick(False, "No") + _tick(False, "Yes")
+        + _tick(_answer(ctx, "owners_corp") == "no", "No") + _tick(_answer(ctx, "owners_corp") == "yes", "Yes")
         + _paras("If yes, the rental provider must attach a copy of the rules to this agreement.")
         + "<h2>13. Condition report</h2>"
         + _paras(
             "The renter must be given 2 copies of the condition report (or one emailed copy) on or before the date the renter moves into the rented premises.",
             '<span class="s">(rental provider to tick as appropriate)</span>',
         )
-        + _tick(False, "The condition report has been provided.")
-        + _tick(False, "The condition report will be provided to the renter on or before the date the agreement starts.")
+        + _tick(_answer(ctx, "condition_report") == "yes", "The condition report has been provided.")
+        + _tick(_answer(ctx, "condition_report") == "no", "The condition report will be provided to the renter on or before the date the agreement starts.")
     )
 
 
@@ -484,7 +493,7 @@ def _part_e(ctx: dict) -> str:
             "Additional terms must also comply with the Australian Consumer Law (Victoria). For example, they cannot be unfair terms, which will have no effect.",
             "Contact Consumer Affairs Victoria on 1300 558 181 for further information or visit consumer.vic.gov.au/products-and-services/business-practices/contracts/unfair-contract-terms.",
         )
-        + '<table><tr><td style="height: 120pt;"></td></tr></table>'
+        + f'<table><tr><td style="height: 120pt;">{_v(ctx, "special_conditions")}</td></tr></table>'
         + _paras('<span class="s">Note: If you need extra space, attach a separate sheet. Both the rental provider and renter should sign and date all attachments.</span>')
         + '<h2 style="page-break-before: always;">32. Signatures</h2>'
         + _paras(
